@@ -1,0 +1,17 @@
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Rider
+.idea/
+
+# New-style solution format (auto-generated alongside .sln)
+*.slnx
+
+# Claude Code local settings
+.claude/
