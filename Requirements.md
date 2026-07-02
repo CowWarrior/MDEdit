@@ -1,5 +1,7 @@
 # MDEdit — Business Requirements
 
+MDEdit is a desktop application for creating and editing Markdown documents. It targets users who write in Markdown regularly and want a dedicated, lightweight editor that stays out of the way: fast to open, comfortable to type in, and aware enough of Markdown syntax to make formatting effortless. The editor supports both Markdown and plain text files, offers real-time syntax highlighting to keep the structure of a document visible while writing, and provides a full set of formatting commands so common Markdown constructs can be inserted without remembering the exact syntax. A WYSIWYG mode — where the formatted output is displayed directly in the editor rather than the raw syntax — is planned for a future version.
+
 ## 1. Document Management
 
 - The user can create a new empty document at any time.
