@@ -46,7 +46,7 @@
     <!-- Blockquotes -->
     <Rule color="Blockquote">^&gt;.*$</Rule>
 
-    <!-- Horizontal rules (---, ***, ___) -->
+    <!-- Horizontal rules (3+ dashes, stars, or underscores) -->
     <Rule color="HRule">^[-\*_]{3,}\s*$</Rule>
 
     <!-- List markers -->
