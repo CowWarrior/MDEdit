@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         LoadSyntaxHighlighting();
+        Editor.TextArea.TextView.LineTransformers.Add(new MarkdownLineColorizer());
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);

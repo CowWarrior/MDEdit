@@ -1,10 +1,6 @@
 <?xml version="1.0"?>
 <SyntaxDefinition name="Markdown" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
 
-  <Color name="Heading1"   foreground="#0057AE" fontWeight="bold" />
-  <Color name="Heading2"   foreground="#0057AE" fontWeight="bold" />
-  <Color name="Heading3"   foreground="#0057AE" fontWeight="bold" />
-  <Color name="Heading456" foreground="#0057AE" fontWeight="bold" />
   <Color name="Bold"       fontWeight="bold" />
   <Color name="Italic"     fontStyle="italic" />
   <Color name="BoldItalic" fontWeight="bold" fontStyle="italic" />
@@ -12,22 +8,20 @@
   <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
   <Color name="CodeBlock"  foreground="#333333" background="#F5F5F5" fontFamily="Consolas" />
   <Color name="Link"       foreground="#0065BD" />
-  <Color name="Blockquote" foreground="#6A737D" fontStyle="italic" />
   <Color name="ListMarker" foreground="#005CC5" />
-  <Color name="HRule"      foreground="#BBBBBB" />
   <Color name="Comment"    foreground="#888888" fontStyle="italic" />
 
   <RuleSet>
 
-    <!-- Fenced code blocks — empty inner RuleSet suppresses further highlighting -->
+    <!-- Fenced code blocks: plain delimiters, no wildcard quantifiers -->
     <Span color="CodeBlock" multiline="true">
-      <Begin>^```.*</Begin>
-      <End>^```\s*$</End>
+      <Begin>^```</Begin>
+      <End>^```</End>
       <RuleSet/>
     </Span>
     <Span color="CodeBlock" multiline="true">
-      <Begin>^~~~.*</Begin>
-      <End>^~~~\s*$</End>
+      <Begin>^~~~</Begin>
+      <End>^~~~</End>
       <RuleSet/>
     </Span>
 
@@ -37,23 +31,11 @@
       <End>--&gt;</End>
     </Span>
 
-    <!-- ATX headings: most specific (###### … ####) first so lower-level rules don't steal the match -->
-    <Rule color="Heading456">^#{4,6}[^#\r\n].*$</Rule>
-    <Rule color="Heading3">^###[^#\r\n].*$</Rule>
-    <Rule color="Heading2">^##[^#\r\n].*$</Rule>
-    <Rule color="Heading1">^#[^#\r\n].*$</Rule>
+    <!-- List markers: min 2 chars, no * quantifier -->
+    <Rule color="ListMarker">[-\*\+]\s</Rule>
+    <Rule color="ListMarker">\d+\.\s</Rule>
 
-    <!-- Blockquotes -->
-    <Rule color="Blockquote">^&gt;.*$</Rule>
-
-    <!-- Horizontal rules (3+ dashes, stars, or underscores) -->
-    <Rule color="HRule">^[-\*_]{3,}\s*$</Rule>
-
-    <!-- List markers -->
-    <Rule color="ListMarker">^\s*[-\*\+]\s</Rule>
-    <Rule color="ListMarker">^\s*\d+\.\s</Rule>
-
-    <!-- Bold+Italic must come before Bold and Italic rules -->
+    <!-- Bold+Italic (must precede Bold and Italic) -->
     <Rule color="BoldItalic">\*{3}[^\*\n]+\*{3}</Rule>
     <Rule color="BoldItalic">_{3}[^_\n]+_{3}</Rule>
 
@@ -71,12 +53,12 @@
     <!-- Inline code -->
     <Rule color="InlineCode">`[^`\n]+`</Rule>
 
-    <!-- Images (before links so ![ is matched as image) -->
-    <Rule color="Link">!\[[^\]\n]*\]\([^\)\n]*\)</Rule>
+    <!-- Images (before links) -->
+    <Rule color="Link">!\[[^\]\n]+\]\([^\)\n]+\)</Rule>
 
-    <!-- Inline links and reference links -->
-    <Rule color="Link">\[[^\]\n]*\]\([^\)\n]*\)</Rule>
-    <Rule color="Link">\[[^\]\n]*\]\[[^\]\n]*\]</Rule>
+    <!-- Inline and reference links -->
+    <Rule color="Link">\[[^\]\n]+\]\([^\)\n]+\)</Rule>
+    <Rule color="Link">\[[^\]\n]+\]\[[^\]\n]+\]</Rule>
 
   </RuleSet>
 
