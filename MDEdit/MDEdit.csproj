@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,6 +15,14 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\Markdown.xshd" />
+  </ItemGroup>
+
+  <!-- WPF "Resource" build action, distinct from the EmbeddedResource above, so XAML can reference these via a relative pack URI.
+       AppIcon.png is used instead of the .ico in the About dialog: WPF's Image control renders a multi-res .ico
+       from its smallest embedded frame and upscales it, which looks blurry at anything above ~32px. -->
+  <ItemGroup>
+    <Resource Include="Resources\AppIcon.ico" />
+    <Resource Include="Resources\AppIcon.png" />
   </ItemGroup>
 
   <!-- Deterministic builds strip the PE timestamp, so stamp the build time into assembly metadata instead (read by the About dialog). -->
