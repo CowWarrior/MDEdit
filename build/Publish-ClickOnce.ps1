@@ -45,4 +45,17 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output "Publishing ClickOnce build (version $applicationVersion, cert $($cert.Thumbprint))..."
 & $msbuild $csproj -t:Publish -p:PublishProfile=$pubxml -p:ApplicationVersion=$applicationVersion -p:ManifestCertificateThumbprint=$($cert.Thumbprint)
-exit $LASTEXITCODE
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# ClickOnce publish only adds a new version folder under "Application Files" — it never removes the
+# ones it supersedes, so without this every publish leaves dead weight behind in the repo.
+$currentVersionFolder = "MDEdit_$($applicationVersion -replace '\.', '_')"
+$applicationFilesDir = Join-Path $repoRoot 'docs\Application Files'
+Get-ChildItem $applicationFilesDir -Directory -ErrorAction SilentlyContinue |
+    Where-Object { $_.Name -ne $currentVersionFolder } |
+    ForEach-Object {
+        Write-Output "Removing superseded ClickOnce version folder: $($_.Name)"
+        Remove-Item $_.FullName -Recurse -Force
+    }
+
+exit 0
