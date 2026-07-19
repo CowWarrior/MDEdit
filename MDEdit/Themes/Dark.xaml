@@ -1,8 +1,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <SolidColorBrush x:Key="AppChromeBackgroundBrush" Color="#202020"/>
+    <!-- Chrome sits one elevation step lighter than the #1E1E1E editor (VS Code-style),
+         with a hairline divider where the surfaces meet. -->
+    <SolidColorBrush x:Key="AppChromeBackgroundBrush" Color="#2D2D30"/>
     <SolidColorBrush x:Key="AppChromeForegroundBrush" Color="#F0F0F0"/>
+    <SolidColorBrush x:Key="AppChromeDividerBrush"    Color="#3F3F46"/>
     <SolidColorBrush x:Key="EditorBackgroundBrush"    Color="#1E1E1E"/>
     <SolidColorBrush x:Key="EditorForegroundBrush"    Color="#DCDCDC"/>
     <SolidColorBrush x:Key="EditorLineNumberBrush"    Color="#858585"/>

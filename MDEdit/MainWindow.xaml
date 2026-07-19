@@ -77,7 +77,8 @@
         </Menu>
 
         <!-- ═══ Toolbar ═══ -->
-        <ToolBarTray DockPanel.Dock="Top" Background="{DynamicResource AppChromeBackgroundBrush}">
+        <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource AppChromeDividerBrush}" BorderThickness="0,1,0,0">
+        <ToolBarTray Background="{DynamicResource AppChromeBackgroundBrush}">
             <ToolBar Band="0" BandIndex="0"
                      Background="{DynamicResource AppChromeBackgroundBrush}"
                      Foreground="{DynamicResource AppChromeForegroundBrush}">
@@ -123,6 +124,7 @@
 
             </ToolBar>
         </ToolBarTray>
+        </Border>
 
         <!-- ═══ Status bar ═══ -->
         <StatusBar DockPanel.Dock="Bottom" Height="22"
@@ -143,16 +145,20 @@
         </StatusBar>
 
         <!-- ═══ Editor ═══ -->
-        <avalonEdit:TextEditor
-            x:Name="Editor"
-            FontFamily="Cascadia Code, Consolas, Courier New"
-            FontSize="14"
-            ShowLineNumbers="True"
-            WordWrap="False"
-            Background="{DynamicResource EditorBackgroundBrush}"
-            Foreground="{DynamicResource EditorForegroundBrush}"
-            LineNumbersForeground="{DynamicResource EditorLineNumberBrush}"
-            Padding="8,4"/>
+        <!-- The Border draws the hairline dividers separating the editor surface from the
+             toolbar above and status bar below; the editor itself has no reliable border slot. -->
+        <Border BorderBrush="{DynamicResource AppChromeDividerBrush}" BorderThickness="0,1">
+            <avalonEdit:TextEditor
+                x:Name="Editor"
+                FontFamily="Cascadia Code, Consolas, Courier New"
+                FontSize="14"
+                ShowLineNumbers="True"
+                WordWrap="False"
+                Background="{DynamicResource EditorBackgroundBrush}"
+                Foreground="{DynamicResource EditorForegroundBrush}"
+                LineNumbersForeground="{DynamicResource EditorLineNumberBrush}"
+                Padding="8,4"/>
+        </Border>
 
     </DockPanel>
 </Window>

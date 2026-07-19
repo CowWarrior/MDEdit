@@ -3,6 +3,7 @@
 
     <SolidColorBrush x:Key="AppChromeBackgroundBrush" Color="#F3F3F3"/>
     <SolidColorBrush x:Key="AppChromeForegroundBrush" Color="#1A1A1A"/>
+    <SolidColorBrush x:Key="AppChromeDividerBrush"    Color="#E0E0E0"/>
     <SolidColorBrush x:Key="EditorBackgroundBrush"    Color="#FFFFFF"/>
     <SolidColorBrush x:Key="EditorForegroundBrush"    Color="#1E1E1E"/>
     <SolidColorBrush x:Key="EditorLineNumberBrush"    Color="#9E9E9E"/>
