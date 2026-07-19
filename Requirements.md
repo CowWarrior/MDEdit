@@ -9,6 +9,7 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 - The user can save the current document to its existing location.
 - The user can save the current document to a new location and file type (Save As), choosing between Markdown and plain text formats.
 - When there are unsaved changes and the user attempts to create a new document, open another file, or close the application, the user is prompted to save, discard, or cancel the operation.
+- The user can reopen a recently used document from an MRU (most recently used) list in the File menu *(planned)*.
 - The title bar and status bar always reflect the current filename and whether the document has unsaved changes.
 
 ## 2. Editing
