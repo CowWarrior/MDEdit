@@ -29,6 +29,7 @@ public partial class MainWindow : Window
 
     // ── State ─────────────────────────────────────────────────────────────
     private readonly FileService _files = new();
+    private readonly AppSettings _settings = SettingsService.Load();
     private bool _isDirty;
     private IHighlightingDefinition? _markdownHighlighting;
 
@@ -41,6 +42,7 @@ public partial class MainWindow : Window
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
+        ApplySettings();
 
         Editor.TextArea.Caret.PositionChanged += (_, _) => UpdateStatusBar();
         Editor.TextChanged += (_, _) => MarkDirty();
@@ -339,11 +341,27 @@ public partial class MainWindow : Window
     private void BtnNumberList_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("1. ");
     private void BtnBlockquote_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("> ");
 
+    private void ApplySettings()
+    {
+        Editor.WordWrap = _settings.WordWrap;
+        MenuWordWrap.IsChecked = _settings.WordWrap;
+        Editor.ShowLineNumbers = _settings.ShowLineNumbers;
+        MenuLineNumbers.IsChecked = _settings.ShowLineNumbers;
+    }
+
     private void MenuWordWrap_Click(object sender, RoutedEventArgs e)
-        => Editor.WordWrap = MenuWordWrap.IsChecked;
+    {
+        Editor.WordWrap = MenuWordWrap.IsChecked;
+        _settings.WordWrap = MenuWordWrap.IsChecked;
+        SettingsService.Save(_settings);
+    }
 
     private void MenuLineNumbers_Click(object sender, RoutedEventArgs e)
-        => Editor.ShowLineNumbers = MenuLineNumbers.IsChecked;
+    {
+        Editor.ShowLineNumbers = MenuLineNumbers.IsChecked;
+        _settings.ShowLineNumbers = MenuLineNumbers.IsChecked;
+        SettingsService.Save(_settings);
+    }
 
     private void MenuAbout_Click(object sender, RoutedEventArgs e)
         => new AboutWindow { Owner = this }.ShowDialog();
