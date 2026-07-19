@@ -70,12 +70,6 @@
         <ToolBarTray DockPanel.Dock="Top">
             <ToolBar Band="0" BandIndex="0">
 
-                <!-- File operations -->
-                <Button Command="New"   ToolTip="New (Ctrl+N)">New</Button>
-                <Button Command="Open"  ToolTip="Open (Ctrl+O)">Open</Button>
-                <Button Command="Save"  ToolTip="Save (Ctrl+S)">Save</Button>
-                <Separator/>
-
                 <!-- Inline formatting -->
                 <Button Command="{x:Static local:MainWindow.BoldCommand}"   ToolTip="Bold (Ctrl+B)">
                     <TextBlock FontWeight="Bold" Width="12" TextAlignment="Center">B</TextBlock>
@@ -104,10 +98,6 @@
                 <Button Click="BtnBulletList_Click"  ToolTip="Bullet List"    Padding="4,2">• List</Button>
                 <Button Click="BtnNumberList_Click"  ToolTip="Numbered List"  Padding="4,2">1. List</Button>
                 <Button Click="BtnBlockquote_Click"  ToolTip="Blockquote"     Padding="4,2">&gt; Quote</Button>
-                <Separator/>
-
-                <!-- View toggles -->
-                <ToggleButton x:Name="TglWordWrap" Click="TglWordWrap_Click" ToolTip="Toggle Word Wrap" Padding="4,2">Wrap</ToggleButton>
 
             </ToolBar>
         </ToolBarTray>

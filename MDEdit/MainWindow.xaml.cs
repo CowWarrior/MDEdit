@@ -329,16 +329,7 @@ public partial class MainWindow : Window
     private void BtnBlockquote_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("> ");
 
     private void MenuWordWrap_Click(object sender, RoutedEventArgs e)
-    {
-        Editor.WordWrap      = MenuWordWrap.IsChecked;
-        TglWordWrap.IsChecked = MenuWordWrap.IsChecked;
-    }
-
-    private void TglWordWrap_Click(object sender, RoutedEventArgs e)
-    {
-        Editor.WordWrap          = TglWordWrap.IsChecked == true;
-        MenuWordWrap.IsChecked   = TglWordWrap.IsChecked == true;
-    }
+        => Editor.WordWrap = MenuWordWrap.IsChecked;
 
     private void MenuLineNumbers_Click(object sender, RoutedEventArgs e)
         => Editor.ShowLineNumbers = MenuLineNumbers.IsChecked;
