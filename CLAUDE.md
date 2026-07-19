@@ -43,7 +43,7 @@ The app is a single-window WPF application; almost all logic lives directly in `
 
 ## Git workflow
 
-- Before running `git commit` (and before `git push`), show the proposed commit message and wait for explicit confirmation — do not commit or push on the same turn as drafting the message without that check-in, even if committing itself was already requested.
+- Before running `git commit` (and before `git push`), show the proposed commit message and wait for explicit confirmation — do not commit or push on the same turn as drafting the message without that check-in. Exception: once the user has given an explicit go-ahead (e.g. supplied the commit message themselves, or said "commit and push"), that covers the rest of that task, including any incidental fixes needed to actually complete it (e.g. a build error hit mid-publish) — don't stop to re-confirm those, just use a reasonable one-line message and proceed. Only a genuinely new/separate change needs fresh confirmation.
 - Commit messages are one line only, unless the change is an extraordinary case that genuinely warrants a body.
 
 ## Conventions
