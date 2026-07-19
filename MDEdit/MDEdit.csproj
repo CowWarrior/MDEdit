@@ -16,4 +16,12 @@
     <EmbeddedResource Include="Resources\Markdown.xshd" />
   </ItemGroup>
 
+  <!-- Authenticode-sign Release builds with the local code-signing cert (CN=Maze Code Signing). -->
+  <Target Name="SignAssembly" AfterTargets="Build" Condition="'$(Configuration)' == 'Release' and '$(OS)' == 'Windows_NT'">
+    <!-- Sign the managed assembly and, since UseAppHost defaults to true for WinExe, the native .exe launcher users actually run. -->
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\build\Sign.ps1&quot; -FilePath &quot;$(TargetPath)&quot;" />
+    <Exec Command="powershell.exe -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\build\Sign.ps1&quot; -FilePath &quot;$(TargetDir)$(TargetName).exe&quot;"
+          Condition="Exists('$(TargetDir)$(TargetName).exe')" />
+  </Target>
+
 </Project>
