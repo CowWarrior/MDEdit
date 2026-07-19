@@ -31,12 +31,18 @@ if (-not $cert) {
 }
 
 # Ties the ClickOnce revision to repo history so it's always increasing without persisting state anywhere.
+#
+# NOTE: this MSBuild's FormatVersion task ignores the ApplicationRevision parameter entirely (verified
+# against Microsoft.Build.Tasks.Core.dll from VS 18 Community — Version="1.0.0" + Revision="7" still
+# formats as "1.0.0", not "1.0.0.7"). So the revision is folded into a full 4-part ApplicationVersion
+# here instead of being passed as a separate property, which IS passed through as-is.
 $revision = (git -C $repoRoot rev-list --count HEAD).Trim()
+$applicationVersion = "1.0.0.$revision"
 
 Write-Output "Restoring win-x64 assets..."
 & dotnet restore $csproj -r win-x64
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Output "Publishing ClickOnce build (revision $revision, cert $($cert.Thumbprint))..."
-& $msbuild $csproj -t:Publish -p:PublishProfile=$pubxml -p:ApplicationRevision=$revision -p:ManifestCertificateThumbprint=$($cert.Thumbprint)
+Write-Output "Publishing ClickOnce build (version $applicationVersion, cert $($cert.Thumbprint))..."
+& $msbuild $csproj -t:Publish -p:PublishProfile=$pubxml -p:ApplicationVersion=$applicationVersion -p:ManifestCertificateThumbprint=$($cert.Thumbprint)
 exit $LASTEXITCODE

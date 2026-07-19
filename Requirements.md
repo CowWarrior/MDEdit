@@ -78,7 +78,7 @@ All common operations are accessible via keyboard shortcuts:
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common file and formatting operations: new, open, save, bold, italic, strikethrough, headings 1–3, inline code, code block, link, bullet list, numbered list, blockquote, and word wrap toggle.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 ## 9. Status Bar
 
