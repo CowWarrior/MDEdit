@@ -335,8 +335,16 @@ public partial class MainWindow : Window
         => Editor.ShowLineNumbers = MenuLineNumbers.IsChecked;
 
     private void MenuAbout_Click(object sender, RoutedEventArgs e)
-        => MessageBox.Show("MDEdit — Markdown Editor\nBuilt with WPF and AvalonEdit",
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        var version = assembly.GetName().Version;
+        var buildDate = assembly.GetCustomAttributes<AssemblyMetadataAttribute>()
+            .FirstOrDefault(a => a.Key == "BuildDate")?.Value;
+
+        MessageBox.Show(
+            $"MDEdit — Markdown Editor\nBuilt with WPF and AvalonEdit\n\nVersion {version}\nBuilt {buildDate}",
             "About MDEdit", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
