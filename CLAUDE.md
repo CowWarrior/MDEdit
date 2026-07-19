@@ -41,6 +41,11 @@ The app is a single-window WPF application; almost all logic lives directly in `
 - **`Resources/Markdown.xshd`** — AvalonEdit XSHD grammar for *inline* Markdown highlighting (bold/italic/strikethrough/inline code/links/images/fenced code blocks/HTML comments/list markers). Embedded as a resource (see `.csproj`) and loaded at runtime via `Assembly.GetManifestResourceStream("MDEdit.Resources.Markdown.xshd")` in `LoadSyntaxHighlighting()`. Comments in the file note deliberate regex constraints (e.g. "no wildcard quantifiers", "min 2 chars") — these were tuned to avoid catastrophic backtracking / crashes in AvalonEdit's regex engine, so preserve that style when editing rules (see commit "Fix syntax highlighting crashes and rearchitect line-level highlighting").
   - Highlighting is swapped based on file extension in `UpdateHighlighting(path)`: `.md`/`.markdown` get the Markdown XSHD, anything else (including `.txt`) gets no highlighting, per Requirements.md §4.
 
+## Git workflow
+
+- Before running `git commit` (and before `git push`), show the proposed commit message and wait for explicit confirmation — do not commit or push on the same turn as drafting the message without that check-in, even if committing itself was already requested.
+- Commit messages are one line only, unless the change is an extraordinary case that genuinely warrants a body.
+
 ## Conventions
 
 - Nullable reference types are enabled; keep new code nullable-aware.
