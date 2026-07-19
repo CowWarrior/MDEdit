@@ -7,6 +7,8 @@ internal sealed class AppSettings
 {
     public bool WordWrap { get; set; }
     public bool ShowLineNumbers { get; set; } = true;
+    // "Light", "Dark", or "System" — parsed leniently by ThemeService.Parse.
+    public string Theme { get; set; } = "System";
 }
 
 internal static class SettingsService

@@ -52,6 +52,7 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 
 - The user can toggle line numbers on or off.
 - The user can toggle word wrap on or off.
+- The user can choose the application theme: Light, Dark, or System (follows the Windows app theme, including live OS theme changes).
 
 ## 7. Keyboard Shortcuts
 

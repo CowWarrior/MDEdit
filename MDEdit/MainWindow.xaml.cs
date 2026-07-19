@@ -3,6 +3,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Xml;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
@@ -30,15 +31,17 @@ public partial class MainWindow : Window
     // ── State ─────────────────────────────────────────────────────────────
     private readonly FileService _files = new();
     private readonly AppSettings _settings = SettingsService.Load();
+    private readonly MarkdownLineColorizer _colorizer = new();
     private bool _isDirty;
-    private IHighlightingDefinition? _markdownHighlighting;
+    private IHighlightingDefinition? _markdownLight;
+    private IHighlightingDefinition? _markdownDark;
 
     // ── Constructor ───────────────────────────────────────────────────────
     public MainWindow()
     {
         InitializeComponent();
         LoadSyntaxHighlighting();
-        Editor.TextArea.TextView.LineTransformers.Add(new MarkdownLineColorizer());
+        Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
@@ -46,6 +49,9 @@ public partial class MainWindow : Window
 
         Editor.TextArea.Caret.PositionChanged += (_, _) => UpdateStatusBar();
         Editor.TextChanged += (_, _) => MarkDirty();
+
+        // Follow OS light/dark switches live while the theme setting is System.
+        SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
         // args[0] is the exe path itself; a file path argument (from double-clicking an associated
         // file, or "Open with") is args[1], per the "MDEdit.exe" "%1" command FileAssociationService registers.
@@ -55,19 +61,57 @@ public partial class MainWindow : Window
     }
 
     // ── Syntax highlighting ───────────────────────────────────────────────
+
+    // Dark replacements for the colors defined in Markdown.xshd (whose values are tuned
+    // for a white background). Colors absent here (Bold/Italic/BoldItalic) are style-only.
+    private static readonly Dictionary<string, (Color? Foreground, Color? Background)> DarkHighlightColors = new()
+    {
+        ["Strike"]     = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
+        ["InlineCode"] = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
+        ["CodeBlock"]  = (Color.FromRgb(0xD4, 0xD4, 0xD4), Color.FromRgb(0x2A, 0x2A, 0x2A)),
+        ["Link"]       = (Color.FromRgb(0x58, 0xA6, 0xFF), null),
+        ["ListMarker"] = (Color.FromRgb(0x79, 0xC0, 0xFF), null),
+        ["Comment"]    = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
+    };
+
     private void LoadSyntaxHighlighting()
+    {
+        _markdownLight = LoadDefinition(dark: false);
+        _markdownDark  = LoadDefinition(dark: true);
+        Editor.SyntaxHighlighting = _markdownLight; // ApplySettings/ApplyTheme picks the real one
+    }
+
+    // The dark variant is built by recoloring the parsed XSHD model before compiling it,
+    // rather than mutating the loaded definition (whose colors may be frozen).
+    private static IHighlightingDefinition LoadDefinition(bool dark)
     {
         using var stream = Assembly.GetExecutingAssembly()
             .GetManifestResourceStream("MDEdit.Resources.Markdown.xshd")!;
         using var reader = new XmlTextReader(stream);
-        _markdownHighlighting = HighlightingLoader.Load(reader, HighlightingManager.Instance);
-        Editor.SyntaxHighlighting = _markdownHighlighting;
+        var xshd = HighlightingLoader.LoadXshd(reader);
+
+        if (dark)
+        {
+            foreach (var color in xshd.Elements.OfType<XshdColor>())
+            {
+                if (color.Name is not null && DarkHighlightColors.TryGetValue(color.Name, out var c))
+                {
+                    if (c.Foreground is Color fg) color.Foreground = new SimpleHighlightingBrush(fg);
+                    if (c.Background is Color bg) color.Background = new SimpleHighlightingBrush(bg);
+                }
+            }
+        }
+
+        return HighlightingLoader.Load(xshd, HighlightingManager.Instance);
     }
 
     private void UpdateHighlighting(string? path)
     {
         var ext = path is null ? ".md" : Path.GetExtension(path).ToLowerInvariant();
-        Editor.SyntaxHighlighting = ext is ".md" or ".markdown" ? _markdownHighlighting : null;
+        var dark = ThemeService.IsDarkEffective(ThemeService.Parse(_settings.Theme));
+        Editor.SyntaxHighlighting = ext is ".md" or ".markdown"
+            ? (dark ? _markdownDark : _markdownLight)
+            : null;
     }
 
     // ── Command bindings ──────────────────────────────────────────────────
@@ -347,6 +391,50 @@ public partial class MainWindow : Window
         MenuWordWrap.IsChecked = _settings.WordWrap;
         Editor.ShowLineNumbers = _settings.ShowLineNumbers;
         MenuLineNumbers.IsChecked = _settings.ShowLineNumbers;
+        ApplyTheme();
+    }
+
+    // ── Theme ─────────────────────────────────────────────────────────────
+    private void ApplyTheme()
+    {
+        var theme = ThemeService.Parse(_settings.Theme);
+        ThemeService.Apply(theme);
+
+        var dark = ThemeService.IsDarkEffective(theme);
+        _colorizer.IsDark = dark;
+        Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
+        UpdateHighlighting(_files.CurrentPath);
+        Editor.TextArea.TextView.Redraw();
+
+        MenuThemeLight.IsChecked  = theme == AppTheme.Light;
+        MenuThemeDark.IsChecked   = theme == AppTheme.Dark;
+        MenuThemeSystem.IsChecked = theme == AppTheme.System;
+    }
+
+    private void SetTheme(AppTheme theme)
+    {
+        _settings.Theme = theme.ToString();
+        SettingsService.Save(_settings);
+        ApplyTheme();
+    }
+
+    private void MenuThemeLight_Click(object sender, RoutedEventArgs e)  => SetTheme(AppTheme.Light);
+    private void MenuThemeDark_Click(object sender, RoutedEventArgs e)   => SetTheme(AppTheme.Dark);
+    private void MenuThemeSystem_Click(object sender, RoutedEventArgs e) => SetTheme(AppTheme.System);
+
+    private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
+    {
+        // Raised on a broadcast thread; General is the category OS theme switches arrive under.
+        if (e.Category != UserPreferenceCategory.General) return;
+        if (ThemeService.Parse(_settings.Theme) != AppTheme.System) return;
+        Dispatcher.BeginInvoke(ApplyTheme);
+    }
+
+    protected override void OnClosed(EventArgs e)
+    {
+        // SystemEvents holds a static reference; unhook so the window can be collected.
+        SystemEvents.UserPreferenceChanged -= OnUserPreferenceChanged;
+        base.OnClosed(e);
     }
 
     private void MenuWordWrap_Click(object sender, RoutedEventArgs e)

@@ -4,6 +4,12 @@
              xmlns:local="clr-namespace:MDEdit"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <!-- Replaced at runtime by ThemeService.Apply; merged here so DynamicResource
+                     lookups resolve during window initialization, before the first Apply. -->
+                <ResourceDictionary Source="Themes/Light.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

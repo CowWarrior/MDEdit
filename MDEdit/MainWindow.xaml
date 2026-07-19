@@ -12,7 +12,9 @@
     <DockPanel>
 
         <!-- ═══ Menu bar ═══ -->
-        <Menu DockPanel.Dock="Top" Padding="2">
+        <Menu DockPanel.Dock="Top" Padding="2"
+              Background="{DynamicResource AppChromeBackgroundBrush}"
+              Foreground="{DynamicResource AppChromeForegroundBrush}">
             <MenuItem Header="_File">
                 <MenuItem Header="_New"         Command="New"                              InputGestureText="Ctrl+N"/>
                 <MenuItem Header="_Open…"        Command="Open"                             InputGestureText="Ctrl+O"/>
@@ -56,6 +58,11 @@
                 <MenuItem x:Name="MenuWordWrap"    Header="_Word Wrap"    IsCheckable="True" Click="MenuWordWrap_Click"/>
                 <MenuItem x:Name="MenuLineNumbers" Header="Line _Numbers" IsCheckable="True" IsChecked="True" Click="MenuLineNumbers_Click"/>
                 <Separator/>
+                <MenuItem Header="_Theme">
+                    <MenuItem x:Name="MenuThemeLight"  Header="_Light"                    IsCheckable="True" Click="MenuThemeLight_Click"/>
+                    <MenuItem x:Name="MenuThemeDark"   Header="_Dark"                     IsCheckable="True" Click="MenuThemeDark_Click"/>
+                    <MenuItem x:Name="MenuThemeSystem" Header="_System (follow Windows)"  IsCheckable="True" Click="MenuThemeSystem_Click"/>
+                </MenuItem>
                 <MenuItem Header="Editor _Mode">
                     <MenuItem Header="_Syntax Highlighting" IsChecked="True" IsCheckable="True" IsEnabled="False"/>
                     <MenuItem Header="_WYSIWYG (coming soon)" IsCheckable="True" IsEnabled="False"/>
@@ -70,8 +77,20 @@
         </Menu>
 
         <!-- ═══ Toolbar ═══ -->
-        <ToolBarTray DockPanel.Dock="Top">
-            <ToolBar Band="0" BandIndex="0">
+        <ToolBarTray DockPanel.Dock="Top" Background="{DynamicResource AppChromeBackgroundBrush}">
+            <ToolBar Band="0" BandIndex="0"
+                     Background="{DynamicResource AppChromeBackgroundBrush}"
+                     Foreground="{DynamicResource AppChromeForegroundBrush}">
+
+                <!-- Toolbar buttons get their style from ToolBar.ButtonStyleKey in the active
+                     theme, which doesn't inherit the ToolBar's Foreground. An implicit TextBlock
+                     style reaches both explicit TextBlock content and string content (rendered
+                     via auto-generated TextBlocks), keeping labels readable in both themes. -->
+                <ToolBar.Resources>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{DynamicResource AppChromeForegroundBrush}"/>
+                    </Style>
+                </ToolBar.Resources>
 
                 <!-- Inline formatting -->
                 <Button Command="{x:Static local:MainWindow.BoldCommand}"   ToolTip="Bold (Ctrl+B)">
@@ -106,7 +125,9 @@
         </ToolBarTray>
 
         <!-- ═══ Status bar ═══ -->
-        <StatusBar DockPanel.Dock="Bottom" Height="22">
+        <StatusBar DockPanel.Dock="Bottom" Height="22"
+                   Background="{DynamicResource AppChromeBackgroundBrush}"
+                   Foreground="{DynamicResource AppChromeForegroundBrush}">
             <StatusBar.ItemsPanel>
                 <ItemsPanelTemplate>
                     <DockPanel LastChildFill="True"/>
@@ -128,8 +149,9 @@
             FontSize="14"
             ShowLineNumbers="True"
             WordWrap="False"
-            Background="White"
-            Foreground="#1E1E1E"
+            Background="{DynamicResource EditorBackgroundBrush}"
+            Foreground="{DynamicResource EditorForegroundBrush}"
+            LineNumbersForeground="{DynamicResource EditorLineNumberBrush}"
             Padding="8,4"/>
 
     </DockPanel>

@@ -7,9 +7,16 @@ namespace MDEdit;
 
 internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 {
-    private static readonly SolidColorBrush HeadingBrush    = Freeze(Color.FromRgb(0x00, 0x57, 0xAE));
-    private static readonly SolidColorBrush BlockquoteBrush = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    private static readonly SolidColorBrush HRuleBrush      = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
+    private static readonly SolidColorBrush LightHeadingBrush    = Freeze(Color.FromRgb(0x00, 0x57, 0xAE));
+    private static readonly SolidColorBrush LightBlockquoteBrush = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
+    private static readonly SolidColorBrush LightHRuleBrush      = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
+
+    private static readonly SolidColorBrush DarkHeadingBrush    = Freeze(Color.FromRgb(0x58, 0xA6, 0xFF));
+    private static readonly SolidColorBrush DarkBlockquoteBrush = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
+    private static readonly SolidColorBrush DarkHRuleBrush      = Freeze(Color.FromRgb(0x48, 0x4F, 0x58));
+
+    // Set by MainWindow.ApplyTheme; a TextView.Redraw() afterwards re-runs ColorizeLine.
+    public bool IsDark { get; set; }
 
     protected override void ColorizeLine(DocumentLine line)
     {
@@ -17,11 +24,11 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         if (text.Length == 0) return;
 
         if (TryGetHeadingLevel(text, out int level))
-            ColorLine(line, HeadingBrush, level <= 3 ? FontWeights.Bold : FontWeights.SemiBold);
+            ColorLine(line, IsDark ? DarkHeadingBrush : LightHeadingBrush, level <= 3 ? FontWeights.Bold : FontWeights.SemiBold);
         else if (text[0] == '>')
-            ColorLine(line, BlockquoteBrush, FontWeights.Normal, italic: true);
+            ColorLine(line, IsDark ? DarkBlockquoteBrush : LightBlockquoteBrush, FontWeights.Normal, italic: true);
         else if (IsHorizontalRule(text))
-            ColorLine(line, HRuleBrush, FontWeights.Normal);
+            ColorLine(line, IsDark ? DarkHRuleBrush : LightHRuleBrush, FontWeights.Normal);
     }
 
     private void ColorLine(DocumentLine line, SolidColorBrush brush,
