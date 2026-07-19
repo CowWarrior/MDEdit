@@ -337,6 +337,25 @@ public partial class MainWindow : Window
     private void MenuAbout_Click(object sender, RoutedEventArgs e)
         => new AboutWindow { Owner = this }.ShowDialog();
 
+    private void MenuRegisterFileAssociations_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            FileAssociationService.Register();
+            MessageBox.Show(
+                "MDEdit is now the default app for .md and .markdown files.\n\n" +
+                "For .txt, MDEdit is listed under \"Open with\" but the existing default app is left " +
+                "alone — to make MDEdit the default there too, right-click a .txt file, choose " +
+                "\"Open with\" > \"Choose another app\", select MDEdit, and check \"Always use this app\".",
+                "Register File Associations", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not register file associations:\n\n{ex.Message}",
+                "Register File Associations", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
     {
         if (!CheckUnsavedChanges())
