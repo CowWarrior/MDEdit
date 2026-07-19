@@ -1,0 +1,4 @@
+# ClickOnce deployment output must stay byte-identical to what was hashed/signed at publish
+# time — CRLF normalization would silently break the manifest's embedded file hashes.
+/docs/** -text
+/docs/*.html text

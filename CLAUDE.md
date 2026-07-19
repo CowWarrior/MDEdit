@@ -17,6 +17,17 @@ There are no automated tests in this repo currently.
 
 Release builds (`dotnet build -c Release` / `dotnet publish -c Release`) are Authenticode-signed automatically via an `AfterTargets="Build"` MSBuild target in `MDEdit.csproj` that runs `build/Sign.ps1`. It signs with whatever cert matches subject `CN=Maze Code Signing` in the CurrentUser store (matched by subject, not thumbprint, since the cert rotates yearly) and timestamps against `http://timestamp.digicert.com`. This requires network access and the cert being present — Release builds will fail without them. Debug builds are unaffected.
 
+### ClickOnce deployment
+
+`docs/` is a live GitHub Pages site (`https://cowwarrior.github.io/MDEdit/`) serving a ClickOnce deployment — this is why the repo is public rather than private. To publish a new version, run `build/Publish-ClickOnce.ps1`, then commit and push the changes under `docs/`.
+
+- The script must be run standalone (not via `dotnet publish`): ClickOnce's `UpdateManifest` task only runs under the full-framework MSBuild bundled with Visual Studio (`MSBuild.exe`, located dynamically), not the cross-platform MSBuild `dotnet` uses (fails with MSB4803 otherwise).
+- ClickOnce manifest signing (the separate XML-DSig signature over `MDEdit.application`/`*.manifest`, distinct from the Authenticode signing above) requires an RSA certificate — the same `CN=Maze Code Signing` cert is used, resolved by subject at publish time, never by thumbprint (it rotates).
+- `ApplicationRevision` is derived from `git rev-list --count HEAD` rather than persisted anywhere, so it's always increasing as long as publishes happen after committing.
+- The deploy is framework-dependent (`SelfContained=false`) — self-contained ClickOnce output is ~350MB, impractical to version in git. This means machines installing MDEdit need the [.NET 10 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/10.0) already present; there's no bootstrapper to auto-install it.
+- `MDEdit/Properties/PublishProfiles/ClickOnce.pubxml` holds the static settings (URLs, product/publisher name, `SelfContained=false`, etc). It deliberately omits `ManifestCertificateThumbprint` and `ApplicationRevision` — the script supplies both at publish time.
+- `.gitattributes` marks everything under `docs/` as binary (`-text`) except `*.html` — git's CRLF normalization would otherwise corrupt the byte-exact hashes ClickOnce embeds in the manifest.
+
 ## Architecture
 
 The app is a single-window WPF application; almost all logic lives directly in `MainWindow.xaml.cs` rather than being split across MVVM layers — there is no ViewModel.
