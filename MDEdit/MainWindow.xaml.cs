@@ -44,6 +44,12 @@ public partial class MainWindow : Window
 
         Editor.TextArea.Caret.PositionChanged += (_, _) => UpdateStatusBar();
         Editor.TextChanged += (_, _) => MarkDirty();
+
+        // args[0] is the exe path itself; a file path argument (from double-clicking an associated
+        // file, or "Open with") is args[1], per the "MDEdit.exe" "%1" command FileAssociationService registers.
+        var args = Environment.GetCommandLineArgs();
+        if (args.Length > 1)
+            OpenFile(args[1]);
     }
 
     // ── Syntax highlighting ───────────────────────────────────────────────
@@ -130,11 +136,16 @@ public partial class MainWindow : Window
         };
         if (dlg.ShowDialog() != true) return;
 
+        OpenFile(dlg.FileName);
+    }
+
+    private void OpenFile(string path)
+    {
         try
         {
-            Editor.Document.Text = _files.LoadFile(dlg.FileName);
+            Editor.Document.Text = _files.LoadFile(path);
             _isDirty = false;
-            UpdateHighlighting(dlg.FileName);
+            UpdateHighlighting(path);
             UpdateTitle();
             UpdateStatusBar();
         }
