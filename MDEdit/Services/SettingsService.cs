@@ -9,6 +9,8 @@ internal sealed class AppSettings
     public bool ShowLineNumbers { get; set; } = true;
     // "Light", "Dark", or "System" — parsed leniently by ThemeService.Parse.
     public string Theme { get; set; } = "System";
+    // Live-preview ("WYSIWYG") editor mode toggle — see the View > Editor Mode menu.
+    public bool LivePreview { get; set; }
 }
 
 internal static class SettingsService

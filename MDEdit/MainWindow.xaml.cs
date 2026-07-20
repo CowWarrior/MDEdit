@@ -1,6 +1,5 @@
 using System.IO;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -8,6 +7,7 @@ using System.Xml;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Search;
+using MDEdit.Editing;
 using MDEdit.Services;
 using Microsoft.Win32;
 
@@ -32,7 +32,9 @@ public partial class MainWindow : Window
     private readonly FileService _files = new();
     private readonly AppSettings _settings = SettingsService.Load();
     private readonly MarkdownLineColorizer _colorizer = new();
+    private readonly HeadingMarkerElementGenerator _headingMarkerGenerator = new();
     private bool _isDirty;
+    private int _lastCaretLine = -1;
     private IHighlightingDefinition? _markdownLight;
     private IHighlightingDefinition? _markdownDark;
 
@@ -42,12 +44,13 @@ public partial class MainWindow : Window
         InitializeComponent();
         LoadSyntaxHighlighting();
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
+        Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
         ApplySettings();
 
-        Editor.TextArea.Caret.PositionChanged += (_, _) => UpdateStatusBar();
+        Editor.TextArea.Caret.PositionChanged += (_, _) => OnCaretPositionChanged();
         Editor.TextChanged += (_, _) => MarkDirty();
 
         // Follow OS light/dark switches live while the theme setting is System.
@@ -167,6 +170,7 @@ public partial class MainWindow : Window
         _files.Reset();
         _isDirty = false;
         UpdateHighlighting(null);
+        ResetLivePreviewCaretTracking();
         UpdateTitle();
         UpdateStatusBar();
     }
@@ -192,6 +196,7 @@ public partial class MainWindow : Window
             Editor.Document.Text = _files.LoadFile(path);
             _isDirty = false;
             UpdateHighlighting(path);
+            ResetLivePreviewCaretTracking();
             UpdateTitle();
             UpdateStatusBar();
         }
@@ -269,87 +274,36 @@ public partial class MainWindow : Window
     }
 
     // ── Formatting helpers ────────────────────────────────────────────────
-    private void WrapSelection(string prefix, string suffix)
-    {
-        var start  = Editor.SelectionStart;
-        var length = Editor.SelectionLength;
+    // The actual edit logic lives in MarkdownFormatter (unit-testable, no UI dependency);
+    // these thin wrappers feed it the editor's selection and apply the returned caret placement.
 
-        if (length > 0)
+    // SelectionStart equals the caret offset when the selection is empty, so it serves both cases.
+    private SelectionRange CurrentSelection => new(Editor.SelectionStart, Editor.SelectionLength);
+
+    private void ApplyFormat(SelectionRange? sel)
+    {
+        if (sel is { } s)
         {
-            var inner = Editor.SelectedText;
-            Editor.Document.Replace(start, length, prefix + inner + suffix);
-            Editor.SelectionStart  = start + prefix.Length;
-            Editor.SelectionLength = inner.Length;
-        }
-        else
-        {
-            Editor.Document.Insert(Editor.CaretOffset, prefix + suffix);
-            Editor.CaretOffset -= suffix.Length;
+            Editor.SelectionStart  = s.Start;
+            Editor.SelectionLength = s.Length;
         }
         Editor.Focus();
     }
+
+    private void WrapSelection(string prefix, string suffix)
+        => ApplyFormat(MarkdownFormatter.Wrap(Editor.Document, CurrentSelection, prefix, suffix));
 
     private void InsertHeading(int level)
-    {
-        var prefix = new string('#', level) + " ";
-        var line   = Editor.Document.GetLineByOffset(Editor.CaretOffset);
-        var text   = Editor.Document.GetText(line);
-        var body   = Regex.Replace(text, @"^#{1,6}\s*", "");
-        Editor.Document.Replace(line.Offset, line.Length, prefix + body);
-        Editor.Focus();
-    }
+        => ApplyFormat(MarkdownFormatter.Heading(Editor.Document, CurrentSelection, level));
 
     private void InsertLinePrefix(string prefix)
-    {
-        var line = Editor.Document.GetLineByOffset(Editor.CaretOffset);
-        var text = Editor.Document.GetText(line);
-        if (text.StartsWith(prefix))
-            Editor.Document.Remove(line.Offset, prefix.Length);
-        else
-            Editor.Document.Insert(line.Offset, prefix);
-        Editor.Focus();
-    }
+        => ApplyFormat(MarkdownFormatter.ToggleLinePrefix(Editor.Document, CurrentSelection, prefix));
 
     private void InsertCodeBlock()
-    {
-        var sel    = Editor.SelectedText;
-        var start  = Editor.SelectionStart;
-        var length = Editor.SelectionLength;
-
-        if (length > 0)
-        {
-            Editor.Document.Replace(start, length, "```\n" + sel + "\n```");
-        }
-        else
-        {
-            var offset = Editor.CaretOffset;
-            Editor.Document.Insert(offset, "```\n\n```");
-            Editor.CaretOffset = offset + 4;
-        }
-        Editor.Focus();
-    }
+        => ApplyFormat(MarkdownFormatter.CodeBlock(Editor.Document, CurrentSelection));
 
     private void InsertLink()
-    {
-        var sel    = Editor.SelectedText;
-        var start  = Editor.SelectionStart;
-        var length = Editor.SelectionLength;
-
-        if (length > 0)
-        {
-            Editor.Document.Replace(start, length, $"[{sel}](url)");
-            Editor.SelectionStart  = start + 1 + sel.Length + 2;
-            Editor.SelectionLength = 3;
-        }
-        else
-        {
-            var offset = Editor.CaretOffset;
-            Editor.Document.Insert(offset, "[link text](url)");
-            Editor.SelectionStart  = offset + 1;
-            Editor.SelectionLength = 9;
-        }
-        Editor.Focus();
-    }
+        => ApplyFormat(MarkdownFormatter.Link(Editor.Document, CurrentSelection));
 
     // ── Dirty / title / status ────────────────────────────────────────────
     private void MarkDirty()
@@ -373,6 +327,59 @@ public partial class MainWindow : Window
         StatusPosition.Text = $"Ln {caret.Line}, Col {caret.Column}";
     }
 
+    // ── Live preview (WYSIWYG) ────────────────────────────────────────────
+    // The caret's line is redrawn whenever it changes so a heading's "# " marker reappears
+    // exactly on the line being edited and hides again once the caret moves off it — the
+    // rest of the document is untouched by a caret move so a full Redraw() isn't needed.
+    private void OnCaretPositionChanged()
+    {
+        UpdateStatusBar();
+        if (!_settings.LivePreview) return;
+
+        var line = Editor.TextArea.Caret.Line;
+        if (line == _lastCaretLine) return;
+
+        RedrawLine(_lastCaretLine);
+        RedrawLine(line);
+        _lastCaretLine = line;
+        _headingMarkerGenerator.CaretLine = line;
+    }
+
+    private void RedrawLine(int lineNumber)
+    {
+        if (lineNumber < 1 || lineNumber > Editor.Document.LineCount) return;
+        Editor.TextArea.TextView.Redraw(Editor.Document.GetLineByNumber(lineNumber));
+    }
+
+    // Called after loading a new/opened document, whose caret always resets to line 1 —
+    // without this, a stale _lastCaretLine from the previous document could suppress the
+    // redraw that shows/hides markers correctly on first caret move in the new document.
+    private void ResetLivePreviewCaretTracking()
+    {
+        _lastCaretLine = Editor.TextArea.Caret.Line;
+        _headingMarkerGenerator.CaretLine = _lastCaretLine;
+    }
+
+    private void UpdateLivePreviewState()
+    {
+        _colorizer.LivePreviewEnabled = _settings.LivePreview;
+        _headingMarkerGenerator.Enabled = _settings.LivePreview;
+        ResetLivePreviewCaretTracking();
+        MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
+        MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
+    }
+
+    private void SetLivePreview(bool enabled)
+    {
+        _settings.LivePreview = enabled;
+        SettingsService.Save(_settings);
+        UpdateLivePreviewState();
+        Editor.TextArea.TextView.Redraw();
+    }
+
+    private void MenuEditorModeSource_Click(object sender, RoutedEventArgs e)  => SetLivePreview(false);
+    private void MenuEditorModeWysiwyg_Click(object sender, RoutedEventArgs e) => SetLivePreview(true);
+
     // ── Event handlers (toolbar / menu) ───────────────────────────────────
     private void BtnStrike_Click(object sender, RoutedEventArgs e)   => WrapSelection("~~", "~~");
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
@@ -391,6 +398,7 @@ public partial class MainWindow : Window
         MenuWordWrap.IsChecked = _settings.WordWrap;
         Editor.ShowLineNumbers = _settings.ShowLineNumbers;
         MenuLineNumbers.IsChecked = _settings.ShowLineNumbers;
+        UpdateLivePreviewState();
         ApplyTheme();
     }
 

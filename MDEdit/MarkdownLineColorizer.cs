@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
+using MDEdit.Editing;
 
 namespace MDEdit;
 
@@ -18,21 +19,43 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     // Set by MainWindow.ApplyTheme; a TextView.Redraw() afterwards re-runs ColorizeLine.
     public bool IsDark { get; set; }
 
+    // Set by MainWindow's live-preview toggle. Only affects heading font size (Typora-style
+    // scaling) — colors/weight apply regardless, matching the pre-live-preview behavior.
+    public bool LivePreviewEnabled { get; set; }
+
     protected override void ColorizeLine(DocumentLine line)
     {
-        var text = CurrentContext.Document.GetText(line);
-        if (text.Length == 0) return;
+        var doc = CurrentContext.Document;
+        if (line.Length == 0) return;
 
-        if (TryGetHeadingLevel(text, out int level))
-            ColorLine(line, IsDark ? DarkHeadingBrush : LightHeadingBrush, level <= 3 ? FontWeights.Bold : FontWeights.SemiBold);
-        else if (text[0] == '>')
+        if (MarkdownSyntax.TryGetHeadingLevel(doc, line, out int level, out _))
+        {
+            var scale = LivePreviewEnabled ? HeadingScale(level) : 1.0;
+            ColorLine(line, IsDark ? DarkHeadingBrush : LightHeadingBrush,
+                level <= 3 ? FontWeights.Bold : FontWeights.SemiBold, emSizeScale: scale);
+            return;
+        }
+
+        var text = doc.GetText(line);
+        if (text[0] == '>')
             ColorLine(line, IsDark ? DarkBlockquoteBrush : LightBlockquoteBrush, FontWeights.Normal, italic: true);
         else if (IsHorizontalRule(text))
             ColorLine(line, IsDark ? DarkHRuleBrush : LightHRuleBrush, FontWeights.Normal);
     }
 
+    // Typora-ish size ratios relative to the editor's base font size; only applied in live preview.
+    private static double HeadingScale(int level) => level switch
+    {
+        1 => 1.6,
+        2 => 1.4,
+        3 => 1.25,
+        4 => 1.15,
+        5 => 1.05,
+        _ => 1.0,
+    };
+
     private void ColorLine(DocumentLine line, SolidColorBrush brush,
-        FontWeight weight, bool italic = false)
+        FontWeight weight, bool italic = false, double emSizeScale = 1.0)
     {
         ChangeLinePart(line.Offset, line.EndOffset, el =>
         {
@@ -43,18 +66,9 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
                 italic ? FontStyles.Italic : old.Style,
                 weight,
                 old.Stretch));
+            if (emSizeScale != 1.0)
+                el.TextRunProperties.SetFontRenderingEmSize(el.TextRunProperties.FontRenderingEmSize * emSizeScale);
         });
-    }
-
-    private static bool TryGetHeadingLevel(string text, out int level)
-    {
-        level = 0;
-        if (text[0] != '#') return false;
-        int count = 0;
-        while (count < text.Length && text[count] == '#') count++;
-        if (count > 6 || count >= text.Length || text[count] != ' ') return false;
-        level = count;
-        return true;
     }
 
     private static bool IsHorizontalRule(string text)

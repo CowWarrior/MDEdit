@@ -64,8 +64,8 @@
                     <MenuItem x:Name="MenuThemeSystem" Header="_System (follow Windows)"  IsCheckable="True" Click="MenuThemeSystem_Click"/>
                 </MenuItem>
                 <MenuItem Header="Editor _Mode">
-                    <MenuItem Header="_Syntax Highlighting" IsChecked="True" IsCheckable="True" IsEnabled="False"/>
-                    <MenuItem Header="_WYSIWYG (coming soon)" IsCheckable="True" IsEnabled="False"/>
+                    <MenuItem x:Name="MenuEditorModeSource"   Header="_Source"  IsCheckable="True" IsChecked="True" Click="MenuEditorModeSource_Click"/>
+                    <MenuItem x:Name="MenuEditorModeWysiwyg" Header="_WYSIWYG (live preview)" IsCheckable="True" Click="MenuEditorModeWysiwyg_Click"/>
                 </MenuItem>
             </MenuItem>
 
