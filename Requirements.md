@@ -54,6 +54,7 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 - The user can toggle line numbers on or off.
 - The user can toggle word wrap on or off.
 - The user can choose the application theme: Light, Dark, or System (follows the Windows app theme, including live OS theme changes).
+- The user can change the editor's display font via a Font item in the View menu *(planned)*.
 
 ## 7. Keyboard Shortcuts
 
@@ -88,3 +89,6 @@ A status bar is always visible and displays:
 - The current filename (or "Untitled" for unsaved documents).
 - An indicator when the document has unsaved changes.
 - The current cursor position (line and column number).
+- The document's file size and character count *(planned)*.
+- The character count can treat each line break as one character or as two (CR+LF) — either as a user-selectable option or by displaying both counts *(planned)*.
+- When text is selected, an additional status bar section displays "Selected" and the number of characters selected *(planned)*.
