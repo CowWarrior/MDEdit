@@ -39,13 +39,43 @@
     <Rule color="BoldItalic">\*{3}[^\*\n]+\*{3}</Rule>
     <Rule color="BoldItalic">_{3}[^_\n]+_{3}</Rule>
 
-    <!-- Bold -->
-    <Rule color="Bold">\*{2}[^\*\n]+\*{2}</Rule>
-    <Rule color="Bold">_{2}[^_\n]+_{2}</Rule>
+    <!-- Bold, each with a nested Rule recognizing italic wrapped in the OTHER delimiter
+         character (e.g. "**_text_**") — CommonMark forbids nesting the same delimiter inside
+         itself, so mixing delimiter families is the standard, unambiguous way to combine bold
+         and italic as two nested runs. The nested Rule is colored BoldItalic (not Italic)
+         explicitly, since it's inside a Bold span and needs both weight and style, not a
+         color override that might drop the surrounding boldness. -->
+    <Span color="Bold">
+      <Begin>\*{2}</Begin>
+      <End>\*{2}</End>
+      <RuleSet>
+        <Rule color="BoldItalic">_[^_\n]+_</Rule>
+      </RuleSet>
+    </Span>
+    <Span color="Bold">
+      <Begin>_{2}</Begin>
+      <End>_{2}</End>
+      <RuleSet>
+        <Rule color="BoldItalic">\*[^\*\n]+\*</Rule>
+      </RuleSet>
+    </Span>
 
-    <!-- Italic -->
-    <Rule color="Italic">\*[^\*\n]+\*</Rule>
-    <Rule color="Italic">_[^_\n]+_</Rule>
+    <!-- Italic, each with a nested Rule recognizing bold wrapped in the OTHER delimiter
+         character (e.g. "_**text**_") — same reasoning as above, reversed. -->
+    <Span color="Italic">
+      <Begin>\*</Begin>
+      <End>\*</End>
+      <RuleSet>
+        <Rule color="BoldItalic">_{2}[^_\n]+_{2}</Rule>
+      </RuleSet>
+    </Span>
+    <Span color="Italic">
+      <Begin>_</Begin>
+      <End>_</End>
+      <RuleSet>
+        <Rule color="BoldItalic">\*{2}[^\*\n]+\*{2}</Rule>
+      </RuleSet>
+    </Span>
 
     <!-- Strikethrough -->
     <Rule color="Strike">~~[^~\n]+~~</Rule>
