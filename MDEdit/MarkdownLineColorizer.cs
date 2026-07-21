@@ -36,10 +36,14 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
             return;
         }
 
-        var text = doc.GetText(line);
-        if (text[0] == '>')
+        if (MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _))
+        {
             ColorLine(line, IsDark ? DarkBlockquoteBrush : LightBlockquoteBrush, FontWeights.Normal, italic: true);
-        else if (IsHorizontalRule(text))
+            return;
+        }
+
+        var text = doc.GetText(line);
+        if (IsHorizontalRule(text))
             ColorLine(line, IsDark ? DarkHRuleBrush : LightHRuleBrush, FontWeights.Normal);
     }
 

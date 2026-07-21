@@ -52,6 +52,35 @@ internal static class MarkdownSyntax
         return true;
     }
 
+    /// <summary>
+    /// Detects a blockquote marker at the start of a line: one or more '&gt;' characters, each
+    /// optionally followed by a single space — so "&gt; text", "&gt;text", "&gt;&gt; text", and
+    /// "&gt; &gt; text" (nested blockquotes) all count. This generalizes the simple "first
+    /// character is '&gt;'" rule <see cref="MarkdownLineColorizer"/> has always used for its
+    /// (always-on, not live-preview-gated) italic styling, so both now share one definition.
+    /// <paramref name="markerLength"/> is the length of that leading run — the portion live
+    /// preview hides on every line except the one the caret is on. <paramref name="depth"/> is
+    /// the number of '&gt;' characters found (nesting level) — used by
+    /// <see cref="BlockquoteMarkerElementGenerator"/> to draw one indent bar per level.
+    /// </summary>
+    public static bool TryGetBlockquoteMarkerLength(TextDocument doc, DocumentLine line, out int markerLength, out int depth)
+    {
+        markerLength = 0;
+        depth = 0;
+        if (line.Length == 0 || doc.GetCharAt(line.Offset) != '>') return false;
+
+        int pos = 0;
+        while (pos < line.Length && doc.GetCharAt(line.Offset + pos) == '>')
+        {
+            depth++;
+            pos++;
+            if (pos < line.Length && doc.GetCharAt(line.Offset + pos) == ' ') pos++;
+        }
+
+        markerLength = pos;
+        return true;
+    }
+
     // Same patterns and precedence as Markdown.xshd (bold+italic before bold before italic; no
     // wildcard quantifiers, character-class exclusion instead, to avoid catastrophic backtracking —
     // see the comments there). \G anchors each pattern to the exact scan position passed to Match,

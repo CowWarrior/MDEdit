@@ -36,4 +36,37 @@ public class MarkdownSyntaxTests
 
         Assert.False(result);
     }
+
+    [Theory]
+    [InlineData("> quoted", 2, 1)]
+    [InlineData(">quoted", 1, 1)]
+    [InlineData(">", 1, 1)]
+    [InlineData(">> nested", 3, 2)]
+    [InlineData("> > nested", 4, 2)]
+    [InlineData(">>> deeply nested", 4, 3)]
+    public void TryGetBlockquoteMarkerLength_ValidBlockquote_ReturnsMarkerLengthAndDepth(string text, int expectedMarkerLength, int expectedDepth)
+    {
+        var doc  = new TextDocument(text);
+        var line = doc.GetLineByNumber(1);
+
+        var result = MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out int markerLength, out int depth);
+
+        Assert.True(result);
+        Assert.Equal(expectedMarkerLength, markerLength);
+        Assert.Equal(expectedDepth, depth);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("Plain text")]
+    [InlineData("text > not a quote")]
+    public void TryGetBlockquoteMarkerLength_NotABlockquote_ReturnsFalse(string text)
+    {
+        var doc  = new TextDocument(text);
+        var line = doc.GetLineByNumber(1);
+
+        var result = MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _);
+
+        Assert.False(result);
+    }
 }

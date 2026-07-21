@@ -36,6 +36,7 @@ public partial class MainWindow : Window
     private readonly EmphasisMarkerElementGenerator _emphasisMarkerGenerator = new();
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
     private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
+    private readonly BlockquoteMarkerElementGenerator _blockquoteMarkerGenerator = new();
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -52,6 +53,7 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_emphasisMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_blockquoteMarkerGenerator);
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
@@ -340,15 +342,14 @@ public partial class MainWindow : Window
     }
 
     // ── Live preview (WYSIWYG) ────────────────────────────────────────────
-    // Heading markers reveal per *line* (caret anywhere on the line); emphasis and link markers
-    // reveal per *span* (caret inside that specific run), so unlike the heading-only version of
-    // this method, any caret offset change — not just a line change — can affect what's hidden
-    // and must trigger a redraw of the affected line(s). Generator state is updated before the
-    // redraws so both the line the caret left (re-hide) and the line/span it entered (reveal)
-    // render against the new caret position. Code-block fences are line-scoped like headings,
-    // but the fence pair bracketing the caret's line can sit far away from it (a multi-line
-    // construct, unlike everything else here), so those need their own redraw beyond the
-    // old/new caret line.
+    // Heading and blockquote markers reveal per *line* (caret anywhere on the line); emphasis
+    // and link markers reveal per *span* (caret inside that specific run), so unlike the purely
+    // line-scoped generators, any caret offset change — not just a line change — can affect
+    // what's hidden and must trigger a redraw of the affected line(s). Generator state is
+    // updated before the redraws so both the line the caret left (re-hide) and the line/span it
+    // entered (reveal) render against the new caret position. Code-block fences are line-scoped
+    // too, but the fence pair bracketing the caret's line can sit far away from it (the only
+    // multi-line construct here), so those need their own redraw beyond the old/new caret line.
     private void OnCaretPositionChanged()
     {
         UpdateStatusBar();
@@ -366,6 +367,7 @@ public partial class MainWindow : Window
         _emphasisMarkerGenerator.CaretOffset = offset;
         _codeBlockFenceGenerator.CaretLine   = line;
         _linkMarkerGenerator.CaretOffset     = offset;
+        _blockquoteMarkerGenerator.CaretLine = line;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
@@ -397,6 +399,7 @@ public partial class MainWindow : Window
         _emphasisMarkerGenerator.CaretOffset = _lastCaretOffset;
         _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
         _linkMarkerGenerator.CaretOffset     = _lastCaretOffset;
+        _blockquoteMarkerGenerator.CaretLine = _lastCaretLine;
     }
 
     private void UpdateLivePreviewState()
@@ -406,6 +409,7 @@ public partial class MainWindow : Window
         _emphasisMarkerGenerator.Enabled   = _settings.LivePreview;
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
         _linkMarkerGenerator.Enabled       = _settings.LivePreview;
+        _blockquoteMarkerGenerator.Enabled = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
@@ -452,6 +456,7 @@ public partial class MainWindow : Window
 
         var dark = ThemeService.IsDarkEffective(theme);
         _colorizer.IsDark = dark;
+        _blockquoteMarkerGenerator.IsDark = dark;
         Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
         UpdateHighlighting(_files.CurrentPath);
         Editor.TextArea.TextView.Redraw();
