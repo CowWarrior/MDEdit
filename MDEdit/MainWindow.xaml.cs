@@ -283,13 +283,18 @@ public partial class MainWindow : Window
     // SelectionStart equals the caret offset when the selection is empty, so it serves both cases.
     private SelectionRange CurrentSelection => new(Editor.SelectionStart, Editor.SelectionLength);
 
+    // Editor.Select(start, length) sets both atomically, unlike setting SelectionStart then
+    // SelectionLength separately: TextEditor.SelectionStart's setter internally reuses the
+    // CURRENT SelectionLength (Select(value, SelectionLength)), and that value is whatever the
+    // AvalonEdit selection's TextAnchors resolved to after MarkdownFormatter's doc.Replace —
+    // not necessarily s.Length. When the replaced span reached the end of the document, that
+    // stale length could exceed the new document's length at the new start, throwing
+    // ArgumentOutOfRangeException ("Value must be between 0 and N") — reproducible by wrapping
+    // a selection that ends at EOF (e.g. Ctrl+B over the last word in the file).
     private void ApplyFormat(SelectionRange? sel)
     {
         if (sel is { } s)
-        {
-            Editor.SelectionStart  = s.Start;
-            Editor.SelectionLength = s.Length;
-        }
+            Editor.Select(s.Start, s.Length);
         Editor.Focus();
     }
 
