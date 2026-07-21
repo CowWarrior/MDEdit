@@ -1,6 +1,3 @@
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Shapes;
 using ICSharpCode.AvalonEdit.Rendering;
 
@@ -15,25 +12,28 @@ namespace MDEdit.Editing;
 /// line shows its "&gt;", matching CLAUDE.md's guidance that this construct follows the simpler
 /// per-line pattern, not the fence pair's per-block one. The marker characters still occupy
 /// their document offsets — selection/undo/the saved file are unaffected — only the visual
-/// rendering changes: instead of collapsing to nothing (like the other marker generators), the
-/// marker is replaced by an indent with a left accent bar per nesting level — an
-/// <see cref="InlineObjectElement"/>'s replacement content isn't required to be zero-size, and a
-/// blockquote reads as indented, bordered prose rather than merely "text that lost its '&gt;'".
+/// rendering changes: instead of a zero-size hide, the marker is replaced by a blank horizontal
+/// spacer wide enough for the accent bar(s) that <see cref="BlockquoteAccentBarRenderer"/> draws
+/// separately (this class only reserves the space; it doesn't paint anything itself). Splitting
+/// it this way — rather than drawing the bar directly in this generator's replacement element,
+/// as an earlier version did — is what lets the bar span multiple lines with no gap: an
+/// InlineObjectElement is confined to its own line's content flow, but a background renderer
+/// draws in the TextView's shared pixel space and isn't limited that way. See
+/// <see cref="BlockquoteAccentBarRenderer"/> for the actual drawing and the reasoning behind it.
 /// <see cref="MarkdownLineColorizer"/>'s italic styling for the line is not live-preview-gated
 /// and is unaffected either way.
 /// </summary>
 internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenerator
 {
-    // Matches MarkdownLineColorizer's blockquote brush colors, so the indent bar and the
-    // quoted text read as the same visual language.
-    private static readonly SolidColorBrush LightBarBrush = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    private static readonly SolidColorBrush DarkBarBrush  = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
-
-    private const double BarWidth = 3.0;
-    private const double GapAfterBar = 8.0;
+    // The layout of the reserved indent, per nesting level — tweak these to adjust the look.
+    // BlockquoteAccentBarRenderer reads the same constants so the bar it draws always lines up
+    // with the blank space reserved here.
+    internal const double LeadingGap = 10.0;
+    internal const double BarWidth = 3.0;
+    internal const double TrailingGap = 4.0;
+    internal const double IndentPerLevel = LeadingGap + BarWidth + TrailingGap;
 
     public bool Enabled { get; set; }
-    public bool IsDark { get; set; }
     public int CaretLine { get; set; } = -1;
 
     public override int GetFirstInterestedOffset(int startOffset)
@@ -56,37 +56,10 @@ internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenera
         var doc  = CurrentContext.Document;
         var line = doc.GetLineByOffset(offset);
         MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out int markerLength, out int depth);
-        return new InlineObjectElement(markerLength, BuildIndent(depth));
-    }
 
-    // InlineObjectRun measures its element with an infinite constraint (it can't stretch to
-    // "the current line's height" the way in-flow content does), so the bar's height has to be
-    // set explicitly rather than left to auto-size — approximated from the current font size
-    // rather than a hardcoded pixel value, so it scales with editor font size and (loosely) with
-    // heading-scaled lines.
-    private UIElement BuildIndent(int depth)
-    {
-        double barHeight = CurrentContext.GlobalTextRunProperties.FontRenderingEmSize * 1.4;
-        var brush = IsDark ? DarkBarBrush : LightBarBrush;
-
-        var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        for (int i = 0; i < depth; i++)
-        {
-            panel.Children.Add(new Rectangle
-            {
-                Width = BarWidth,
-                Height = barHeight,
-                Fill = brush,
-                Margin = new Thickness(0, 0, GapAfterBar, 0),
-            });
-        }
-        return panel;
-    }
-
-    private static SolidColorBrush Freeze(Color color)
-    {
-        var b = new SolidColorBrush(color);
-        b.Freeze();
-        return b;
+        // Height 0: this element only reserves horizontal space (Width), same zero-visual-height
+        // technique the other generators use for a plain hide — the visible bar comes from
+        // BlockquoteAccentBarRenderer instead, so nothing needs to be drawn here.
+        return new InlineObjectElement(markerLength, new Rectangle { Width = depth * IndentPerLevel, Height = 0 });
     }
 }

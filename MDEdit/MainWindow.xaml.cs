@@ -37,6 +37,7 @@ public partial class MainWindow : Window
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
     private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
     private readonly BlockquoteMarkerElementGenerator _blockquoteMarkerGenerator = new();
+    private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -54,6 +55,7 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_blockquoteMarkerGenerator);
+        Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
@@ -80,7 +82,7 @@ public partial class MainWindow : Window
     {
         ["Strike"]     = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
         ["InlineCode"] = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
-        ["CodeBlock"]  = (Color.FromRgb(0xD4, 0xD4, 0xD4), Color.FromRgb(0x2A, 0x2A, 0x2A)),
+        ["CodeBlock"]  = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
         ["Link"]       = (Color.FromRgb(0x58, 0xA6, 0xFF), null),
         ["ListMarker"] = (Color.FromRgb(0x79, 0xC0, 0xFF), null),
         ["Comment"]    = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
@@ -410,6 +412,7 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
         _linkMarkerGenerator.Enabled       = _settings.LivePreview;
         _blockquoteMarkerGenerator.Enabled = _settings.LivePreview;
+        _blockquoteAccentBarRenderer.Enabled = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
@@ -456,7 +459,7 @@ public partial class MainWindow : Window
 
         var dark = ThemeService.IsDarkEffective(theme);
         _colorizer.IsDark = dark;
-        _blockquoteMarkerGenerator.IsDark = dark;
+        _blockquoteAccentBarRenderer.IsDark = dark;
         Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
         UpdateHighlighting(_files.CurrentPath);
         Editor.TextArea.TextView.Redraw();

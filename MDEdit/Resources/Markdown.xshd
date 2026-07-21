@@ -6,7 +6,7 @@
   <Color name="BoldItalic" fontWeight="bold" fontStyle="italic" />
   <Color name="Strike"     foreground="#888888" />
   <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
-  <Color name="CodeBlock"  foreground="#333333" background="#F5F5F5" fontFamily="Consolas" />
+  <Color name="CodeBlock"  foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
   <Color name="Link"       foreground="#0065BD" />
   <Color name="ListMarker" foreground="#005CC5" />
   <Color name="Comment"    foreground="#888888" fontStyle="italic" />
