@@ -4,9 +4,9 @@ using ICSharpCode.AvalonEdit.Rendering;
 namespace MDEdit.Editing;
 
 /// <summary>
-/// Live-preview element generator: hides the opening/closing markers of bold/italic/bold+italic
-/// and strikethrough runs (**, __, *, _, their 3-char combinations, and ~~) except for whichever
-/// run the caret is currently inside. Unlike <see cref="HeadingMarkerElementGenerator"/> (which reveals per *line*,
+/// Live-preview element generator: hides the opening/closing markers of bold/italic/bold+italic,
+/// strikethrough, and inline-code runs (**, __, *, _, their 3-char combinations, ~~, and `)
+/// except for whichever run the caret is currently inside. Unlike <see cref="HeadingMarkerElementGenerator"/> (which reveals per *line*,
 /// since a heading marker only ever exists at the very start of one), emphasis reveal is per
 /// *span* — several bold/italic runs can share a line, and hiding all of them just because the
 /// caret is somewhere else on that same line would be distracting while editing prose.

@@ -21,6 +21,7 @@ public class MarkdownSyntaxEmphasisTests
     [InlineData("***both***", 3)]
     [InlineData("___both___", 3)]
     [InlineData("~~strike~~", 2)]
+    [InlineData("`code`", 1)]
     public void FindEmphasisSpans_WholeLineIsOneRun_MatchesEntireLineWithExpectedMarkerLength(string text, int expectedMarkerLength)
     {
         var span = Single(text);
@@ -61,6 +62,8 @@ public class MarkdownSyntaxEmphasisTests
     [InlineData("trailing unmatched **bold")]
     [InlineData("trailing unmatched ~~strike")]
     [InlineData("~~~")]   // fenced-code-block delimiter line, not strikethrough
+    [InlineData("a single ` backtick")]
+    [InlineData("trailing unmatched `code")]
     public void FindEmphasisSpans_NoValidRun_ReturnsEmpty(string text)
     {
         var doc  = new TextDocument(text);
@@ -137,6 +140,34 @@ public class MarkdownSyntaxEmphasisTests
         Assert.Equal(2, spans.Count);
         Assert.Equal(new EmphasisSpan(0, text.Length, 2), spans[0]);              // whole line, bold marker
         Assert.Equal(new EmphasisSpan(2, text.Length - 2, 2), spans[1]);          // nested strike inside
+    }
+
+    // A code span's content is literal (CommonMark gives code spans precedence over emphasis),
+    // so emphasis markers inside backticks must NOT produce nested spans — otherwise live
+    // preview would hide the "**" of "`**not bold**`" even though it renders as plain text.
+    [Theory]
+    [InlineData("`**not bold**`")]
+    [InlineData("`_not italic_`")]
+    [InlineData("`~~not struck~~`")]
+    public void FindEmphasisSpans_EmphasisInsideCode_IsLiteralSingleCodeSpan(string text)
+    {
+        var span = Single(text);
+
+        Assert.Equal(new EmphasisSpan(0, text.Length, 1), span);
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_CodeInsideBold_FindsBothOuterAndInnerSpans()
+    {
+        var text = "**bold `code` here**";
+        var doc  = new TextDocument(text);
+        var line = doc.GetLineByNumber(1);
+
+        var spans = MarkdownSyntax.FindEmphasisSpans(doc, line);
+
+        Assert.Equal(2, spans.Count);
+        Assert.Equal(new EmphasisSpan(0, 20, 2), spans[0]);   // whole line, bold marker
+        Assert.Equal(new EmphasisSpan(7, 13, 1), spans[1]);   // "`code`" nested inside
     }
 
     [Fact]

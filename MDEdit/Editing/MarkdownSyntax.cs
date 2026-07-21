@@ -4,8 +4,8 @@ using ICSharpCode.AvalonEdit.Document;
 namespace MDEdit.Editing;
 
 /// <summary>
-/// An inline emphasis-style run (bold/italic/bold+italic/strikethrough) found on a single line.
-/// Start/End are
+/// An inline emphasis-style run (bold/italic/bold+italic/strikethrough/inline code) found on a
+/// single line. Start/End are
 /// absolute document offsets; End is exclusive (one past the closing marker's last character).
 /// The opening marker occupies [Start, Start+MarkerLength) and the closing marker occupies
 /// [End-MarkerLength, End) — both the same length since Markdown emphasis delimiters are symmetric.
@@ -45,25 +45,33 @@ internal static class MarkdownSyntax
     // see the comments there). \G anchors each pattern to the exact scan position passed to Match,
     // so this doubles as a tiny non-overlapping lexer: at each offset, try patterns in priority
     // order, take the first that matches there, otherwise advance one character and retry.
-    // Strikethrough sits last purely to mirror the XSHD's rule order — its '~' delimiter can't
-    // collide with the star/underscore families, so its position in the list is immaterial.
-    private static readonly (Regex Pattern, int MarkerLength)[] EmphasisPatterns =
+    // Strikethrough and inline code sit last purely to mirror the XSHD's rule order — their
+    // '~'/'`' delimiters can't collide with the star/underscore families, so their position in
+    // the list is immaterial. RecurseIntoContent is false for inline code because a code span's
+    // content is literal text (CommonMark gives code spans precedence over emphasis — the "**"
+    // in "`**not bold**`" is just two asterisks); the lexer's leftmost-wins scan already gives
+    // an earlier-opening backtick that precedence at the top level, matching how AvalonEdit
+    // resolves the XSHD's rules by earliest match position.
+    private static readonly (Regex Pattern, int MarkerLength, bool RecurseIntoContent)[] EmphasisPatterns =
     [
-        (new Regex(@"\G\*{3}[^\*\n]+\*{3}"), 3),
-        (new Regex(@"\G_{3}[^_\n]+_{3}"), 3),
-        (new Regex(@"\G\*{2}[^\*\n]+\*{2}"), 2),
-        (new Regex(@"\G_{2}[^_\n]+_{2}"), 2),
-        (new Regex(@"\G\*[^\*\n]+\*"), 1),
-        (new Regex(@"\G_[^_\n]+_"), 1),
-        (new Regex(@"\G~{2}[^~\n]+~{2}"), 2),
+        (new Regex(@"\G\*{3}[^\*\n]+\*{3}"), 3, true),
+        (new Regex(@"\G_{3}[^_\n]+_{3}"), 3, true),
+        (new Regex(@"\G\*{2}[^\*\n]+\*{2}"), 2, true),
+        (new Regex(@"\G_{2}[^_\n]+_{2}"), 2, true),
+        (new Regex(@"\G\*[^\*\n]+\*"), 1, true),
+        (new Regex(@"\G_[^_\n]+_"), 1, true),
+        (new Regex(@"\G~{2}[^~\n]+~{2}"), 2, true),
+        (new Regex(@"\G`[^`\n]+`"), 1, false),
     ];
 
     /// <summary>
-    /// Scans a line for bold/italic/bold+italic/strikethrough runs, including mixed-delimiter
-    /// nesting (e.g. "_**bold**_" or "**_italic_**" — the standard, unambiguous way to combine
-    /// bold and italic as two nested runs, since CommonMark forbids nesting the same delimiter
-    /// inside itself — and likewise "~~**text**~~"). Emphasis never crosses lines (matching
-    /// Markdown.xshd's rules, which exclude '\n' from the content class), so this is line-scoped.
+    /// Scans a line for bold/italic/bold+italic/strikethrough/inline-code runs, including
+    /// mixed-delimiter nesting (e.g. "_**bold**_" or "**_italic_**" — the standard, unambiguous
+    /// way to combine bold and italic as two nested runs, since CommonMark forbids nesting the
+    /// same delimiter inside itself — and likewise "~~**text**~~" or "**a `code` b**"). Inline
+    /// code content is never recursed into: it's literal text, so "`**x**`" is one code span
+    /// with no nested bold. Emphasis never crosses lines (matching Markdown.xshd's rules, which
+    /// exclude '\n' from the content class), so this is line-scoped.
     /// </summary>
     public static IReadOnlyList<EmphasisSpan> FindEmphasisSpans(TextDocument doc, DocumentLine line)
     {
@@ -83,7 +91,7 @@ internal static class MarkdownSyntax
         while (pos < text.Length)
         {
             var matched = false;
-            foreach (var (pattern, markerLength) in EmphasisPatterns)
+            foreach (var (pattern, markerLength, recurseIntoContent) in EmphasisPatterns)
             {
                 var m = pattern.Match(text, pos);
                 if (!m.Success) continue;
@@ -92,7 +100,7 @@ internal static class MarkdownSyntax
 
                 var innerStart  = pos + markerLength;
                 var innerLength = m.Length - 2 * markerLength;
-                if (innerLength > 0)
+                if (recurseIntoContent && innerLength > 0)
                     ScanEmphasis(text.Substring(innerStart, innerLength), baseOffset + innerStart, results);
 
                 pos += m.Length;
