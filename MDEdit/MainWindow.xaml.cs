@@ -34,6 +34,7 @@ public partial class MainWindow : Window
     private readonly MarkdownLineColorizer _colorizer = new();
     private readonly HeadingMarkerElementGenerator _headingMarkerGenerator = new();
     private readonly EmphasisMarkerElementGenerator _emphasisMarkerGenerator = new();
+    private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -48,6 +49,7 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
         Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_emphasisMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
@@ -341,7 +343,10 @@ public partial class MainWindow : Window
     // method, any caret offset change — not just a line change — can affect what's hidden and
     // must trigger a redraw of the affected line(s). Generator state is updated before the
     // redraws so both the line the caret left (re-hide) and the line/span it entered (reveal)
-    // render against the new caret position.
+    // render against the new caret position. Code-block fences are line-scoped like headings,
+    // but the fence pair bracketing the caret's line can sit far away from it (a multi-line
+    // construct, unlike everything else here), so those need their own redraw beyond the
+    // old/new caret line.
     private void OnCaretPositionChanged()
     {
         UpdateStatusBar();
@@ -355,17 +360,27 @@ public partial class MainWindow : Window
         var previousLine = _lastCaretLine;
         _lastCaretLine   = line;
         _lastCaretOffset = offset;
-        _headingMarkerGenerator.CaretLine   = line;
+        _headingMarkerGenerator.CaretLine    = line;
         _emphasisMarkerGenerator.CaretOffset = offset;
+        _codeBlockFenceGenerator.CaretLine   = line;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
+        RedrawEnclosingFenceLines(previousLine);
+        if (line != previousLine) RedrawEnclosingFenceLines(line);
     }
 
     private void RedrawLine(int lineNumber)
     {
         if (lineNumber < 1 || lineNumber > Editor.Document.LineCount) return;
         Editor.TextArea.TextView.Redraw(Editor.Document.GetLineByNumber(lineNumber));
+    }
+
+    private void RedrawEnclosingFenceLines(int lineNumber)
+    {
+        if (!MarkdownSyntax.TryGetEnclosingFenceBlock(Editor.Document, lineNumber, out int start, out int end)) return;
+        RedrawLine(start);
+        if (end != start) RedrawLine(end);
     }
 
     // Called after loading a new/opened document, whose caret always resets to line 1 —
@@ -377,13 +392,15 @@ public partial class MainWindow : Window
         _lastCaretOffset = Editor.TextArea.Caret.Offset;
         _headingMarkerGenerator.CaretLine    = _lastCaretLine;
         _emphasisMarkerGenerator.CaretOffset = _lastCaretOffset;
+        _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
     }
 
     private void UpdateLivePreviewState()
     {
         _colorizer.LivePreviewEnabled = _settings.LivePreview;
-        _headingMarkerGenerator.Enabled  = _settings.LivePreview;
-        _emphasisMarkerGenerator.Enabled = _settings.LivePreview;
+        _headingMarkerGenerator.Enabled    = _settings.LivePreview;
+        _emphasisMarkerGenerator.Enabled   = _settings.LivePreview;
+        _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;

@@ -12,6 +12,8 @@ namespace MDEdit.Editing;
 /// </summary>
 internal readonly record struct EmphasisSpan(int Start, int End, int MarkerLength);
 
+internal enum FenceKind { None, Backtick, Tilde }
+
 /// <summary>
 /// Shared line-level Markdown construct detection, used by both <see cref="MarkdownLineColorizer"/>
 /// (coloring/sizing) and the live-preview element generators (marker hiding) so the two always
@@ -109,5 +111,74 @@ internal static class MarkdownSyntax
             }
             if (!matched) pos++;
         }
+    }
+
+    // Matches Markdown.xshd's fenced-code-block Begin/End patterns ("^```" / "^~~~") exactly: a
+    // literal 3-char prefix at the very start of the line, not a minimum-length regex — so this
+    // deliberately doesn't implement the full CommonMark fence spec (longer fences, indentation),
+    // same scope tradeoff as the rest of this file.
+    private static FenceKind GetFenceKind(TextDocument doc, DocumentLine line)
+    {
+        if (line.Length < 3) return FenceKind.None;
+        char c0 = doc.GetCharAt(line.Offset);
+        if (c0 != '`' && c0 != '~') return FenceKind.None;
+        if (doc.GetCharAt(line.Offset + 1) != c0 || doc.GetCharAt(line.Offset + 2) != c0) return FenceKind.None;
+        return c0 == '`' ? FenceKind.Backtick : FenceKind.Tilde;
+    }
+
+    /// <summary>
+    /// Whether <paramref name="line"/> is itself a fenced-code-block delimiter line (opening or
+    /// closing). Live preview's fence-hiding generator checks this first, before the document-wide
+    /// walk in <see cref="TryGetEnclosingFenceBlock"/>, so the common case — a line that's neither
+    /// a fence nor inside one — stays a cheap O(1) check.
+    /// </summary>
+    public static bool IsFenceDelimiterLine(TextDocument doc, DocumentLine line) => GetFenceKind(doc, line) != FenceKind.None;
+
+    /// <summary>
+    /// Finds the fenced code block (1-based, inclusive start/end line numbers) that
+    /// <paramref name="lineNumber"/> falls within — whether that line is the opening fence, the
+    /// closing fence, or a content line in between. An unterminated fence (no matching closing
+    /// line before the end of the document) is treated as extending to the document's last line,
+    /// matching how an unclosed Markdown.xshd Span still colors the rest of the document.
+    /// Unlike every other construct in this file, fence pairing is a document-wide property (the
+    /// Nth same-kind fence line closes the block opened by the (N-1)th) rather than something
+    /// determinable from a single line in isolation, so this walks from the start of the document
+    /// — callers on the live-preview render path use <see cref="IsFenceDelimiterLine"/> first to
+    /// avoid paying that cost for the vast majority of lines, which are neither a fence nor
+    /// (for the purposes of this method's callers) need this at all.
+    /// </summary>
+    public static bool TryGetEnclosingFenceBlock(TextDocument doc, int lineNumber, out int startLine, out int endLine)
+    {
+        startLine = endLine = 0;
+        var openKind = FenceKind.None;
+        int openStart = 0;
+
+        for (int n = 1; n <= doc.LineCount; n++)
+        {
+            var kind = GetFenceKind(doc, doc.GetLineByNumber(n));
+            if (openKind == FenceKind.None)
+            {
+                if (kind != FenceKind.None) { openKind = kind; openStart = n; }
+            }
+            else if (kind == openKind)
+            {
+                if (lineNumber >= openStart && lineNumber <= n)
+                {
+                    startLine = openStart;
+                    endLine = n;
+                    return true;
+                }
+                openKind = FenceKind.None;
+            }
+        }
+
+        if (openKind != FenceKind.None && lineNumber >= openStart)
+        {
+            startLine = openStart;
+            endLine = doc.LineCount;
+            return true;
+        }
+
+        return false;
     }
 }
