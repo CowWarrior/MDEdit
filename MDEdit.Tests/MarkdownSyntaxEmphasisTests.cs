@@ -183,4 +183,19 @@ public class MarkdownSyntaxEmphasisTests
         Assert.Equal(new EmphasisSpan(4, 11, 2), spans[0]);   // "~~two~~"
         Assert.Equal(new EmphasisSpan(18, 26, 2), spans[1]);  // "**four**"
     }
+
+    // Markdown.xshd's Link rule is a flat Rule (no nested RuleSet) that swallows its "[...]"
+    // portion as literal content, so "**bold**" inside link text is never separately
+    // Bold-colored — otherwise live preview would hide the "**" in "[**bold**](url)" even though
+    // it doesn't render bold. See MarkdownSyntaxLinkTests for the reverse case.
+    [Fact]
+    public void FindEmphasisSpans_EmphasisInsideLinkText_IsNotFoundSeparately()
+    {
+        var doc  = new TextDocument("[**bold** link](url)");
+        var line = doc.GetLineByNumber(1);
+
+        var spans = MarkdownSyntax.FindEmphasisSpans(doc, line);
+
+        Assert.Empty(spans);
+    }
 }

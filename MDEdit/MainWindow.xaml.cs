@@ -35,6 +35,7 @@ public partial class MainWindow : Window
     private readonly HeadingMarkerElementGenerator _headingMarkerGenerator = new();
     private readonly EmphasisMarkerElementGenerator _emphasisMarkerGenerator = new();
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
+    private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -50,6 +51,7 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_emphasisMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
         RegisterCommands();
         RegisterHeadingKeyBindings();
         SearchPanel.Install(Editor);
@@ -338,10 +340,10 @@ public partial class MainWindow : Window
     }
 
     // ── Live preview (WYSIWYG) ────────────────────────────────────────────
-    // Heading markers reveal per *line* (caret anywhere on the line); emphasis markers reveal
-    // per *span* (caret inside that specific run), so unlike the heading-only version of this
-    // method, any caret offset change — not just a line change — can affect what's hidden and
-    // must trigger a redraw of the affected line(s). Generator state is updated before the
+    // Heading markers reveal per *line* (caret anywhere on the line); emphasis and link markers
+    // reveal per *span* (caret inside that specific run), so unlike the heading-only version of
+    // this method, any caret offset change — not just a line change — can affect what's hidden
+    // and must trigger a redraw of the affected line(s). Generator state is updated before the
     // redraws so both the line the caret left (re-hide) and the line/span it entered (reveal)
     // render against the new caret position. Code-block fences are line-scoped like headings,
     // but the fence pair bracketing the caret's line can sit far away from it (a multi-line
@@ -363,6 +365,7 @@ public partial class MainWindow : Window
         _headingMarkerGenerator.CaretLine    = line;
         _emphasisMarkerGenerator.CaretOffset = offset;
         _codeBlockFenceGenerator.CaretLine   = line;
+        _linkMarkerGenerator.CaretOffset     = offset;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
@@ -393,6 +396,7 @@ public partial class MainWindow : Window
         _headingMarkerGenerator.CaretLine    = _lastCaretLine;
         _emphasisMarkerGenerator.CaretOffset = _lastCaretOffset;
         _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
+        _linkMarkerGenerator.CaretOffset     = _lastCaretOffset;
     }
 
     private void UpdateLivePreviewState()
@@ -401,6 +405,7 @@ public partial class MainWindow : Window
         _headingMarkerGenerator.Enabled    = _settings.LivePreview;
         _emphasisMarkerGenerator.Enabled   = _settings.LivePreview;
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
+        _linkMarkerGenerator.Enabled       = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
