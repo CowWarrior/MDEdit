@@ -100,8 +100,7 @@ MDEdit will ask before discarding your work.
 
 ## Where to go next
 
-- The `samples` folder installed alongside MDEdit contains further example documents, including a
-  Markdown conformance test you can use to see exactly which constructs the editor handles.
+- The `samples` folder installed alongside MDEdit contains further example documents.
 - MDEdit updates itself. When a new version is published you will receive it automatically the next
   time you launch the application.
 

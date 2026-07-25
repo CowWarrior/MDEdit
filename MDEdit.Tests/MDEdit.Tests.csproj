@@ -20,6 +20,13 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Markdown fixtures for functional tests, copied next to the test assembly so tests can read them
+       relative to their own working directory. markdown-conformance-test.md relies on significant
+       trailing whitespace (two-space hard breaks) — don't reformat it. -->
+  <ItemGroup>
+    <None Update="TestData\**\*.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\MDEdit\MDEdit.csproj" />
   </ItemGroup>
