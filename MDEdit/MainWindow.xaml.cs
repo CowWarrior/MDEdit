@@ -1,6 +1,7 @@
 using System.IO;
 using System.Reflection;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml;
@@ -214,12 +215,92 @@ public partial class MainWindow : Window
             ResetLivePreviewCaretTracking();
             UpdateTitle();
             UpdateStatusBar();
+            AddToRecentFiles(path); // only on success — a file that failed to open isn't "recent"
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Could not open file:\n{ex.Message}", "MDEdit",
                 MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    // ── Recent files (MRU) ────────────────────────────────────────────────
+    // The list itself lives in AppSettings (persisted); Editing/RecentFiles owns the list logic.
+
+    private void AddToRecentFiles(string path)
+    {
+        _settings.RecentFiles = RecentFiles.Add(_settings.RecentFiles, path);
+        SettingsService.Save(_settings);
+        RebuildRecentFilesMenu();
+    }
+
+    private void RebuildRecentFilesMenu()
+    {
+        MenuRecentFiles.Items.Clear();
+
+        var paths = _settings.RecentFiles;
+        if (paths.Count == 0)
+        {
+            MenuRecentFiles.Items.Add(new MenuItem { Header = "(No recent files)", IsEnabled = false });
+            return;
+        }
+
+        for (var i = 0; i < paths.Count; i++)
+        {
+            var item = new MenuItem
+            {
+                // Access keys 1-9 then 0 for a tenth entry. Doubling underscores escapes them:
+                // WPF consumes a single "_" in a header as an access-key marker, which would
+                // otherwise mangle the display of any file named like "my_notes.md".
+                Header = $"_{(i + 1) % 10} {Path.GetFileName(paths[i]).Replace("_", "__")}",
+                ToolTip = paths[i],   // full path — file names alone are often ambiguous
+                Tag = paths[i]
+            };
+            item.Click += RecentFile_Click;
+            MenuRecentFiles.Items.Add(item);
+        }
+
+        MenuRecentFiles.Items.Add(new Separator());
+        var clear = new MenuItem { Header = "_Clear Recent Files" };
+        clear.Click += ClearRecentFiles_Click;
+        MenuRecentFiles.Items.Add(clear);
+    }
+
+    private void RecentFile_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: string path })
+            OpenRecentFile(path);
+    }
+
+    private void OpenRecentFile(string path)
+    {
+        // Checked before CheckUnsavedChanges deliberately: a stale entry shouldn't make the user
+        // answer a save prompt for a file that turns out not to be there.
+        if (!File.Exists(path))
+        {
+            var result = MessageBox.Show(
+                $"'{path}' could not be found. It may have been moved, renamed, or deleted.\n\n" +
+                "Remove it from the recent files list?", "MDEdit",
+                MessageBoxButton.YesNo, MessageBoxImage.Warning);
+
+            if (result == MessageBoxResult.Yes)
+            {
+                _settings.RecentFiles = RecentFiles.Remove(_settings.RecentFiles, path);
+                SettingsService.Save(_settings);
+                RebuildRecentFilesMenu();
+            }
+            return;
+        }
+
+        if (!CheckUnsavedChanges()) return;
+        OpenFile(path);
+    }
+
+    private void ClearRecentFiles_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.RecentFiles = [];
+        SettingsService.Save(_settings);
+        RebuildRecentFilesMenu();
     }
 
     private bool ExecuteSave()
@@ -261,6 +342,7 @@ public partial class MainWindow : Window
             UpdateHighlighting(dlg.FileName);
             UpdateTitle();
             UpdateStatusBar();
+            AddToRecentFiles(dlg.FileName);
             return true;
         }
         catch (Exception ex)
@@ -457,6 +539,9 @@ public partial class MainWindow : Window
         MenuWordWrap.IsChecked = _settings.WordWrap;
         Editor.ShowLineNumbers = _settings.ShowLineNumbers;
         MenuLineNumbers.IsChecked = _settings.ShowLineNumbers;
+        // settings.json is user-editable, so the persisted list is re-checked rather than trusted.
+        _settings.RecentFiles = RecentFiles.Sanitize(_settings.RecentFiles);
+        RebuildRecentFilesMenu();
         UpdateLivePreviewState();
         ApplyTheme();
     }

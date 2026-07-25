@@ -11,6 +11,9 @@ internal sealed class AppSettings
     public string Theme { get; set; } = "System";
     // Live-preview ("WYSIWYG") editor mode toggle — see the View > Editor Mode menu.
     public bool LivePreview { get; set; }
+    // Most-recently-used file paths, newest first — see the File > Recent Files menu.
+    // Kept in shape by Editing/RecentFiles, which also sanitizes it on load.
+    public List<string> RecentFiles { get; set; } = [];
 }
 
 internal static class SettingsService
