@@ -81,6 +81,93 @@ internal static class MarkdownSyntax
         return true;
     }
 
+    /// <summary>
+    /// Detects a bullet list marker: optional leading whitespace (nesting indent), then '-', '*',
+    /// or '+' followed by a space or tab. <paramref name="markerOffset"/> is the absolute document
+    /// offset of the bullet character itself — live preview replaces just that one character with
+    /// a rendered, indented "•" glyph (the following space and any leading indent stay as real
+    /// text, so spacing and nested-item indentation come from the document itself). Unlike Markdown.xshd's
+    /// unanchored ListMarker rule ("[-\*\+]\s" anywhere on a line), this is line-start-only —
+    /// replacing a mid-sentence "a - b" dash with a bullet would corrupt prose display, so the
+    /// marker replacement is deliberately stricter than the coloring. Horizontal-rule lines
+    /// ("---", "* * *") are excluded via the same <see cref="IsHorizontalRule"/> check
+    /// <see cref="MarkdownLineColorizer"/> uses, so the two can never disagree about whether a
+    /// line is a rule or a one-item list.
+    /// </summary>
+    public static bool TryGetBulletListMarker(TextDocument doc, DocumentLine line, out int markerOffset)
+    {
+        markerOffset = 0;
+        int pos = 0;
+        while (pos < line.Length && doc.GetCharAt(line.Offset + pos) is ' ' or '\t') pos++;
+        if (pos + 1 >= line.Length) return false;
+
+        char c = doc.GetCharAt(line.Offset + pos);
+        if (c != '-' && c != '*' && c != '+') return false;
+        if (doc.GetCharAt(line.Offset + pos + 1) is not (' ' or '\t')) return false;
+        if (IsHorizontalRule(doc.GetText(line))) return false;
+
+        markerOffset = line.Offset + pos;
+        return true;
+    }
+
+    /// <summary>
+    /// Detects a numbered list marker: optional leading whitespace (nesting indent), then one or
+    /// more digits and a '.', followed by a space or tab — mirroring Markdown.xshd's second
+    /// ListMarker rule ("\d+\.\s") but line-start-only, same reasoning as
+    /// <see cref="TryGetBulletListMarker"/> ("version 1. note" mid-prose must not be treated as
+    /// a marker). <paramref name="markerOffset"/>/<paramref name="markerLength"/> bound the
+    /// digits + '.' only (not the following space) — live preview replaces that range with an
+    /// identical-text element that just adds leading indent, keeping the number visible: a "1. "
+    /// marker's rendered form is its source form, so unlike bullets there's no glyph substitution,
+    /// only the indent.
+    /// </summary>
+    public static bool TryGetNumberedListMarker(TextDocument doc, DocumentLine line, out int markerOffset, out int markerLength)
+    {
+        markerOffset = 0;
+        markerLength = 0;
+        int pos = 0;
+        while (pos < line.Length && doc.GetCharAt(line.Offset + pos) is ' ' or '\t') pos++;
+
+        int digits = 0;
+        while (pos + digits < line.Length && char.IsAsciiDigit(doc.GetCharAt(line.Offset + pos + digits))) digits++;
+        if (digits == 0) return false;
+
+        int dot = pos + digits;
+        if (dot + 1 >= line.Length) return false;
+        if (doc.GetCharAt(line.Offset + dot) != '.') return false;
+        if (doc.GetCharAt(line.Offset + dot + 1) is not (' ' or '\t')) return false;
+
+        markerOffset = line.Offset + pos;
+        markerLength = digits + 1;
+        return true;
+    }
+
+    /// <summary>
+    /// Whether an entire line is a horizontal rule: three or more characters, all the same one
+    /// of '-'/'*'/'_' optionally interleaved with spaces, starting at column 0. Shared by
+    /// <see cref="MarkdownLineColorizer"/> (gray hrule styling — this used to be its private
+    /// helper) and <see cref="TryGetBulletListMarker"/> (a "- - -" line is a rule, not a
+    /// one-item bullet list, even though it starts with "- ").
+    /// </summary>
+    public static bool IsHorizontalRule(string text)
+    {
+        if (text.Length < 3) return false;
+        char c = text[0];
+        if (c != '-' && c != '*' && c != '_') return false;
+        foreach (char ch in text)
+            if (ch != c && ch != ' ') return false;
+        return true;
+    }
+
+    // Mirrors Markdown.xshd's rule order, where the ListMarker rules precede every emphasis and
+    // link rule: on a bullet line like "* item*", the leading "* " is a list marker, never an
+    // italic opener, so both scanners below start past it. The skipped length is the marker
+    // character plus its following whitespace char — the exact 2 characters the XSHD's
+    // "[-\*\+]\s" rule consumes (leading indent is included in the skip; nothing in it could
+    // match anyway).
+    private static int LeadingBulletMarkerLength(TextDocument doc, DocumentLine line)
+        => TryGetBulletListMarker(doc, line, out int markerOffset) ? markerOffset - line.Offset + 2 : 0;
+
     // Same patterns and precedence as Markdown.xshd (bold+italic before bold before italic; no
     // wildcard quantifiers, character-class exclusion instead, to avoid catastrophic backtracking —
     // see the comments there). \G anchors each pattern to the exact scan position passed to Match,
@@ -148,14 +235,17 @@ internal static class MarkdownSyntax
     /// with no nested bold. Links/images are skipped over rather than matched into — "[**not
     /// bold**](url)" is one opaque Link run to Markdown.xshd (a flat Rule with no nested
     /// RuleSet, unlike Bold/Italic's Span), so this never reports a Bold span starting inside a
-    /// link's "[...]" text; see <see cref="FindLinkSpans"/> for the reverse case. Emphasis never
+    /// link's "[...]" text; see <see cref="FindLinkSpans"/> for the reverse case. A leading
+    /// bullet list marker is skipped too (see <see cref="LeadingBulletMarkerLength"/> — on
+    /// "* item*" the leading "* " is a list marker, not an italic opener). Emphasis never
     /// crosses lines (matching Markdown.xshd's rules, which exclude '\n' from the content
     /// class), so this is line-scoped.
     /// </summary>
     public static IReadOnlyList<EmphasisSpan> FindEmphasisSpans(TextDocument doc, DocumentLine line)
     {
         var spans = new List<EmphasisSpan>();
-        ScanEmphasis(doc.GetText(line), line.Offset, spans);
+        int skip = LeadingBulletMarkerLength(doc, line);
+        ScanEmphasis(doc.GetText(line)[skip..], line.Offset + skip, spans);
         return spans;
     }
 
@@ -205,13 +295,15 @@ internal static class MarkdownSyntax
     /// this never reports a link starting inside one of those. This is the asymmetric-marker
     /// counterpart to <see cref="FindEmphasisSpans"/>: it does not recurse into a matched link's
     /// own text (Markdown.xshd's Link rule is flat, so "[**bold**](url)" is one opaque link, not
-    /// a link containing a separately-colored Bold run).
+    /// a link containing a separately-colored Bold run). A leading bullet list marker is skipped
+    /// the same way (see <see cref="LeadingBulletMarkerLength"/>) — without it, a line like
+    /// "* [x](url) *note*" would be swallowed whole by the italic skip before the link is found.
     /// </summary>
     public static IReadOnlyList<LinkSpan> FindLinkSpans(TextDocument doc, DocumentLine line)
     {
         var results = new List<LinkSpan>();
         var text = doc.GetText(line);
-        int pos = 0;
+        int pos = LeadingBulletMarkerLength(doc, line);
         while (pos < text.Length)
         {
             if (TryMatchEmphasisPattern(text, pos, out int skipLength))

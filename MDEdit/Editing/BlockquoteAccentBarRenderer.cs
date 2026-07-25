@@ -54,7 +54,8 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
         // lines are still at least depth 1), while level 2 only spans the deeper sub-run.
         for (int level = 1; level <= maxDepth; level++)
         {
-            double x = BlockquoteMarkerElementGenerator.LeadingGap
+            double x = BlockquoteMarkerElementGenerator.LeadingIndent
+                     + BlockquoteMarkerElementGenerator.LeadingGap
                      + (level - 1) * BlockquoteMarkerElementGenerator.IndentPerLevel
                      - textView.HorizontalOffset;
 

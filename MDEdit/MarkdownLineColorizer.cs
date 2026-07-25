@@ -43,7 +43,7 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         }
 
         var text = doc.GetText(line);
-        if (IsHorizontalRule(text))
+        if (MarkdownSyntax.IsHorizontalRule(text))
             ColorLine(line, IsDark ? DarkHRuleBrush : LightHRuleBrush, FontWeights.Normal);
     }
 
@@ -73,16 +73,6 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
             if (emSizeScale != 1.0)
                 el.TextRunProperties.SetFontRenderingEmSize(el.TextRunProperties.FontRenderingEmSize * emSizeScale);
         });
-    }
-
-    private static bool IsHorizontalRule(string text)
-    {
-        if (text.Length < 3) return false;
-        char c = text[0];
-        if (c != '-' && c != '*' && c != '_') return false;
-        foreach (char ch in text)
-            if (ch != c && ch != ' ') return false;
-        return true;
     }
 
     private static SolidColorBrush Freeze(Color color)

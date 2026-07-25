@@ -27,7 +27,10 @@ internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenera
 {
     // The layout of the reserved indent, per nesting level — tweak these to adjust the look.
     // BlockquoteAccentBarRenderer reads the same constants so the bar it draws always lines up
-    // with the blank space reserved here.
+    // with the blank space reserved here. LeadingIndent is a one-time (not per-level) shift of
+    // the whole construct, added so the level-1 bar lines up with the "•" glyphs the list
+    // generators draw.
+    internal const double LeadingIndent = 11.0;
     internal const double LeadingGap = 10.0;
     internal const double BarWidth = 3.0;
     internal const double TrailingGap = 4.0;
@@ -60,6 +63,6 @@ internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenera
         // Height 0: this element only reserves horizontal space (Width), same zero-visual-height
         // technique the other generators use for a plain hide — the visible bar comes from
         // BlockquoteAccentBarRenderer instead, so nothing needs to be drawn here.
-        return new InlineObjectElement(markerLength, new Rectangle { Width = depth * IndentPerLevel, Height = 0 });
+        return new InlineObjectElement(markerLength, new Rectangle { Width = LeadingIndent + depth * IndentPerLevel, Height = 0 });
     }
 }

@@ -37,6 +37,8 @@ public partial class MainWindow : Window
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
     private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
     private readonly BlockquoteMarkerElementGenerator _blockquoteMarkerGenerator = new();
+    private readonly BulletListMarkerElementGenerator _bulletListMarkerGenerator = new();
+    private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
     private bool _isDirty;
     private int _lastCaretLine = -1;
@@ -55,6 +57,8 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_blockquoteMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_bulletListMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_numberedListMarkerGenerator);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
         RegisterCommands();
         RegisterHeadingKeyBindings();
@@ -344,7 +348,7 @@ public partial class MainWindow : Window
     }
 
     // ── Live preview (WYSIWYG) ────────────────────────────────────────────
-    // Heading and blockquote markers reveal per *line* (caret anywhere on the line); emphasis
+    // Heading, blockquote, and list markers reveal per *line* (caret anywhere on the line); emphasis
     // and link markers reveal per *span* (caret inside that specific run), so unlike the purely
     // line-scoped generators, any caret offset change — not just a line change — can affect
     // what's hidden and must trigger a redraw of the affected line(s). Generator state is
@@ -370,6 +374,8 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.CaretLine   = line;
         _linkMarkerGenerator.CaretOffset     = offset;
         _blockquoteMarkerGenerator.CaretLine = line;
+        _bulletListMarkerGenerator.CaretLine = line;
+        _numberedListMarkerGenerator.CaretLine = line;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
@@ -402,6 +408,8 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
         _linkMarkerGenerator.CaretOffset     = _lastCaretOffset;
         _blockquoteMarkerGenerator.CaretLine = _lastCaretLine;
+        _bulletListMarkerGenerator.CaretLine = _lastCaretLine;
+        _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
     }
 
     private void UpdateLivePreviewState()
@@ -412,6 +420,8 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
         _linkMarkerGenerator.Enabled       = _settings.LivePreview;
         _blockquoteMarkerGenerator.Enabled = _settings.LivePreview;
+        _bulletListMarkerGenerator.Enabled = _settings.LivePreview;
+        _numberedListMarkerGenerator.Enabled = _settings.LivePreview;
         _blockquoteAccentBarRenderer.Enabled = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
