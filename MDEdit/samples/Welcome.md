@@ -66,6 +66,18 @@ MDEdit will ask before discarding your work.
 
 ## Recent changes
 
+### Version 1.0.0.48
+
+- **Underline.** Use the underlined **U** button on the toolbar, or *Format → Underline*. Markdown
+  itself has no underline — underlining is conventionally reserved for links — so MDEdit inserts the
+  HTML tags `<u>` and `</u>` around your text instead. That works anywhere HTML is allowed through,
+  which covers most places Markdown is read, but a stricter reader may show the tags as plain text.
+- **More familiar shortcuts**, matching the ones you already know from Word: **Ctrl+U** underlines,
+  **Ctrl+Shift++** raises text, and **Ctrl+Shift+_** lowers it. **Ctrl+I** now italicises reliably —
+  it was previously being intercepted by the editor.
+- The toolbar's formatting buttons have been reordered into a more familiar sequence, and the Format
+  menu now matches it.
+
 ### Version 1.0.0.47
 
 - **Superscript and subscript.** Write `X^2^` for a raised character and `H~2~O` for a lowered one.

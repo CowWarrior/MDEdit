@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Xml;
+using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
 using ICSharpCode.AvalonEdit.Highlighting.Xshd;
 using ICSharpCode.AvalonEdit.Search;
@@ -37,6 +38,7 @@ public partial class MainWindow : Window
     private readonly EmphasisMarkerElementGenerator _emphasisMarkerGenerator = new();
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
     private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
+    private readonly UnderlineMarkerElementGenerator _underlineMarkerGenerator = new();
     private readonly BlockquoteMarkerElementGenerator _blockquoteMarkerGenerator = new();
     private readonly BulletListMarkerElementGenerator _bulletListMarkerGenerator = new();
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
@@ -57,12 +59,13 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_emphasisMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_underlineMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_blockquoteMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_bulletListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_numberedListMarkerGenerator);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
         RegisterCommands();
-        RegisterHeadingKeyBindings();
+        RegisterKeyBindings();
         SearchPanel.Install(Editor);
         ApplySettings();
 
@@ -172,8 +175,36 @@ public partial class MainWindow : Window
             (_, _) => WrapSelection("_", "_"), AlwaysCanExecute));
     }
 
-    private void RegisterHeadingKeyBindings()
+    // AvalonEdit declares gestures on its own editing commands: Ctrl+I runs IndentSelection and
+    // Ctrl+U runs ConvertToLowercase. Those resolve against the TextArea, which is nearer the
+    // keyboard focus than this window, so they consumed the keystroke and MDEdit's Italic and
+    // Underline never fired — Bold (Ctrl+B) worked only because AvalonEdit claims no Ctrl+B.
+    // Neither AvalonEdit command is exposed anywhere in MDEdit's UI, so dropping their gestures
+    // costs nothing. Do this before the bindings below are registered.
+    private static void ReleaseConflictingEditorGestures()
     {
+        AvalonEditCommands.IndentSelection.InputGestures.Clear();
+        AvalonEditCommands.ConvertToLowercase.InputGestures.Clear();
+    }
+
+    // Shortcuts for commands with no WPF built-in and no RoutedUICommand of their own.
+    private void RegisterKeyBindings()
+    {
+        ReleaseConflictingEditorGestures();
+
+        // Underline follows Word's Ctrl+U, freed up just above.
+        InputBindings.Add(new KeyBinding(
+            new RelayCommand(() => WrapSelection("<u>", "</u>")), Key.U, ModifierKeys.Control));
+
+        // Subscript/superscript follow Word: Ctrl+Shift+_ and Ctrl+Shift++. Both of those
+        // characters are Shift-ed already, so the underlying keys are OemMinus and OemPlus.
+        // Menu InputGestureText is set by hand in XAML — WPF only fills that in automatically for
+        // a RoutedUICommand's own gestures, not for InputBindings like these.
+        InputBindings.Add(new KeyBinding(
+            new RelayCommand(() => WrapSelection("~", "~")), Key.OemMinus, ModifierKeys.Control | ModifierKeys.Shift));
+        InputBindings.Add(new KeyBinding(
+            new RelayCommand(() => WrapSelection("^", "^")), Key.OemPlus, ModifierKeys.Control | ModifierKeys.Shift));
+
         InputBindings.Add(new KeyBinding(
             new RelayCommand(() => InsertHeading(1)), Key.D1, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(
@@ -461,6 +492,7 @@ public partial class MainWindow : Window
         _emphasisMarkerGenerator.CaretOffset = offset;
         _codeBlockFenceGenerator.CaretLine   = line;
         _linkMarkerGenerator.CaretOffset     = offset;
+        _underlineMarkerGenerator.CaretOffset = offset;
         _blockquoteMarkerGenerator.CaretLine = line;
         _bulletListMarkerGenerator.CaretLine = line;
         _numberedListMarkerGenerator.CaretLine = line;
@@ -495,6 +527,7 @@ public partial class MainWindow : Window
         _emphasisMarkerGenerator.CaretOffset = _lastCaretOffset;
         _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
         _linkMarkerGenerator.CaretOffset     = _lastCaretOffset;
+        _underlineMarkerGenerator.CaretOffset = _lastCaretOffset;
         _blockquoteMarkerGenerator.CaretLine = _lastCaretLine;
         _bulletListMarkerGenerator.CaretLine = _lastCaretLine;
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
@@ -507,6 +540,7 @@ public partial class MainWindow : Window
         _emphasisMarkerGenerator.Enabled   = _settings.LivePreview;
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
         _linkMarkerGenerator.Enabled       = _settings.LivePreview;
+        _underlineMarkerGenerator.Enabled  = _settings.LivePreview;
         _blockquoteMarkerGenerator.Enabled = _settings.LivePreview;
         _bulletListMarkerGenerator.Enabled = _settings.LivePreview;
         _numberedListMarkerGenerator.Enabled = _settings.LivePreview;
@@ -532,6 +566,8 @@ public partial class MainWindow : Window
     private void BtnHighlight_Click(object sender, RoutedEventArgs e) => WrapSelection("==", "==");
     private void BtnSuperscript_Click(object sender, RoutedEventArgs e) => WrapSelection("^", "^");
     private void BtnSubscript_Click(object sender, RoutedEventArgs e)  => WrapSelection("~", "~");
+    // The only formatting command that emits HTML rather than Markdown — see Requirements.md §3.
+    private void BtnUnderline_Click(object sender, RoutedEventArgs e)  => WrapSelection("<u>", "</u>");
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);
     private void BtnH3_Click(object sender, RoutedEventArgs e)       => InsertHeading(3);

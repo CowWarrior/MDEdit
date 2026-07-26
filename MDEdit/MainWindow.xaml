@@ -40,12 +40,15 @@
             </MenuItem>
 
             <MenuItem Header="F_ormat">
-                <MenuItem Header="_Bold"         Command="{x:Static local:MainWindow.BoldCommand}"   InputGestureText="Ctrl+B"/>
-                <MenuItem Header="_Italic"       Command="{x:Static local:MainWindow.ItalicCommand}" InputGestureText="Ctrl+I"/>
+                <!-- Order matches the toolbar's inline group. Access keys are case-insensitive in
+                     WPF, so subscript takes "t" rather than the "b" that would clash with Bold. -->
+                <MenuItem Header="_Bold"          Command="{x:Static local:MainWindow.BoldCommand}"   InputGestureText="Ctrl+B"/>
+                <MenuItem Header="_Italic"        Command="{x:Static local:MainWindow.ItalicCommand}" InputGestureText="Ctrl+I"/>
+                <MenuItem Header="_Underline"     Click="BtnUnderline_Click"    InputGestureText="Ctrl+U"/>
                 <MenuItem Header="_Strikethrough" Click="BtnStrike_Click"/>
+                <MenuItem Header="Subscrip_t"     Click="BtnSubscript_Click"   InputGestureText="Ctrl+Shift+_"/>
+                <MenuItem Header="Su_perscript"   Click="BtnSuperscript_Click" InputGestureText="Ctrl+Shift++"/>
                 <MenuItem Header="_Highlight"     Click="BtnHighlight_Click"/>
-                <MenuItem Header="Su_perscript"   Click="BtnSuperscript_Click"/>
-                <MenuItem Header="Su_bscript"     Click="BtnSubscript_Click"/>
                 <Separator/>
                 <MenuItem Header="Heading _1"    Click="BtnH1_Click"         InputGestureText="Ctrl+1"/>
                 <MenuItem Header="Heading _2"    Click="BtnH2_Click"         InputGestureText="Ctrl+2"/>
@@ -106,19 +109,22 @@
                 <Button Command="{x:Static local:MainWindow.ItalicCommand}" ToolTip="Italic (Ctrl+I)">
                     <TextBlock FontStyle="Italic" Width="12" TextAlignment="Center">I</TextBlock>
                 </Button>
+                <Button Click="BtnUnderline_Click" ToolTip="Underline, Ctrl+U (inserts HTML &lt;u&gt; tags)">
+                    <TextBlock TextDecorations="Underline" Width="12" TextAlignment="Center">U</TextBlock>
+                </Button>
                 <Button Click="BtnStrike_Click" ToolTip="Strikethrough">
                     <TextBlock TextDecorations="Strikethrough" Width="12" TextAlignment="Center">S</TextBlock>
+                </Button>
+                <Button Click="BtnSubscript_Click" ToolTip="Subscript (Ctrl+Shift+_)">
+                    <TextBlock Width="14" TextAlignment="Center">X₂</TextBlock>
+                </Button>
+                <Button Click="BtnSuperscript_Click" ToolTip="Superscript (Ctrl+Shift++)">
+                    <TextBlock Width="14" TextAlignment="Center">X²</TextBlock>
                 </Button>
                 <Button Click="BtnHighlight_Click" ToolTip="Highlight">
                     <!-- Swatch matches Markdown.xshd's Highlight background. Foreground is pinned
                          because the swatch stays pale in both themes, unlike the editor's own. -->
                     <TextBlock Background="#F5E7A3" Foreground="#1E1E1E" Width="12" TextAlignment="Center">H</TextBlock>
-                </Button>
-                <Button Click="BtnSuperscript_Click" ToolTip="Superscript">
-                    <TextBlock Width="14" TextAlignment="Center">X²</TextBlock>
-                </Button>
-                <Button Click="BtnSubscript_Click" ToolTip="Subscript">
-                    <TextBlock Width="14" TextAlignment="Center">X₂</TextBlock>
                 </Button>
                 <Separator/>
 

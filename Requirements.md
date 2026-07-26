@@ -37,7 +37,7 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 - Highlight — `==text==`
 - Superscript — `X^2^`
 - Subscript — `H~2~O`
-- Underline — `<u>text</u>` *(planned)*
+- Underline — `<u>text</u>`
 
 ### Block formatting
 - Heading levels 1, 2, and 3
@@ -67,7 +67,7 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - Highlighted text is shown with a muted yellow background, in both the light and dark themes.
 - Superscript and subscript text is raised or lowered from the baseline and shown smaller than the surrounding text, in both editor modes.
 - The remaining extended constructs listed in §3 (task lists, tables, emoji shortcodes) are highlighted on the same terms as the core constructs *(planned)*.
-- Underline's `<u>` and `</u>` tags are distinguished from surrounding text, as inline HTML rather than as a Markdown construct *(planned)*.
+- Underlined text is shown underlined, in both editor modes.
 
 ## 5. WYSIWYG Mode
 
@@ -79,7 +79,7 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - Hidden syntax is revealed again around the cursor so it stays directly editable. The amount revealed suits the construct: the whole line for headings, blockquotes, and list items; the individual run for bold, italic, strikethrough, inline code, and links; and both fences of a fenced code block whenever the cursor is anywhere inside it.
 - Constructs are rendered rather than merely stripped of their markers where that aids readability: headings display at a larger size per level, bullet items display a bullet glyph, and blockquotes are indented with a vertical accent bar spanning the quote, one bar per nesting level.
 - The remaining extended constructs listed in §3 (task lists, tables, emoji shortcodes) are displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
-- Underlined text displays as underlined, with its `<u>` and `</u>` tags hidden, on the same terms as the other inline constructs *(planned)*.
+- Underlined text displays as underlined, with its `<u>` and `</u>` tags hidden, on the same terms as the other inline constructs.
 
 ## 6. View Options
 
@@ -90,7 +90,8 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 
 ## 7. Keyboard Shortcuts
 
-All common operations are accessible via keyboard shortcuts:
+All common operations are accessible via keyboard shortcuts. Where an equivalent operation exists in
+common word processors, its established shortcut is used in preference to inventing one:
 
 | Action | Shortcut |
 |---|---|
@@ -100,6 +101,9 @@ All common operations are accessible via keyboard shortcuts:
 | Save As | Ctrl+Shift+S |
 | Bold | Ctrl+B |
 | Italic | Ctrl+I |
+| Underline | Ctrl+U |
+| Subscript | Ctrl+Shift+_ |
+| Superscript | Ctrl+Shift++ |
 | Heading 1 | Ctrl+1 |
 | Heading 2 | Ctrl+2 |
 | Heading 3 | Ctrl+3 |
@@ -113,7 +117,7 @@ All common operations are accessible via keyboard shortcuts:
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 ## 9. Status Bar
 

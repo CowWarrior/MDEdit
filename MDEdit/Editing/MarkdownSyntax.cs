@@ -27,6 +27,14 @@ internal enum EmphasisKind { Other, Superscript, Subscript }
 internal readonly record struct ScriptSpan(int ContentStart, int ContentEnd, bool IsSuperscript);
 
 /// <summary>
+/// An underline run: "&lt;u&gt;" occupies [Start, ContentStart), the underlined text occupies
+/// [ContentStart, ContentEnd), and "&lt;/u&gt;" occupies [ContentEnd, End). Like
+/// <see cref="LinkSpan"/> and unlike <see cref="EmphasisSpan"/>, the two markers are different
+/// lengths, so both ends are carried explicitly rather than derived from one marker length.
+/// </summary>
+internal readonly record struct UnderlineSpan(int Start, int ContentStart, int ContentEnd, int End);
+
+/// <summary>
 /// A link or image found on a single line: "[text](url)", "![alt](url)", or "[text][ref]".
 /// Start/End are absolute document offsets (End exclusive) for the whole construct; TextStart/
 /// TextEnd bound the visible label ("text"/"alt") — live preview keeps [TextStart, TextEnd)
@@ -216,6 +224,18 @@ internal static class MarkdownSyntax
     // links, since both start with "[" at the same position and Markdown.xshd tries the
     // parenthesized form first). Each pattern's single capturing group is the visible
     // text/alt label, used to compute LinkSpan.TextStart/TextEnd from the match.
+    // Underline is the one construct here that isn't Markdown at all: no dialect has an underline
+    // syntax (underlining is reserved for links by convention), so Requirements.md §3 specs it as
+    // literal inline HTML, riding on Markdown's pass-through of inline HTML. Deliberately strict —
+    // lowercase "<u>" only, no attributes, no whitespace inside the tag — because anything looser
+    // starts guessing at arbitrary HTML, which this editor does not parse. The content class
+    // excludes '<' (so a nested tag ends the run) and '\n', same no-wildcard-quantifier discipline
+    // as Markdown.xshd's rules.
+    private static readonly Regex UnderlinePattern = new(@"\G<u>[^<\n]+</u>");
+
+    private const int UnderlineOpenLength  = 3;   // "<u>"
+    private const int UnderlineCloseLength = 4;   // "</u>"
+
     private static readonly Regex[] LinkPatterns =
     [
         new Regex(@"\G!\[([^\]\n]+)\]\([^\)\n]+\)"),
@@ -283,6 +303,39 @@ internal static class MarkdownSyntax
             spans.Add(new ScriptSpan(span.Start + 1, span.End - 1, kind is EmphasisKind.Superscript));
         }
         return spans;
+    }
+
+    /// <summary>
+    /// The underline (<c>&lt;u&gt;…&lt;/u&gt;</c>) runs on a line.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately *not* skip-aware of the emphasis and link scanners, unlike those two are of each
+    /// other. Underline is a container rather than an opaque run: the whole point of
+    /// <c>&lt;u&gt;**bold**&lt;/u&gt;</c> is that the bold still applies, so the scanners are meant to
+    /// find their own runs inside it independently. Their markers never sit at the same offset as
+    /// <c>&lt;u&gt;</c>/<c>&lt;/u&gt;</c>, so the generators can't collide either.
+    /// </remarks>
+    public static IReadOnlyList<UnderlineSpan> FindUnderlineSpans(TextDocument doc, DocumentLine line)
+    {
+        var results = new List<UnderlineSpan>();
+        var text = doc.GetText(line);
+        int pos = LeadingBulletMarkerLength(doc, line);
+        while (pos < text.Length)
+        {
+            var m = UnderlinePattern.Match(text, pos);
+            if (m.Success)
+            {
+                results.Add(new UnderlineSpan(
+                    line.Offset + pos,
+                    line.Offset + pos + UnderlineOpenLength,
+                    line.Offset + pos + m.Length - UnderlineCloseLength,
+                    line.Offset + pos + m.Length));
+                pos += m.Length;
+                continue;
+            }
+            pos++;
+        }
+        return results;
     }
 
     private static List<(EmphasisSpan Span, EmphasisKind Kind)> ScanLine(TextDocument doc, DocumentLine line)

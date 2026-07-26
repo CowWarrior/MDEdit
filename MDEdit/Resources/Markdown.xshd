@@ -8,6 +8,9 @@
   <!-- Deliberately a muted, desaturated yellow: a saturated highlighter yellow glares against a
        white page and fights the text for attention. See DarkHighlightColors for the dark variant. -->
   <Color name="Highlight"  background="#F5E7A3" />
+  <!-- Underline is inline HTML rather than Markdown (Requirements.md §3) — styled here so the
+       effect shows in source mode too, the same way Bold/Italic do. -->
+  <Color name="Underline"  underline="true" />
   <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
   <Color name="CodeBlock"  foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
   <Color name="Link"       foreground="#0065BD" />
@@ -85,6 +88,9 @@
 
     <!-- Highlight (extended syntax) -->
     <Rule color="Highlight">={2}[^=\n]+={2}</Rule>
+
+    <!-- Underline: literal inline HTML, not Markdown. Lowercase tag only, no attributes. -->
+    <Rule color="Underline">&lt;u&gt;[^&lt;\n]+&lt;/u&gt;</Rule>
 
     <!-- Inline code -->
     <Rule color="InlineCode">`[^`\n]+`</Rule>
