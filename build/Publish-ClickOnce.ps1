@@ -84,7 +84,11 @@ Write-Output "Restoring win-x64 assets..."
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Output "Publishing ClickOnce build (version $applicationVersion, was $storedVersion, cert $($cert.Thumbprint))..."
-& $msbuild $csproj -t:Publish -p:PublishProfile=$pubxml -p:ApplicationVersion=$applicationVersion -p:ManifestCertificateThumbprint=$($cert.Thumbprint)
+# MDEditReleaseVersion is what makes the compiled assembly's version match the deployment manifest's.
+# Without it the build falls back to published-version.txt, which still holds the PREVIOUS release at
+# this point (it's written back below, after a successful publish) — so the shipped About dialog
+# reported one release behind what ClickOnce installed.
+& $msbuild $csproj -t:Publish -p:PublishProfile=$pubxml -p:ApplicationVersion=$applicationVersion -p:MDEditReleaseVersion=$releaseVersion -p:ManifestCertificateThumbprint=$($cert.Thumbprint)
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Recorded only after a successful publish, so a failed run leaves the stored version untouched and

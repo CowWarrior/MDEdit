@@ -56,12 +56,17 @@
     <PropertyGroup>
       <_PublishedVersionFile>$(MSBuildThisFileDirectory)..\build\published-version.txt</_PublishedVersionFile>
     </PropertyGroup>
-    <PropertyGroup Condition="Exists('$(_PublishedVersionFile)')">
+    <!-- Publish-ClickOnce.ps1 passes MDEditReleaseVersion for the release being published. It must,
+         because published-version.txt records the release LAST published and is only written back
+         after a successful publish — so during a publish it still holds the previous value, and
+         reading it there stamped the assembly one release behind the deployment manifest. Ordinary
+         builds pass nothing and fall back to the file, which is correct for them. -->
+    <PropertyGroup Condition="'$(MDEditReleaseVersion)' == '' and Exists('$(_PublishedVersionFile)')">
       <_PublishedVersionRaw>$([System.IO.File]::ReadAllText('$(_PublishedVersionFile)'))</_PublishedVersionRaw>
-      <_PublishedVersion>$(_PublishedVersionRaw.Trim())</_PublishedVersion>
+      <MDEditReleaseVersion>$(_PublishedVersionRaw.Trim())</MDEditReleaseVersion>
     </PropertyGroup>
-    <PropertyGroup Condition="'$(_GitCommitCount)' != '' and '$(_PublishedVersion)' != ''">
-      <Version>$(_PublishedVersion).$(_GitCommitCount)</Version>
+    <PropertyGroup Condition="'$(_GitCommitCount)' != '' and '$(MDEditReleaseVersion)' != ''">
+      <Version>$(MDEditReleaseVersion).$(_GitCommitCount)</Version>
     </PropertyGroup>
   </Target>
 
