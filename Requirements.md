@@ -35,8 +35,9 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 - Strikethrough
 - Inline code
 - Highlight — `==text==`
-- Superscript — `X^2^` *(planned)*
-- Subscript — `H~2~O` *(planned)*
+- Superscript — `X^2^`
+- Subscript — `H~2~O`
+- Underline — `<u>text</u>` *(planned)*
 
 ### Block formatting
 - Heading levels 1, 2, and 3
@@ -51,7 +52,12 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 - Table — inserts a starter table (header row, delimiter row, one body row) with the cursor placed in the first header cell. Column alignment via `:---` (left), `:---:` (center), and `---:` (right) is supported in the delimiter row *(planned)*
 - Emoji — inserts an emoji shortcode such as `:joy:` *(planned)*
 
-The last three inline commands, task lists, tables, and emoji shortcodes are all *extended* Markdown syntax rather than part of the original specification. They are widely supported (GitHub, GitLab, and most modern renderers) but not universally, and a document using them may render as literal text elsewhere.
+Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are all *extended* Markdown syntax rather than part of the original specification. They are widely supported (GitHub, GitLab, and most modern renderers) but not universally, and a document using them may render as literal text elsewhere.
+
+**Underline is a deliberate exception.** Markdown has no underline syntax in any dialect — underlining is conventionally reserved for hyperlinks, which is why no dialect added one. MDEdit therefore provides it as literal inline HTML: the command wraps the selection in `<u>` and `</u>`, relying on Markdown's own rule that inline HTML is passed through to the renderer untouched. Two consequences follow, and both are accepted rather than worked around:
+
+- Underline renders only where the consuming renderer permits inline HTML. A renderer that strips or escapes HTML will drop the effect or show the tags as text.
+- It is the only formatting command that emits HTML rather than Markdown, and the only one whose opening and closing markers differ from each other.
 
 ## 4. Syntax Highlighting
 
@@ -59,7 +65,9 @@ The last three inline commands, task lists, tables, and emoji shortcodes are all
 - When a plain text file is open, no syntax highlighting is applied.
 - Highlighting updates in real time as the user types.
 - Highlighted text is shown with a muted yellow background, in both the light and dark themes.
-- The remaining extended constructs listed in §3 (superscript, subscript, task lists, tables, emoji shortcodes) are highlighted on the same terms as the core constructs *(planned)*.
+- Superscript and subscript text is raised or lowered from the baseline and shown smaller than the surrounding text, in both editor modes.
+- The remaining extended constructs listed in §3 (task lists, tables, emoji shortcodes) are highlighted on the same terms as the core constructs *(planned)*.
+- Underline's `<u>` and `</u>` tags are distinguished from surrounding text, as inline HTML rather than as a Markdown construct *(planned)*.
 
 ## 5. WYSIWYG Mode
 
@@ -70,7 +78,8 @@ The last three inline commands, task lists, tables, and emoji shortcodes are all
 - Syntax markers are hidden rather than deleted: they still occupy their position in the document, so selection, undo, and the saved file are unaffected.
 - Hidden syntax is revealed again around the cursor so it stays directly editable. The amount revealed suits the construct: the whole line for headings, blockquotes, and list items; the individual run for bold, italic, strikethrough, inline code, and links; and both fences of a fenced code block whenever the cursor is anywhere inside it.
 - Constructs are rendered rather than merely stripped of their markers where that aids readability: headings display at a larger size per level, bullet items display a bullet glyph, and blockquotes are indented with a vertical accent bar spanning the quote, one bar per nesting level.
-- The remaining extended constructs listed in §3 (superscript, subscript, task lists, tables, emoji shortcodes) are displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
+- The remaining extended constructs listed in §3 (task lists, tables, emoji shortcodes) are displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
+- Underlined text displays as underlined, with its `<u>` and `</u>` tags hidden, on the same terms as the other inline constructs *(planned)*.
 
 ## 6. View Options
 
@@ -104,7 +113,7 @@ All common operations are accessible via keyboard shortcuts:
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 ## 9. Status Bar
 

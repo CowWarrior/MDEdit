@@ -44,8 +44,44 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 
         var text = doc.GetText(line);
         if (MarkdownSyntax.IsHorizontalRule(text))
+        {
             ColorLine(line, IsDark ? DarkHRuleBrush : LightHRuleBrush, FontWeights.Normal);
+            return;
+        }
+
+        StyleScriptSpans(doc, line);
     }
+
+    // Superscript/subscript are raised or lowered and shrunk. Deliberately NOT gated on
+    // LivePreviewEnabled: like bold rendering bold in source mode, the baseline shift *is* the
+    // construct, and showing it alongside the visible markers is the same bargain. (Heading
+    // scaling is gated because a heading is legible either way — size there is decoration.)
+    //
+    // Only the content between the markers moves; the '^'/'~' characters stay on the baseline,
+    // so in source mode the markers still read as markers. In WYSIWYG they are hidden by
+    // EmphasisMarkerElementGenerator and only the shifted content remains.
+    //
+    // Heading, blockquote, and horizontal-rule lines return before reaching here — those style the
+    // whole line as one unit, and a later per-span change would fight the line-wide typeface.
+    // Superscript inside a heading or blockquote therefore renders plain; accepted, not overlooked.
+    private void StyleScriptSpans(TextDocument doc, DocumentLine line)
+    {
+        foreach (var span in MarkdownSyntax.FindScriptSpans(doc, line))
+        {
+            if (span.ContentEnd <= span.ContentStart) continue;
+
+            var alignment = span.IsSuperscript ? BaselineAlignment.Superscript : BaselineAlignment.Subscript;
+            ChangeLinePart(span.ContentStart, span.ContentEnd, el =>
+            {
+                el.TextRunProperties.SetBaselineAlignment(alignment);
+                el.TextRunProperties.SetFontRenderingEmSize(el.TextRunProperties.FontRenderingEmSize * ScriptScale);
+            });
+        }
+    }
+
+    // Conventional typographic ratio for scripts; small enough to read as raised/lowered rather
+    // than as ordinary text that happens to sit oddly.
+    private const double ScriptScale = 0.75;
 
     // Typora-ish size ratios relative to the editor's base font size; only applied in live preview.
     private static double HeadingScale(int level) => level switch

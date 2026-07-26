@@ -13,6 +13,20 @@ namespace MDEdit.Editing;
 internal readonly record struct EmphasisSpan(int Start, int End, int MarkerLength);
 
 /// <summary>
+/// Which construct an emphasis run is. Only the cases a consumer has to tell apart are named:
+/// superscript/subscript need baseline styling from <c>MarkdownLineColorizer</c>, and their
+/// single-character markers make them indistinguishable from italic by <see cref="EmphasisSpan.MarkerLength"/>
+/// alone. Everything else is <see cref="Other"/> — the marker-hiding generator treats all runs alike.
+/// </summary>
+internal enum EmphasisKind { Other, Superscript, Subscript }
+
+/// <summary>
+/// A superscript or subscript run's <em>content</em> — the text between the markers, which is what
+/// gets raised or lowered; the markers themselves stay on the baseline.
+/// </summary>
+internal readonly record struct ScriptSpan(int ContentStart, int ContentEnd, bool IsSuperscript);
+
+/// <summary>
 /// A link or image found on a single line: "[text](url)", "![alt](url)", or "[text][ref]".
 /// Start/End are absolute document offsets (End exclusive) for the whole construct; TextStart/
 /// TextEnd bound the visible label ("text"/"alt") — live preview keeps [TextStart, TextEnd)
@@ -180,17 +194,21 @@ internal static class MarkdownSyntax
     // in "`**not bold**`" is just two asterisks); the lexer's leftmost-wins scan already gives
     // an earlier-opening backtick that precedence at the top level, matching how AvalonEdit
     // resolves the XSHD's rules by earliest match position.
-    private static readonly (Regex Pattern, int MarkerLength, bool RecurseIntoContent)[] EmphasisPatterns =
+    private static readonly (Regex Pattern, int MarkerLength, bool RecurseIntoContent, EmphasisKind Kind)[] EmphasisPatterns =
     [
-        (new Regex(@"\G\*{3}[^\*\n]+\*{3}"), 3, true),
-        (new Regex(@"\G_{3}[^_\n]+_{3}"), 3, true),
-        (new Regex(@"\G\*{2}[^\*\n]+\*{2}"), 2, true),
-        (new Regex(@"\G_{2}[^_\n]+_{2}"), 2, true),
-        (new Regex(@"\G\*[^\*\n]+\*"), 1, true),
-        (new Regex(@"\G_[^_\n]+_"), 1, true),
-        (new Regex(@"\G~{2}[^~\n]+~{2}"), 2, true),
-        (new Regex(@"\G={2}[^=\n]+={2}"), 2, true),
-        (new Regex(@"\G`[^`\n]+`"), 1, false),
+        (new Regex(@"\G\*{3}[^\*\n]+\*{3}"), 3, true, EmphasisKind.Other),
+        (new Regex(@"\G_{3}[^_\n]+_{3}"), 3, true, EmphasisKind.Other),
+        (new Regex(@"\G\*{2}[^\*\n]+\*{2}"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G_{2}[^_\n]+_{2}"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G\*[^\*\n]+\*"), 1, true, EmphasisKind.Other),
+        (new Regex(@"\G_[^_\n]+_"), 1, true, EmphasisKind.Other),
+        (new Regex(@"\G~{2}[^~\n]+~{2}"), 2, true, EmphasisKind.Other),
+        // Subscript MUST stay below strikethrough: both open with '~', and at a position starting
+        // "~~" the two-character pattern has to win — the same precedence bold has over italic.
+        (new Regex(@"\G~[^~\n]+~"), 1, true, EmphasisKind.Subscript),
+        (new Regex(@"\G\^[^\^\n]+\^"), 1, true, EmphasisKind.Superscript),
+        (new Regex(@"\G={2}[^=\n]+={2}"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G`[^`\n]+`"), 1, false, EmphasisKind.Other),
     ];
 
     // Same order as Markdown.xshd (images before plain links, since an "![...]" run must not
@@ -218,7 +236,7 @@ internal static class MarkdownSyntax
 
     private static bool TryMatchEmphasisPattern(string text, int pos, out int length)
     {
-        foreach (var (pattern, _, _) in EmphasisPatterns)
+        foreach (var (pattern, _, _, _) in EmphasisPatterns)
         {
             var m = pattern.Match(text, pos);
             if (m.Success) { length = m.Length; return true; }
@@ -245,9 +263,34 @@ internal static class MarkdownSyntax
     public static IReadOnlyList<EmphasisSpan> FindEmphasisSpans(TextDocument doc, DocumentLine line)
     {
         var spans = new List<EmphasisSpan>();
-        int skip = LeadingBulletMarkerLength(doc, line);
-        ScanEmphasis(doc.GetText(line)[skip..], line.Offset + skip, spans);
+        foreach (var (span, _) in ScanLine(doc, line))
+            spans.Add(span);
         return spans;
+    }
+
+    /// <summary>
+    /// The superscript and subscript runs on a line, as the content between their markers.
+    /// Shares <see cref="FindEmphasisSpans"/>'s single scan rather than re-parsing, so the
+    /// baseline styling and the marker hiding can never disagree about what a run is.
+    /// </summary>
+    public static IReadOnlyList<ScriptSpan> FindScriptSpans(TextDocument doc, DocumentLine line)
+    {
+        var spans = new List<ScriptSpan>();
+        foreach (var (span, kind) in ScanLine(doc, line))
+        {
+            if (kind is EmphasisKind.Other) continue;
+            // Markers are one character on both sides for both constructs.
+            spans.Add(new ScriptSpan(span.Start + 1, span.End - 1, kind is EmphasisKind.Superscript));
+        }
+        return spans;
+    }
+
+    private static List<(EmphasisSpan Span, EmphasisKind Kind)> ScanLine(TextDocument doc, DocumentLine line)
+    {
+        var results = new List<(EmphasisSpan, EmphasisKind)>();
+        int skip = LeadingBulletMarkerLength(doc, line);
+        ScanEmphasis(doc.GetText(line)[skip..], line.Offset + skip, results);
+        return results;
     }
 
     // Recurses into each match's inner content (between its opening and closing markers) to
@@ -255,18 +298,18 @@ internal static class MarkdownSyntax
     // than needing special-casing: a match's content can never itself contain its own delimiter
     // (the pattern's own content class excludes it), so re-scanning that content with the same
     // pattern list can only ever find an other-delimiter — i.e. genuinely nested — run.
-    private static void ScanEmphasis(string text, int baseOffset, List<EmphasisSpan> results)
+    private static void ScanEmphasis(string text, int baseOffset, List<(EmphasisSpan, EmphasisKind)> results)
     {
         int pos = 0;
         while (pos < text.Length)
         {
             var matched = false;
-            foreach (var (pattern, markerLength, recurseIntoContent) in EmphasisPatterns)
+            foreach (var (pattern, markerLength, recurseIntoContent, kind) in EmphasisPatterns)
             {
                 var m = pattern.Match(text, pos);
                 if (!m.Success) continue;
 
-                results.Add(new EmphasisSpan(baseOffset + pos, baseOffset + pos + m.Length, markerLength));
+                results.Add((new EmphasisSpan(baseOffset + pos, baseOffset + pos + m.Length, markerLength), kind));
 
                 var innerStart  = pos + markerLength;
                 var innerLength = m.Length - 2 * markerLength;

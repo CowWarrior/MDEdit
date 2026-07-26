@@ -530,6 +530,8 @@ public partial class MainWindow : Window
     // ── Event handlers (toolbar / menu) ───────────────────────────────────
     private void BtnStrike_Click(object sender, RoutedEventArgs e)   => WrapSelection("~~", "~~");
     private void BtnHighlight_Click(object sender, RoutedEventArgs e) => WrapSelection("==", "==");
+    private void BtnSuperscript_Click(object sender, RoutedEventArgs e) => WrapSelection("^", "^");
+    private void BtnSubscript_Click(object sender, RoutedEventArgs e)  => WrapSelection("~", "~");
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);
     private void BtnH3_Click(object sender, RoutedEventArgs e)       => InsertHeading(3);

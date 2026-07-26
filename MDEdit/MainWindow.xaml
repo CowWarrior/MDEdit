@@ -44,6 +44,8 @@
                 <MenuItem Header="_Italic"       Command="{x:Static local:MainWindow.ItalicCommand}" InputGestureText="Ctrl+I"/>
                 <MenuItem Header="_Strikethrough" Click="BtnStrike_Click"/>
                 <MenuItem Header="_Highlight"     Click="BtnHighlight_Click"/>
+                <MenuItem Header="Su_perscript"   Click="BtnSuperscript_Click"/>
+                <MenuItem Header="Su_bscript"     Click="BtnSubscript_Click"/>
                 <Separator/>
                 <MenuItem Header="Heading _1"    Click="BtnH1_Click"         InputGestureText="Ctrl+1"/>
                 <MenuItem Header="Heading _2"    Click="BtnH2_Click"         InputGestureText="Ctrl+2"/>
@@ -111,6 +113,12 @@
                     <!-- Swatch matches Markdown.xshd's Highlight background. Foreground is pinned
                          because the swatch stays pale in both themes, unlike the editor's own. -->
                     <TextBlock Background="#F5E7A3" Foreground="#1E1E1E" Width="12" TextAlignment="Center">H</TextBlock>
+                </Button>
+                <Button Click="BtnSuperscript_Click" ToolTip="Superscript">
+                    <TextBlock Width="14" TextAlignment="Center">X²</TextBlock>
+                </Button>
+                <Button Click="BtnSubscript_Click" ToolTip="Subscript">
+                    <TextBlock Width="14" TextAlignment="Center">X₂</TextBlock>
                 </Button>
                 <Separator/>
 

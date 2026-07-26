@@ -66,6 +66,12 @@ MDEdit will ask before discarding your work.
 
 ## Recent changes
 
+### Version 1.0.0.47
+
+- **Superscript and subscript.** Write `X^2^` for a raised character and `H~2~O` for a lowered one.
+  Both appear raised or lowered and slightly smaller as you type, in either editor mode. Use the
+  **X²** and **X₂** buttons on the toolbar, or *Format → Superscript* and *Format → Subscript*.
+
 ### Version 1.0.0.46
 
 - **Highlight.** You can now mark text with a highlighter, using `==` on either side of it — so
