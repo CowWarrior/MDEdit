@@ -43,14 +43,25 @@
     <AssemblyMetadata Include="BuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm')) UTC" />
   </ItemGroup>
 
-  <!-- Same 1.0.0.<commit count> scheme build/Publish-ClickOnce.ps1 uses for ApplicationVersion, so the
-       assembly version shown in the About dialog matches the deployed ClickOnce version. -->
+  <!-- Same <Major.Minor.Build>.<commit count> scheme build/Publish-ClickOnce.ps1 uses for
+       ApplicationVersion, so the assembly version shown in the About dialog matches the deployed
+       ClickOnce version. Major.Minor.Build comes from build/published-version.txt (the LAST published
+       release), the revision from git — so a local build at the publish commit reports exactly the
+       published version, and afterwards differs only in the revision, which is the honest answer.
+       Both parts degrade to the SDK default rather than failing the build if unavailable. -->
   <Target Name="SetVersionFromGit" BeforeTargets="GetAssemblyVersion;GenerateAssemblyInfo">
     <Exec Command="git rev-list --count HEAD" ConsoleToMSBuild="true" StandardOutputImportance="low" ContinueOnError="WarnAndContinue">
       <Output TaskParameter="ConsoleOutput" PropertyName="_GitCommitCount" />
     </Exec>
-    <PropertyGroup Condition="'$(_GitCommitCount)' != ''">
-      <Version>1.0.0.$(_GitCommitCount)</Version>
+    <PropertyGroup>
+      <_PublishedVersionFile>$(MSBuildThisFileDirectory)..\build\published-version.txt</_PublishedVersionFile>
+    </PropertyGroup>
+    <PropertyGroup Condition="Exists('$(_PublishedVersionFile)')">
+      <_PublishedVersionRaw>$([System.IO.File]::ReadAllText('$(_PublishedVersionFile)'))</_PublishedVersionRaw>
+      <_PublishedVersion>$(_PublishedVersionRaw.Trim())</_PublishedVersion>
+    </PropertyGroup>
+    <PropertyGroup Condition="'$(_GitCommitCount)' != '' and '$(_PublishedVersion)' != ''">
+      <Version>$(_PublishedVersion).$(_GitCommitCount)</Version>
     </PropertyGroup>
   </Target>
 

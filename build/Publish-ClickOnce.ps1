@@ -1,3 +1,13 @@
+# Publishes a new ClickOnce version to docs/. Run standalone, not via `dotnet publish`.
+#
+#   .\Publish-ClickOnce.ps1              # 1.0.4 -> 1.0.5   (ordinary release)
+#   .\Publish-ClickOnce.ps1 -BumpMinor   # 1.0.4 -> 1.1.0
+#   .\Publish-ClickOnce.ps1 -BumpMajor   # 1.0.4 -> 2.0.0
+param(
+    [switch]$BumpMajor,
+    [switch]$BumpMinor
+)
+
 $ErrorActionPreference = 'Stop'
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '..')
@@ -30,22 +40,57 @@ if (-not $cert) {
     exit 1
 }
 
-# Ties the ClickOnce revision to repo history so it's always increasing without persisting state anywhere.
+# ── Version ───────────────────────────────────────────────────────────────────────────────────
+# Major.Minor.Build are the human-controlled parts and live in published-version.txt, which records
+# the version LAST published (not the next one). Build increments on every publish; -BumpMinor and
+# -BumpMajor reset it to 0. Revision is git's commit count and is never reset by any of that, so the
+# 4-part version keeps increasing even if the stored parts are hand-edited or a bump goes wrong —
+# which matters because a version that fails to increase leaves installed clients stranded on the
+# old build with no error anywhere.
 #
 # NOTE: this MSBuild's FormatVersion task ignores the ApplicationRevision parameter entirely (verified
 # against Microsoft.Build.Tasks.Core.dll from VS 18 Community — Version="1.0.0" + Revision="7" still
 # formats as "1.0.0", not "1.0.0.7"). So the revision is folded into a full 4-part ApplicationVersion
 # here instead of being passed as a separate property, which IS passed through as-is.
+if ($BumpMajor -and $BumpMinor) {
+    Write-Error "Specify at most one of -BumpMajor or -BumpMinor."
+    exit 1
+}
+
+$versionFile = Join-Path $PSScriptRoot 'published-version.txt'
+if (-not (Test-Path $versionFile)) {
+    Write-Error "Version file not found: $versionFile. It must contain the last published Major.Minor.Build, e.g. '1.0.4'."
+    exit 1
+}
+
+$storedVersion = (Get-Content $versionFile -Raw).Trim()
+if ($storedVersion -notmatch '^\d+\.\d+\.\d+$') {
+    Write-Error "Version file '$versionFile' should contain Major.Minor.Build (e.g. '1.0.4') but contains '$storedVersion'."
+    exit 1
+}
+
+$major, $minor, $build = $storedVersion -split '\.' | ForEach-Object { [int]$_ }
+
+if     ($BumpMajor) { $major++; $minor = 0; $build = 0 }
+elseif ($BumpMinor) { $minor++; $build = 0 }
+else                { $build++ }
+
 $revision = (git -C $repoRoot rev-list --count HEAD).Trim()
-$applicationVersion = "1.0.0.$revision"
+$releaseVersion     = "$major.$minor.$build"
+$applicationVersion = "$releaseVersion.$revision"
 
 Write-Output "Restoring win-x64 assets..."
 & dotnet restore $csproj -r win-x64
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-Write-Output "Publishing ClickOnce build (version $applicationVersion, cert $($cert.Thumbprint))..."
+Write-Output "Publishing ClickOnce build (version $applicationVersion, was $storedVersion, cert $($cert.Thumbprint))..."
 & $msbuild $csproj -t:Publish -p:PublishProfile=$pubxml -p:ApplicationVersion=$applicationVersion -p:ManifestCertificateThumbprint=$($cert.Thumbprint)
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# Recorded only after a successful publish, so a failed run leaves the stored version untouched and
+# the next attempt produces the same number rather than silently skipping one.
+Set-Content -Path $versionFile -Value $releaseVersion -Encoding utf8
+Write-Output "Recorded published version $releaseVersion in $versionFile"
 
 # ClickOnce publish only adds a new version folder under "Application Files" — it never removes the
 # ones it supersedes, so without this every publish leaves dead weight behind in the repo.
