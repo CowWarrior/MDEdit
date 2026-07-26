@@ -86,6 +86,12 @@ public partial class MainWindow : Window
     private static readonly Dictionary<string, (Color? Foreground, Color? Background)> DarkHighlightColors = new()
     {
         ["Strike"]     = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
+        // Muted amber rather than the light theme's pale yellow, which reads as a glaring block on a
+        // dark page. Tuned against the #1E1E1E editor background and #DCDCDC text (Themes/Dark.xaml):
+        // light enough to be an obvious band (~2.6:1 against the page — an earlier, darker #4A431F
+        // managed only ~1.7:1 and was barely visible), while keeping body text at ~4.7:1 over it.
+        // Foreground stays unset so highlighted text keeps the editor's standard text color.
+        ["Highlight"]  = (null, Color.FromRgb(0x6A, 0x5E, 0x2E)),
         ["InlineCode"] = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
         ["CodeBlock"]  = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
         ["Link"]       = (Color.FromRgb(0x58, 0xA6, 0xFF), null),
@@ -523,6 +529,7 @@ public partial class MainWindow : Window
 
     // ── Event handlers (toolbar / menu) ───────────────────────────────────
     private void BtnStrike_Click(object sender, RoutedEventArgs e)   => WrapSelection("~~", "~~");
+    private void BtnHighlight_Click(object sender, RoutedEventArgs e) => WrapSelection("==", "==");
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);
     private void BtnH3_Click(object sender, RoutedEventArgs e)       => InsertHeading(3);

@@ -31,6 +31,13 @@
     <Resource Include="Resources\AppIcon.png" />
   </ItemGroup>
 
+  <!-- Sample documents shipped alongside the app. Content (not Resource/EmbeddedResource) so they stay
+       ordinary files on disk the user can open, and so ClickOnce carries them in the deployment payload.
+       Welcome.md's "Recent changes" section is the user-facing changelog — update it before every publish. -->
+  <ItemGroup>
+    <Content Include="samples\**\*.md" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- Deterministic builds strip the PE timestamp, so stamp the build time into assembly metadata instead (read by the About dialog). -->
   <ItemGroup>
     <AssemblyMetadata Include="BuildDate" Value="$([System.DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm')) UTC" />

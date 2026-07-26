@@ -1,4 +1,4 @@
-# Welcome to MDEdit
+﻿# Welcome to MDEdit
 
 Thanks for installing MDEdit. This document is a short tour of what the editor does — and since it
 is written in Markdown, it doubles as a live example. Try switching between **Source** and **WYSIWYG**
@@ -45,34 +45,6 @@ Available formatting includes:
 > Formatting commands work in any open document, including plain `.txt` files — MDEdit will not stop
 > you writing Markdown wherever you like.
 
-### Code, kept readable
-
-Fenced code blocks are highlighted and left strictly alone, so nothing inside them is reinterpreted
-as formatting:
-
-```csharp
-public static string Greet(string name)
-{
-    return $"Hello, {name}";
-}
-```
-
-## Keyboard shortcuts
-
-The operations you will reach for most:
-
-- **Ctrl+N** — new document
-- **Ctrl+O** — open
-- **Ctrl+S** — save
-- **Ctrl+Shift+S** — save as
-- **Ctrl+B** — bold
-- **Ctrl+I** — italic
-- **Ctrl+1**, **Ctrl+2**, **Ctrl+3** — heading levels 1 to 3
-- **Ctrl+F** — find
-- **Ctrl+Z** / **Ctrl+Y** — undo and redo
-
-The usual **Ctrl+X**, **Ctrl+C**, **Ctrl+V**, and **Ctrl+A** behave exactly as you would expect.
-
 ## Making it yours
 
 From the *View* menu you can:
@@ -84,12 +56,6 @@ From the *View* menu you can:
 
 Your choices are remembered between sessions.
 
-### Opening Markdown files by double-clicking
-
-MDEdit can register itself as the handler for `.md` and `.markdown` files, and offer itself as an
-"Open with" choice for `.txt`. This is not done automatically — choose *Help → Register File
-Associations* when you want it. Your existing `.txt` default is deliberately left alone.
-
 ## A note on saving
 
 MDEdit reads and writes **UTF-8** text, and nothing else. There is no project file, no sidecar
@@ -98,11 +64,31 @@ metadata, and no lock on your documents — they remain ordinary files you can e
 If you close the application, open another file, or start a new document with unsaved changes,
 MDEdit will ask before discarding your work.
 
+## Recent changes
+
+### Version 1.0.0.46
+
+- **Highlight.** You can now mark text with a highlighter, using `==` on either side of it — so
+  `==this==` comes out highlighted. Use the **H** button on the toolbar or *Format → Highlight*, either
+  with text selected or on its own to start typing highlighted. The colour is a muted yellow that suits
+  both the light and dark themes.
+
+### Version 1.0.0.44
+
+- **Recent Files.** The File menu now keeps the ten documents you opened most recently, under
+  *File → Recent Files*. A document joins the list when you open it and when you save it somewhere
+  new with Save As, and the list survives between sessions. Choosing an entry asks about unsaved
+  work first, exactly as Open does. If a file has since been moved or deleted, MDEdit says so and
+  offers to drop it from the list. You can clear the list at any time.
+
+### Prior versions
+
+Changes made before version 1.0.0.44 were not tracked, and are not listed here.
+
 ## Where to go next
 
-- The `samples` folder installed alongside MDEdit contains further example documents.
 - MDEdit updates itself. When a new version is published you will receive it automatically the next
-  time you launch the application.
+  time you launch the application — and this page will tell you what changed.
 
 ---
 

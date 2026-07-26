@@ -173,9 +173,9 @@ internal static class MarkdownSyntax
     // see the comments there). \G anchors each pattern to the exact scan position passed to Match,
     // so this doubles as a tiny non-overlapping lexer: at each offset, try patterns in priority
     // order, take the first that matches there, otherwise advance one character and retry.
-    // Strikethrough and inline code sit last purely to mirror the XSHD's rule order — their
-    // '~'/'`' delimiters can't collide with the star/underscore families, so their position in
-    // the list is immaterial. RecurseIntoContent is false for inline code because a code span's
+    // Strikethrough, highlight, and inline code sit last purely to mirror the XSHD's rule order —
+    // their '~'/'='/'`' delimiters can't collide with the star/underscore families, so their
+    // position in the list is immaterial. RecurseIntoContent is false for inline code because a code span's
     // content is literal text (CommonMark gives code spans precedence over emphasis — the "**"
     // in "`**not bold**`" is just two asterisks); the lexer's leftmost-wins scan already gives
     // an earlier-opening backtick that precedence at the top level, matching how AvalonEdit
@@ -189,6 +189,7 @@ internal static class MarkdownSyntax
         (new Regex(@"\G\*[^\*\n]+\*"), 1, true),
         (new Regex(@"\G_[^_\n]+_"), 1, true),
         (new Regex(@"\G~{2}[^~\n]+~{2}"), 2, true),
+        (new Regex(@"\G={2}[^=\n]+={2}"), 2, true),
         (new Regex(@"\G`[^`\n]+`"), 1, false),
     ];
 

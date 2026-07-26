@@ -34,7 +34,7 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 - Italic
 - Strikethrough
 - Inline code
-- Highlight — `==text==` *(planned)*
+- Highlight — `==text==`
 - Superscript — `X^2^` *(planned)*
 - Subscript — `H~2~O` *(planned)*
 
@@ -58,7 +58,8 @@ The last three inline commands, task lists, tables, and emoji shortcodes are all
 - When a Markdown file is open, the editor visually distinguishes Markdown elements using color and style cues (e.g. headings, bold, italic, code, links, blockquotes, list markers).
 - When a plain text file is open, no syntax highlighting is applied.
 - Highlighting updates in real time as the user types.
-- The extended constructs listed in §3 (highlight, superscript, subscript, task lists, tables, emoji shortcodes) are highlighted on the same terms as the core constructs *(planned)*.
+- Highlighted text is shown with a muted yellow background, in both the light and dark themes.
+- The remaining extended constructs listed in §3 (superscript, subscript, task lists, tables, emoji shortcodes) are highlighted on the same terms as the core constructs *(planned)*.
 
 ## 5. WYSIWYG Mode
 
@@ -69,7 +70,7 @@ The last three inline commands, task lists, tables, and emoji shortcodes are all
 - Syntax markers are hidden rather than deleted: they still occupy their position in the document, so selection, undo, and the saved file are unaffected.
 - Hidden syntax is revealed again around the cursor so it stays directly editable. The amount revealed suits the construct: the whole line for headings, blockquotes, and list items; the individual run for bold, italic, strikethrough, inline code, and links; and both fences of a fenced code block whenever the cursor is anywhere inside it.
 - Constructs are rendered rather than merely stripped of their markers where that aids readability: headings display at a larger size per level, bullet items display a bullet glyph, and blockquotes are indented with a vertical accent bar spanning the quote, one bar per nesting level.
-- The extended constructs listed in §3 are displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
+- The remaining extended constructs listed in §3 (superscript, subscript, task lists, tables, emoji shortcodes) are displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
 
 ## 6. View Options
 
@@ -103,7 +104,7 @@ All common operations are accessible via keyboard shortcuts:
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 ## 9. Status Bar
 
@@ -115,17 +116,21 @@ A status bar is always visible and displays:
 - The character count can treat each line break as one character or as two (CR+LF) — either as a user-selectable option or by displaying both counts *(planned)*.
 - When text is selected, an additional status bar section displays "Selected" and the number of characters selected *(planned)*.
 
-## 10. Sample Documents *(planned)*
+## 10. Sample Documents
 
 - A set of sample Markdown documents is installed alongside the application, including a `Welcome.md`
-  introducing the product and one or more documents demonstrating supported Markdown constructs.
+  introducing the product. Further sample documents demonstrating supported Markdown constructs may be
+  added *(planned)*.
+- `Welcome.md` carries a "Recent changes" section describing what changed in each released version, so a
+  user who receives an automatic update can see what is new. It is updated as part of every release, and
+  lists user-visible changes only.
 - The samples are reachable at any time from the Help menu, without the user needing to know where they
-  were installed.
+  were installed *(planned)*.
 - Editing a sample and saving it prompts for a new location rather than writing over the installed copy,
   because the installed copy is replaced whenever the application updates. The user's own edits are never
-  silently lost to an upgrade.
+  silently lost to an upgrade *(planned)*.
 
-### First run
+### First run *(planned)*
 
 - `Welcome.md` opens automatically the first time the application is run after being installed, and again
   the first time it is run after being updated to a new version — so a returning user sees what has

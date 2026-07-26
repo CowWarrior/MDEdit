@@ -5,6 +5,9 @@
   <Color name="Italic"     fontStyle="italic" />
   <Color name="BoldItalic" fontWeight="bold" fontStyle="italic" />
   <Color name="Strike"     foreground="#888888" />
+  <!-- Deliberately a muted, desaturated yellow: a saturated highlighter yellow glares against a
+       white page and fights the text for attention. See DarkHighlightColors for the dark variant. -->
+  <Color name="Highlight"  background="#F5E7A3" />
   <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
   <Color name="CodeBlock"  foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
   <Color name="Link"       foreground="#0065BD" />
@@ -79,6 +82,9 @@
 
     <!-- Strikethrough -->
     <Rule color="Strike">~~[^~\n]+~~</Rule>
+
+    <!-- Highlight (extended syntax) -->
+    <Rule color="Highlight">={2}[^=\n]+={2}</Rule>
 
     <!-- Inline code -->
     <Rule color="InlineCode">`[^`\n]+`</Rule>

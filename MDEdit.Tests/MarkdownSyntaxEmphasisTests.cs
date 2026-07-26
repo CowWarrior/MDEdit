@@ -21,6 +21,7 @@ public class MarkdownSyntaxEmphasisTests
     [InlineData("***both***", 3)]
     [InlineData("___both___", 3)]
     [InlineData("~~strike~~", 2)]
+    [InlineData("==highlight==", 2)]
     [InlineData("`code`", 1)]
     public void FindEmphasisSpans_WholeLineIsOneRun_MatchesEntireLineWithExpectedMarkerLength(string text, int expectedMarkerLength)
     {
@@ -62,6 +63,11 @@ public class MarkdownSyntaxEmphasisTests
     [InlineData("trailing unmatched **bold")]
     [InlineData("trailing unmatched ~~strike")]
     [InlineData("~~~")]   // fenced-code-block delimiter line, not strikethrough
+    [InlineData("trailing unmatched ==highlight")]
+    [InlineData("===")]   // setext heading underline, not highlight
+    [InlineData("=====================")]
+    [InlineData("a = b")]
+    [InlineData("if (a == b)")]   // a lone "==" has no closing delimiter to pair with
     [InlineData("a single ` backtick")]
     [InlineData("trailing unmatched `code")]
     public void FindEmphasisSpans_NoValidRun_ReturnsEmpty(string text)
@@ -126,6 +132,47 @@ public class MarkdownSyntaxEmphasisTests
         Assert.Equal(2, spans.Count);
         Assert.Equal(new EmphasisSpan(0, text.Length, 2), spans[0]);                                // whole line, ~~ marker
         Assert.Equal(new EmphasisSpan(2, text.Length - 2, innerMarkerLength), spans[1]);            // nested run inside
+    }
+
+    // Highlight's '=' delimiter is a fourth family, nesting on the same terms as the others.
+    [Theory]
+    [InlineData("==**text one**==", 2)]   // highlight wrapping bold
+    [InlineData("==_text two_==", 1)]     // highlight wrapping italic
+    public void FindEmphasisSpans_HighlightWrappingEmphasis_FindsBothOuterAndInnerSpans(string text, int innerMarkerLength)
+    {
+        var doc  = new TextDocument(text);
+        var line = doc.GetLineByNumber(1);
+
+        var spans = MarkdownSyntax.FindEmphasisSpans(doc, line);
+
+        Assert.Equal(2, spans.Count);
+        Assert.Equal(new EmphasisSpan(0, text.Length, 2), spans[0]);                     // whole line, == marker
+        Assert.Equal(new EmphasisSpan(2, text.Length - 2, innerMarkerLength), spans[1]); // nested run inside
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_EmphasisWrappingHighlight_FindsBothOuterAndInnerSpans()
+    {
+        var text = "**==text==**";
+        var doc  = new TextDocument(text);
+        var line = doc.GetLineByNumber(1);
+
+        var spans = MarkdownSyntax.FindEmphasisSpans(doc, line);
+
+        Assert.Equal(2, spans.Count);
+        Assert.Equal(new EmphasisSpan(0, text.Length, 2), spans[0]);   // whole line, bold marker
+        Assert.Equal(new EmphasisSpan(2, 10, 2), spans[1]);            // "==text==" inside
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_HighlightInsideInlineCode_IsLiteral()
+    {
+        var doc  = new TextDocument("`==not highlighted==`");
+        var line = doc.GetLineByNumber(1);
+
+        var span = Assert.Single(MarkdownSyntax.FindEmphasisSpans(doc, line));
+
+        Assert.Equal(1, span.MarkerLength);   // the code span only — its content is literal
     }
 
     [Fact]
