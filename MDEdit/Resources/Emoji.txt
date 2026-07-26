@@ -1,0 +1,269 @@
+# Emoji shortcode catalogue — one "shortcode<space>emoji" pair per line.
+#
+# Deliberately a curated subset rather than the full ~1,800-entry set: MDEdit ships
+# framework-dependent through ClickOnce and everything here is versioned in git, so the whole set
+# would be payload for very little gain. These are the shortcodes people actually type. Adding more
+# is just adding lines — nothing in the code knows how many there are.
+#
+# Names follow GitHub's spelling. Lowercase, and only a-z 0-9 _ + - (see MarkdownSyntax.EmojiPattern).
+# Blank lines and lines starting with '#' are ignored.
+
+# ── Faces ─────────────────────────────────────────────────────────────
+smile 😄
+smiley 😃
+grin 😁
+laughing 😆
+joy 😂
+rofl 🤣
+blush 😊
+slightly_smiling_face 🙂
+wink 😉
+heart_eyes 😍
+kissing_heart 😘
+thinking 🤔
+neutral_face 😐
+expressionless 😑
+no_mouth 😶
+smirk 😏
+unamused 😒
+roll_eyes 🙄
+grimacing 😬
+relieved 😌
+pensive 😔
+sleepy 😪
+sleeping 😴
+mask 😷
+sunglasses 😎
+confused 😕
+worried 😟
+open_mouth 😮
+astonished 😲
+flushed 😳
+scream 😱
+angry 😠
+rage 😡
+cry 😢
+sob 😭
+sweat_smile 😅
+innocent 😇
+nerd_face 🤓
+partying_face 🥳
+yawning_face 🥱
+exploding_head 🤯
+face_with_monocle 🧐
+zipper_mouth_face 🤐
+shushing_face 🤫
+raised_eyebrow 🤨
+
+# ── Hands and people ──────────────────────────────────────────────────
+thumbsup 👍
++1 👍
+thumbsdown 👎
+-1 👎
+ok_hand 👌
+wave 👋
+clap 👏
+pray 🙏
+muscle 💪
+handshake 🤝
+point_right 👉
+point_left 👈
+point_up 👆
+point_down 👇
+raised_hands 🙌
+crossed_fingers 🤞
+eyes 👀
+brain 🧠
+
+# ── Hearts and symbols ────────────────────────────────────────────────
+heart ❤️
+broken_heart 💔
+sparkling_heart 💖
+blue_heart 💙
+green_heart 💚
+yellow_heart 💛
+purple_heart 💜
+black_heart 🖤
+white_check_mark ✅
+heavy_check_mark ✔️
+x ❌
+warning ⚠️
+no_entry ⛔
+question ❓
+exclamation ❗
+bangbang ‼️
+information_source ℹ️
+recycle ♻️
+100 💯
+ok 🆗
+new 🆕
+top 🔝
+arrow_right ➡️
+arrow_left ⬅️
+arrow_up ⬆️
+arrow_down ⬇️
+heavy_plus_sign ➕
+heavy_minus_sign ➖
+heavy_multiplication_x ✖️
+heavy_division_sign ➗
+
+# ── Objects and tools ─────────────────────────────────────────────────
+fire 🔥
+star ⭐
+star2 🌟
+sparkles ✨
+zap ⚡
+boom 💥
+tada 🎉
+confetti_ball 🎊
+balloon 🎈
+gift 🎁
+trophy 🏆
+medal 🏅
+crown 👑
+gem 💎
+bulb 💡
+flashlight 🔦
+battery 🔋
+electric_plug 🔌
+computer 💻
+desktop_computer 🖥️
+keyboard ⌨️
+printer 🖨️
+iphone 📱
+telephone ☎️
+camera 📷
+video_camera 📹
+tv 📺
+radio 📻
+headphones 🎧
+hammer 🔨
+wrench 🔧
+gear ⚙️
+nut_and_bolt 🔩
+link 🔗
+lock 🔒
+unlock 🔓
+key 🔑
+mag 🔍
+bell 🔔
+no_bell 🔕
+hourglass ⌛
+hourglass_flowing_sand ⏳
+watch ⌚
+alarm_clock ⏰
+stopwatch ⏱️
+money_bag 💰
+credit_card 💳
+package 📦
+mailbox 📫
+email 📧
+envelope ✉️
+paperclip 📎
+scissors ✂️
+pushpin 📌
+clipboard 📋
+
+# ── Documents ─────────────────────────────────────────────────────────
+book 📖
+books 📚
+notebook 📓
+memo 📝
+pencil ✏️
+pen 🖊️
+page_facing_up 📄
+file_folder 📁
+open_file_folder 📂
+calendar 📅
+bar_chart 📊
+chart_with_upwards_trend 📈
+chart_with_downwards_trend 📉
+
+# ── Nature and weather ────────────────────────────────────────────────
+sunny ☀️
+cloud ☁️
+snowflake ❄️
+umbrella ☔
+crescent_moon 🌙
+rainbow 🌈
+ocean 🌊
+earth_americas 🌎
+tree 🌳
+cactus 🌵
+cherry_blossom 🌸
+rose 🌹
+sunflower 🌻
+four_leaf_clover 🍀
+maple_leaf 🍁
+mushroom 🍄
+
+# ── Animals ───────────────────────────────────────────────────────────
+dog 🐶
+cat 🐱
+mouse 🐭
+fox 🦊
+bear 🐻
+panda 🐼
+penguin 🐧
+bird 🐦
+fish 🐟
+whale 🐳
+dolphin 🐬
+butterfly 🦋
+bug 🐛
+ant 🐜
+bee 🐝
+snail 🐌
+turtle 🐢
+snake 🐍
+dragon 🐉
+unicorn 🦄
+
+# ── Food and drink ────────────────────────────────────────────────────
+coffee ☕
+tea 🍵
+beer 🍺
+wine_glass 🍷
+pizza 🍕
+hamburger 🍔
+cake 🍰
+birthday 🎂
+apple 🍎
+banana 🍌
+bread 🍞
+cheese 🧀
+chocolate_bar 🍫
+candy 🍬
+popcorn 🍿
+
+# ── Travel and places ─────────────────────────────────────────────────
+rocket 🚀
+airplane ✈️
+car 🚗
+bike 🚲
+train 🚆
+ship 🚢
+house 🏠
+office 🏢
+construction 🚧
+checkered_flag 🏁
+
+# ── Activities ────────────────────────────────────────────────────────
+art 🎨
+musical_note 🎵
+guitar 🎸
+game_die 🎲
+video_game 🎮
+soccer ⚽
+basketball 🏀
+football 🏈
+baseball ⚾
+tennis 🎾
+
+# ── Misc ──────────────────────────────────────────────────────────────
+robot 🤖
+alien 👽
+ghost 👻
+skull 💀
+bomb 💣
+poop 💩

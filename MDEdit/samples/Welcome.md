@@ -66,6 +66,11 @@ MDEdit will ask before discarding your work.
 
 ## Recent changes
 
+### Version 1.0.2
+
+Added emoji shortcodes: type `:joy:`, `:rocket:` or any of around 240 others and it becomes the emoji
+as you write. Also corrected the version number shown in Help → About.
+
 ### Version 1.0.1
 
 Added highlighting, superscript, subscript and underline, with Word's shortcut keys for underline

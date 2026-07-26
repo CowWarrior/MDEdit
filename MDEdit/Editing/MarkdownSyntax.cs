@@ -35,6 +35,13 @@ internal readonly record struct ScriptSpan(int ContentStart, int ContentEnd, boo
 internal readonly record struct UnderlineSpan(int Start, int ContentStart, int ContentEnd, int End);
 
 /// <summary>
+/// A recognized emoji shortcode run: <c>:joy:</c> occupies [Start, End), and <see cref="Emoji"/> is
+/// the character it stands for. Carries the replacement text so the generator never re-does the
+/// catalogue lookup.
+/// </summary>
+internal readonly record struct EmojiSpan(int Start, int End, string Emoji);
+
+/// <summary>
 /// A link or image found on a single line: "[text](url)", "![alt](url)", or "[text][ref]".
 /// Start/End are absolute document offsets (End exclusive) for the whole construct; TextStart/
 /// TextEnd bound the visible label ("text"/"alt") — live preview keeps [TextStart, TextEnd)
@@ -202,6 +209,17 @@ internal static class MarkdownSyntax
     // in "`**not bold**`" is just two asterisks); the lexer's leftmost-wins scan already gives
     // an earlier-opening backtick that precedence at the top level, matching how AvalonEdit
     // resolves the XSHD's rules by earliest match position.
+    // Declared before EmphasisPatterns on purpose: static fields initialize in declaration order, so
+    // putting this after the table would leave the table's entry holding null at runtime, not merely
+    // warn. Named and shared rather than inlined because FindEmojiSpans needs the same definition to
+    // skip code spans — a shortcode inside backticks is literal text.
+    private static readonly Regex InlineCodePattern = new(@"\G`[^`\n]+`");
+
+    // Lowercase only, matching the catalogue's spelling; '+' and '-' are allowed for ":+1:"/":-1:".
+    // A match is only an emoji if EmojiCatalog recognizes the name, so this pattern being loose
+    // costs nothing — "10:30:45" contains ":30:" but "30" is not a shortcode.
+    private static readonly Regex EmojiPattern = new(@"\G:([a-z0-9_+-]+):");
+
     private static readonly (Regex Pattern, int MarkerLength, bool RecurseIntoContent, EmphasisKind Kind)[] EmphasisPatterns =
     [
         (new Regex(@"\G\*{3}[^\*\n]+\*{3}"), 3, true, EmphasisKind.Other),
@@ -216,7 +234,7 @@ internal static class MarkdownSyntax
         (new Regex(@"\G~[^~\n]+~"), 1, true, EmphasisKind.Subscript),
         (new Regex(@"\G\^[^\^\n]+\^"), 1, true, EmphasisKind.Superscript),
         (new Regex(@"\G={2}[^=\n]+={2}"), 2, true, EmphasisKind.Other),
-        (new Regex(@"\G`[^`\n]+`"), 1, false, EmphasisKind.Other),
+        (InlineCodePattern, 1, false, EmphasisKind.Other),
     ];
 
     // Same order as Markdown.xshd (images before plain links, since an "![...]" run must not
@@ -333,6 +351,42 @@ internal static class MarkdownSyntax
                 pos += m.Length;
                 continue;
             }
+            pos++;
+        }
+        return results;
+    }
+
+    /// <summary>
+    /// The recognized emoji shortcode runs on a line. A <c>:name:</c> whose name is not in
+    /// <see cref="EmojiCatalog"/> is ordinary text and is not reported.
+    /// </summary>
+    /// <remarks>
+    /// Skips inline code spans, since a shortcode inside backticks is literal — the one skip this
+    /// scanner needs. It deliberately does *not* skip emphasis or links: emoji inside bold should
+    /// still be emoji, the same reasoning as <see cref="FindUnderlineSpans"/>.
+    /// </remarks>
+    public static IReadOnlyList<EmojiSpan> FindEmojiSpans(TextDocument doc, DocumentLine line)
+    {
+        var results = new List<EmojiSpan>();
+        var text = doc.GetText(line);
+        int pos = LeadingBulletMarkerLength(doc, line);
+        while (pos < text.Length)
+        {
+            var code = InlineCodePattern.Match(text, pos);
+            if (code.Success)
+            {
+                pos += code.Length;
+                continue;
+            }
+
+            var m = EmojiPattern.Match(text, pos);
+            if (m.Success && EmojiCatalog.TryGet(m.Groups[1].Value, out var emoji))
+            {
+                results.Add(new EmojiSpan(line.Offset + pos, line.Offset + pos + m.Length, emoji));
+                pos += m.Length;
+                continue;
+            }
+
             pos++;
         }
         return results;

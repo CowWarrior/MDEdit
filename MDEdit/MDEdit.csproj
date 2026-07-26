@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Resources\Markdown.xshd" />
+    <EmbeddedResource Include="Resources\Emoji.txt" />
   </ItemGroup>
 
   <!-- WPF "Resource" build action, distinct from the EmbeddedResource above, so XAML can reference these via a relative pack URI.

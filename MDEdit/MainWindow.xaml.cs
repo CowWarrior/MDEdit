@@ -39,6 +39,7 @@ public partial class MainWindow : Window
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
     private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
     private readonly UnderlineMarkerElementGenerator _underlineMarkerGenerator = new();
+    private readonly EmojiElementGenerator _emojiGenerator = new();
     private readonly BlockquoteMarkerElementGenerator _blockquoteMarkerGenerator = new();
     private readonly BulletListMarkerElementGenerator _bulletListMarkerGenerator = new();
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
@@ -60,6 +61,7 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_underlineMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_emojiGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_blockquoteMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_bulletListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_numberedListMarkerGenerator);
@@ -493,6 +495,7 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.CaretLine   = line;
         _linkMarkerGenerator.CaretOffset     = offset;
         _underlineMarkerGenerator.CaretOffset = offset;
+        _emojiGenerator.CaretOffset          = offset;
         _blockquoteMarkerGenerator.CaretLine = line;
         _bulletListMarkerGenerator.CaretLine = line;
         _numberedListMarkerGenerator.CaretLine = line;
@@ -528,6 +531,7 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
         _linkMarkerGenerator.CaretOffset     = _lastCaretOffset;
         _underlineMarkerGenerator.CaretOffset = _lastCaretOffset;
+        _emojiGenerator.CaretOffset          = _lastCaretOffset;
         _blockquoteMarkerGenerator.CaretLine = _lastCaretLine;
         _bulletListMarkerGenerator.CaretLine = _lastCaretLine;
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
@@ -541,6 +545,7 @@ public partial class MainWindow : Window
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
         _linkMarkerGenerator.Enabled       = _settings.LivePreview;
         _underlineMarkerGenerator.Enabled  = _settings.LivePreview;
+        _emojiGenerator.Enabled            = _settings.LivePreview;
         _blockquoteMarkerGenerator.Enabled = _settings.LivePreview;
         _bulletListMarkerGenerator.Enabled = _settings.LivePreview;
         _numberedListMarkerGenerator.Enabled = _settings.LivePreview;
@@ -568,6 +573,9 @@ public partial class MainWindow : Window
     private void BtnSubscript_Click(object sender, RoutedEventArgs e)  => WrapSelection("~", "~");
     // The only formatting command that emits HTML rather than Markdown — see Requirements.md §3.
     private void BtnUnderline_Click(object sender, RoutedEventArgs e)  => WrapSelection("<u>", "</u>");
+    // Wrapping in ':' gives both halves of the convention for free: with a word selected it becomes
+    // ":word:", and with nothing selected it leaves the caret between two colons ready to type a name.
+    private void BtnEmoji_Click(object sender, RoutedEventArgs e)      => WrapSelection(":", ":");
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);
     private void BtnH3_Click(object sender, RoutedEventArgs e)       => InsertHeading(3);

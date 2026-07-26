@@ -57,6 +57,7 @@
                 <MenuItem Header="Inline _Code"  Click="BtnCode_Click"/>
                 <MenuItem Header="Code _Block"   Click="BtnCodeBlock_Click"/>
                 <MenuItem Header="_Link…"        Click="BtnLink_Click"/>
+                <MenuItem Header="Emo_ji"        Click="BtnEmoji_Click"/>
                 <Separator/>
                 <MenuItem Header="• Bullet List"    Click="BtnBulletList_Click"/>
                 <MenuItem Header="1. Numbered List" Click="BtnNumberList_Click"/>
