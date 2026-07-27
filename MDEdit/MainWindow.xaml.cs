@@ -1,5 +1,6 @@
 using System.IO;
 using System.Reflection;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -74,7 +75,16 @@ public partial class MainWindow : Window
         ApplySettings();
 
         Editor.TextArea.Caret.PositionChanged += (_, _) => OnCaretPositionChanged();
-        Editor.TextChanged += (_, _) => MarkDirty();
+        // Selection size is shown in the status bar, and a selection can change without the caret
+        // moving (Select All from an already-current caret, or a selection being cleared), so this
+        // is hooked in addition to PositionChanged rather than relying on it.
+        Editor.TextArea.SelectionChanged += (_, _) => UpdateStatusBar();
+        Editor.TextChanged += (_, _) =>
+        {
+            MarkDirty();
+            UpdateDocumentStats();
+        };
+        UpdateDocumentStats();
 
         // Follow OS light/dark switches live while the theme setting is System.
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
@@ -461,13 +471,38 @@ public partial class MainWindow : Window
         var name  = _files.CurrentPath is string p ? Path.GetFileName(p) : "Untitled";
         var dirty = _isDirty ? "*" : "";
         Title = $"MDEdit - {name}{dirty}";
-        StatusFileName.Text = $"{name}{dirty}";
     }
 
+    // Caret position and selection size — cheap, and called on every caret move.
     private void UpdateStatusBar()
     {
         var caret = Editor.TextArea.Caret;
         StatusPosition.Text = $"Ln {caret.Line}, Col {caret.Column}";
+
+        var selected = Editor.SelectionLength;
+        var visibility = selected > 0 ? Visibility.Visible : Visibility.Collapsed;
+        StatusSelection.Visibility = visibility;
+        StatusSelectionSeparator.Visibility = visibility;
+        if (selected > 0)
+            StatusSelection.Text = StatusFormatter.FormatSelectionCount(selected);
+    }
+
+    // Size and character count — separated from UpdateStatusBar because computing the byte count
+    // means walking the whole document, which must not happen on every caret move. Called on text
+    // change and after a document is loaded or reset.
+    private void UpdateDocumentStats()
+    {
+        // The size a save would produce, not the size on disk: it stays correct while editing, and
+        // for an unmodified saved file the two agree. FileService always writes UTF-8 via
+        // File.WriteAllText, which emits the BOM preamble, so that is counted too — otherwise this
+        // would disagree with Explorer by exactly the 3 preamble bytes.
+        var text = Editor.Document.Text;
+        long bytes = Encoding.UTF8.GetPreamble().Length + Encoding.UTF8.GetByteCount(text);
+
+        StatusFileSize.Text  = StatusFormatter.FormatFileSize(bytes);
+        // TextLength counts a CRLF line break as the two characters it is. Offering the
+        // count-as-one alternative is Requirements.md §9's remaining planned item.
+        StatusCharCount.Text = StatusFormatter.FormatCharacterCount(Editor.Document.TextLength);
     }
 
     // ── Live preview (WYSIWYG) ────────────────────────────────────────────

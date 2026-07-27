@@ -153,22 +153,37 @@
         </Border>
 
         <!-- ═══ Status bar ═══ -->
-        <StatusBar DockPanel.Dock="Bottom" Height="22"
-                   Background="{DynamicResource AppChromeBackgroundBrush}"
-                   Foreground="{DynamicResource AppChromeForegroundBrush}">
-            <StatusBar.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <DockPanel LastChildFill="True"/>
-                </ItemsPanelTemplate>
-            </StatusBar.ItemsPanel>
-            <StatusBarItem DockPanel.Dock="Right" Margin="4,0">
-                <TextBlock x:Name="StatusPosition">Ln 1, Col 1</TextBlock>
-            </StatusBarItem>
-            <Separator DockPanel.Dock="Right"/>
-            <StatusBarItem>
-                <TextBlock x:Name="StatusFileName">Untitled</TextBlock>
-            </StatusBarItem>
-        </StatusBar>
+        <!-- A plain Border, NOT StatusBar/StatusBarItem. The themed control rendered no text at all
+             in either theme — this app opts into the experimental Fluent ThemeMode, whose
+             StatusBarItem wants more vertical room than the fixed Height="22" allowed, clipping the
+             content away. The Menu/ToolBar chrome around it works, so this uses the same brushes and
+             the same plain-container approach. MinHeight rather than Height, so content can never be
+             clipped again. Foreground goes through the attached TextElement.Foreground because
+             Border has no Foreground property of its own — the TextBlocks inherit it from there.
+             No filename here: the title bar already carries it, and its dirty marker. The divider
+             line above is drawn by the editor Border below (BorderThickness="0,1"), not here. -->
+        <Border DockPanel.Dock="Bottom" MinHeight="24"
+                Background="{DynamicResource AppChromeBackgroundBrush}"
+                TextElement.Foreground="{DynamicResource AppChromeForegroundBrush}">
+            <Grid Margin="8,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock x:Name="StatusFileSize" Text="0 bytes"/>
+                    <TextBlock Text="  |  " Opacity="0.4"/>
+                    <TextBlock x:Name="StatusCharCount" Text="0 characters"/>
+                    <!-- Prefix and text hide together, so no dangling divider with no selection. -->
+                    <TextBlock x:Name="StatusSelectionSeparator" Text="  |  " Opacity="0.4" Visibility="Collapsed"/>
+                    <TextBlock x:Name="StatusSelection" Visibility="Collapsed"/>
+                </StackPanel>
+
+                <TextBlock x:Name="StatusPosition" Grid.Column="1"
+                           VerticalAlignment="Center" Text="Ln 1, Col 1"/>
+            </Grid>
+        </Border>
 
         <!-- ═══ Editor ═══ -->
         <!-- The Border draws the hairline dividers separating the editor surface from the

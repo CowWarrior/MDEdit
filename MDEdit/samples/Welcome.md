@@ -69,7 +69,8 @@ MDEdit will ask before discarding your work.
 ### Version 1.0.2
 
 Added emoji shortcodes — type `:joy:`, `:rocket:` or any of around 240 others and it becomes the emoji
-as you write — and task lists, which show as tick boxes you can toggle from the toolbar. Also corrected
+as you write — and task lists, which show as tick boxes you can toggle from the toolbar. The status bar
+now shows the document's size, its character count, and how much text you have selected. Also corrected
 the version number shown in Help → About.
 
 ### Version 1.0.1

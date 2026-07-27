@@ -144,12 +144,22 @@ A toolbar provides one-click access to the most common formatting operations: bo
 ## 9. Status Bar
 
 A status bar is always visible and displays:
-- The current filename (or "Untitled" for unsaved documents).
-- An indicator when the document has unsaved changes.
+- The document's size, as `512 bytes`, `1.5 KB`, `2.4 MB` and so on — bytes below one kilobyte, and
+  one decimal place above it. Units are 1024-based and labelled KB/MB/GB, matching what Windows
+  Explorer reports, so the two figures agree for a saved file.
+- The document's character count.
+- When text is selected, an additional section showing the number of characters selected. The section
+  is hidden entirely when nothing is selected.
 - The current cursor position (line and column number).
-- The document's file size and character count *(planned)*.
-- The character count can treat each line break as one character or as two (CR+LF) — either as a user-selectable option or by displaying both counts *(planned)*.
-- When text is selected, an additional status bar section displays "Selected" and the number of characters selected *(planned)*.
+
+The filename and the unsaved-changes indicator are deliberately **not** shown in the status bar — the
+title bar already carries both, and repeating them wastes the space.
+
+Both the size and the character count reflect the document as it currently stands, including unsaved
+edits, rather than the file as last written to disk.
+
+- The character count treats a CRLF line break as the two characters it is. Offering the count-as-one
+  alternative, as an option or by displaying both counts, is *(planned)*.
 
 ## 10. Sample Documents
 
