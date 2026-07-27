@@ -127,7 +127,7 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - The user can choose how the status bar's character count charges a line break: as 0, 1, or 2
   characters (§9).
 - The user can customize the editor's appearance from a Preferences window, opened via View →
-  Preferences *(planned)*:
+  Preferences:
   - A separate font choice for WYSIWYG document text and for code (inline code and fenced code
     blocks), rather than today's fixed WYSIWYG font (Arial) and fixed monospace stack.
   - Text and background colors for the various formatted spans (headings, links, highlights,

@@ -8,17 +8,20 @@ namespace MDEdit;
 
 internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 {
-    private static readonly SolidColorBrush LightHeadingBrush    = Freeze(Color.FromRgb(0x00, 0x57, 0xAE));
-    private static readonly SolidColorBrush LightBlockquoteBrush = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    // internal: HorizontalRuleRenderer draws the WYSIWYG rule line in this same color, so the
-    // rendered rule and the raw "---" text revealed under the caret never look like different
-    // constructs — read from here rather than duplicated, the BlockquoteMarkerElementGenerator
-    // shared-constant convention.
-    internal static readonly SolidColorBrush LightHRuleBrush = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
+    // Settable rather than compile-time constants, so MainWindow.ApplyEditorPreferences can drive
+    // them from AppSettings.EditorPreferences (Requirements.md §6) — defaulted here to exactly the
+    // values that used to be hardcoded, so an unmodified install renders identically. Public (not
+    // internal static like before): HorizontalRuleRenderer reads HRuleBrushLight/Dark through a
+    // reference to this instance now, the same reason it already holds one to
+    // HorizontalRuleElementGenerator, so the rendered rule and the raw "---" text revealed under
+    // the caret can never disagree about color.
+    public SolidColorBrush HeadingBrushLight    { get; set; } = Freeze(Color.FromRgb(0x00, 0x57, 0xAE));
+    public SolidColorBrush BlockquoteBrushLight { get; set; } = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
+    public SolidColorBrush HRuleBrushLight      { get; set; } = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
 
-    private static readonly SolidColorBrush DarkHeadingBrush    = Freeze(Color.FromRgb(0x58, 0xA6, 0xFF));
-    private static readonly SolidColorBrush DarkBlockquoteBrush = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
-    internal static readonly SolidColorBrush DarkHRuleBrush = Freeze(Color.FromRgb(0x48, 0x4F, 0x58));
+    public SolidColorBrush HeadingBrushDark    { get; set; } = Freeze(Color.FromRgb(0x58, 0xA6, 0xFF));
+    public SolidColorBrush BlockquoteBrushDark { get; set; } = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
+    public SolidColorBrush HRuleBrushDark      { get; set; } = Freeze(Color.FromRgb(0x48, 0x4F, 0x58));
 
     // Set by MainWindow.ApplyTheme; a TextView.Redraw() afterwards re-runs ColorizeLine.
     public bool IsDark { get; set; }
@@ -47,21 +50,21 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         if (MarkdownSyntax.TryGetHeadingLevel(doc, line, out int level, out _))
         {
             var scale = LivePreviewEnabled ? HeadingScale(level) : 1.0;
-            ColorLine(line, IsDark ? DarkHeadingBrush : LightHeadingBrush,
+            ColorLine(line, IsDark ? HeadingBrushDark : HeadingBrushLight,
                 level <= 3 ? FontWeights.Bold : FontWeights.SemiBold, emSizeScale: scale);
             return;
         }
 
         if (MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _))
         {
-            ColorLine(line, IsDark ? DarkBlockquoteBrush : LightBlockquoteBrush, FontWeights.Normal, italic: true);
+            ColorLine(line, IsDark ? BlockquoteBrushDark : BlockquoteBrushLight, FontWeights.Normal, italic: true);
             return;
         }
 
         var text = doc.GetText(line);
         if (MarkdownSyntax.IsHorizontalRule(text))
         {
-            ColorLine(line, IsDark ? DarkHRuleBrush : LightHRuleBrush, FontWeights.Normal);
+            ColorLine(line, IsDark ? HRuleBrushDark : HRuleBrushLight, FontWeights.Normal);
             return;
         }
 
@@ -74,7 +77,7 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         // same cost discipline as IsFenceDelimiterLine before TryGetEnclosingFenceBlock.
         if (text[0] == '|' && MarkdownSyntax.TryGetTableBlock(doc, line.LineNumber, out int tableStart, out _))
         {
-            var brush = IsDark ? DarkHRuleBrush : LightHRuleBrush;
+            var brush = IsDark ? HRuleBrushDark : HRuleBrushLight;
             if (line.LineNumber == tableStart + 1)
             {
                 ColorLine(line, brush, FontWeights.Normal);

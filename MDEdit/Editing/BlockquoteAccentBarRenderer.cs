@@ -22,10 +22,12 @@ namespace MDEdit.Editing;
 /// </summary>
 internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
 {
-    // Same brush colors as MarkdownLineColorizer's blockquote text, so the bar and the quoted
-    // text read as the same visual language.
-    private static readonly SolidColorBrush LightBarBrush = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    private static readonly SolidColorBrush DarkBarBrush  = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
+    // Settable rather than compile-time constants, so MainWindow.ApplyEditorPreferences can drive
+    // them from AppSettings.EditorPreferences (Requirements.md §6) — same color as
+    // MarkdownLineColorizer's blockquote text by default (and set to the same value from there),
+    // so the bar and the quoted text read as one visual language.
+    public SolidColorBrush LightBarBrush { get; set; } = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
+    public SolidColorBrush DarkBarBrush  { get; set; } = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
 
     public bool Enabled { get; set; }
     public bool IsDark { get; set; }

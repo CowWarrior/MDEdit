@@ -6,6 +6,10 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!-- Needed only for System.Windows.Forms.ColorDialog (PreferencesWindow's color swatches) —
+         the native OS color picker has no WPF equivalent. Fully supported alongside UseWPF in one
+         SDK project; adds no NuGet package. -->
+    <UseWindowsForms>true</UseWindowsForms>
     <ApplicationIcon>Resources\AppIcon.ico</ApplicationIcon>
     <!-- Application.ThemeMode (Fluent themes) is still marked experimental; used deliberately for dark mode. -->
     <NoWarn>$(NoWarn);WPF0001</NoWarn>
@@ -17,6 +21,16 @@
 
   <ItemGroup>
     <InternalsVisibleTo Include="MDEdit.Tests" />
+  </ItemGroup>
+
+  <!-- UseWindowsForms + ImplicitUsings silently adds global usings for System.Windows.Forms and
+       System.Drawing, which collide project-wide with WPF's own Color/Brush/FontFamily and even
+       MDEdit.Editing.SelectionRange (System.Windows.Forms has its own SelectionRange type). Only
+       PreferencesWindow.xaml.cs actually needs WinForms (System.Windows.Forms.ColorDialog, fully
+       qualified there); removing these two implicit usings avoids the collision everywhere else. -->
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
   </ItemGroup>
 
   <ItemGroup>

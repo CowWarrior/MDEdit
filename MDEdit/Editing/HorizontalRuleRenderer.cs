@@ -31,8 +31,17 @@ internal sealed class HorizontalRuleRenderer : IBackgroundRenderer
     private const double Thickness  = 1.0;
 
     private readonly HorizontalRuleElementGenerator _generator;
+    // HRuleBrushLight/Dark are now settable (AppSettings.EditorPreferences drives them, see
+    // MainWindow.ApplyEditorPreferences), so this reads them through a reference to the colorizer
+    // instance rather than a static field — the same reason this already holds one to
+    // HorizontalRuleElementGenerator.
+    private readonly MarkdownLineColorizer _colorizer;
 
-    public HorizontalRuleRenderer(HorizontalRuleElementGenerator generator) => _generator = generator;
+    public HorizontalRuleRenderer(HorizontalRuleElementGenerator generator, MarkdownLineColorizer colorizer)
+    {
+        _generator = generator;
+        _colorizer = colorizer;
+    }
 
     public bool Enabled { get; set; }
     public bool IsDark { get; set; }
@@ -52,7 +61,7 @@ internal sealed class HorizontalRuleRenderer : IBackgroundRenderer
         // Colors, not brush choice, are shared with MarkdownLineColorizer's source-mode hrule
         // styling — the drawn rule and the raw "---" revealed under the caret must read as the
         // same construct.
-        var brush = IsDark ? MarkdownLineColorizer.DarkHRuleBrush : MarkdownLineColorizer.LightHRuleBrush;
+        var brush = IsDark ? _colorizer.HRuleBrushDark : _colorizer.HRuleBrushLight;
         double right = textView.ActualWidth - RightInset;
         if (right <= LeftInset) return;
 

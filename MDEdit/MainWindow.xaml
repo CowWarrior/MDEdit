@@ -84,6 +84,8 @@
                     <MenuItem x:Name="MenuLineBreakOne"  Header="_1 Character"  IsCheckable="True" Click="MenuLineBreakOne_Click"/>
                     <MenuItem x:Name="MenuLineBreakTwo"  Header="_2 Characters" IsCheckable="True" IsChecked="True" Click="MenuLineBreakTwo_Click"/>
                 </MenuItem>
+                <Separator/>
+                <MenuItem Header="_Preferences…" Click="MenuPreferences_Click"/>
             </MenuItem>
 
             <MenuItem Header="_Help">

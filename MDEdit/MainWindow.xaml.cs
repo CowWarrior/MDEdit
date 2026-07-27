@@ -50,12 +50,12 @@ public partial class MainWindow : Window
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
     private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
     private readonly HorizontalRuleRenderer _horizontalRuleRenderer; // needs _horizontalRuleGenerator, so built in the ctor
-    // WYSIWYG renders prose in a document font; source mode keeps the XAML mono stack
-    // (captured into _sourceFontFamily in the constructor rather than duplicated here).
-    // Deliberately side by side: the planned font picker (Requirements.md §6) would make
-    // both configurable, and this is the seam it will find.
-    private static readonly FontFamily WysiwygFontFamily = new("Arial");
-    private readonly FontFamily _sourceFontFamily;
+    // WYSIWYG renders prose in a document font; source mode (and the XSHD code colors) use the
+    // code font — both come from AppSettings.EditorPreferences (Requirements.md §6) and are
+    // (re)derived by ApplyEditorPreferences, not compile-time constants, so Preferences can change
+    // them live. The XAML FontFamily on the editor is only the pre-ApplyEditorPreferences fallback.
+    private FontFamily _wysiwygFontFamily = new("Arial");
+    private FontFamily _sourceFontFamily = new("Cascadia Code, Consolas, Courier New");
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -66,11 +66,9 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
-        _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator);
+        _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator, _colorizer);
         InitializeComponent();
-        _sourceFontFamily = Editor.FontFamily; // the XAML mono stack, single source of truth
-        _colorizer.SourceFontFamily = _sourceFontFamily;
-        LoadSyntaxHighlighting();
+        ApplyEditorPreferences(); // fonts, span colors, and the compiled highlighting definitions
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
         Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_emphasisMarkerGenerator);
@@ -118,24 +116,6 @@ public partial class MainWindow : Window
 
     // ── Syntax highlighting ───────────────────────────────────────────────
 
-    // Dark replacements for the colors defined in Markdown.xshd (whose values are tuned
-    // for a white background). Colors absent here (Bold/Italic/BoldItalic) are style-only.
-    private static readonly Dictionary<string, (Color? Foreground, Color? Background)> DarkHighlightColors = new()
-    {
-        ["Strike"]     = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
-        // Muted amber rather than the light theme's pale yellow, which reads as a glaring block on a
-        // dark page. Tuned against the #1E1E1E editor background and #DCDCDC text (Themes/Dark.xaml):
-        // light enough to be an obvious band (~2.6:1 against the page — an earlier, darker #4A431F
-        // managed only ~1.7:1 and was barely visible), while keeping body text at ~4.7:1 over it.
-        // Foreground stays unset so highlighted text keeps the editor's standard text color.
-        ["Highlight"]  = (null, Color.FromRgb(0x6A, 0x5E, 0x2E)),
-        ["InlineCode"] = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
-        ["CodeBlock"]  = (Color.FromRgb(0xFF, 0x7B, 0x72), Color.FromRgb(0x30, 0x36, 0x3D)),
-        ["Link"]       = (Color.FromRgb(0x58, 0xA6, 0xFF), null),
-        ["ListMarker"] = (Color.FromRgb(0x79, 0xC0, 0xFF), null),
-        ["Comment"]    = (Color.FromRgb(0x8B, 0x94, 0x9E), null),
-    };
-
     private void LoadSyntaxHighlighting()
     {
         _markdownLight = LoadDefinition(dark: false);
@@ -143,28 +123,86 @@ public partial class MainWindow : Window
         Editor.SyntaxHighlighting = _markdownLight; // ApplySettings/ApplyTheme picks the real one
     }
 
-    // The dark variant is built by recoloring the parsed XSHD model before compiling it,
-    // rather than mutating the loaded definition (whose colors may be frozen).
-    private static IHighlightingDefinition LoadDefinition(bool dark)
+    // Both the light and dark variants are built by recoloring the parsed XSHD model before
+    // compiling it, rather than mutating the loaded definition (whose colors may be frozen) —
+    // every color and the code font family comes from AppSettings.EditorPreferences
+    // (Requirements.md §6), so a user customization and the compiled-in Markdown.xshd defaults
+    // go through the exact same path. Called again, recompiling both definitions from scratch,
+    // whenever ApplyEditorPreferences runs — a deliberate, infrequent user action, not something
+    // happening per keystroke, so redoing this (already done twice at every startup) costs nothing
+    // measurable. Colors absent from the table below (Bold/Italic/BoldItalic/Underline) are
+    // style-only or decoration-only — nothing to recolor.
+    private IHighlightingDefinition LoadDefinition(bool dark)
     {
         using var stream = Assembly.GetExecutingAssembly()
             .GetManifestResourceStream("MDEdit.Resources.Markdown.xshd")!;
         using var reader = new XmlTextReader(stream);
         var xshd = HighlightingLoader.LoadXshd(reader);
 
-        if (dark)
+        var p = _settings.EditorPreferences;
+        var overrides = new Dictionary<string, (Color? Foreground, Color? Background, string? FontFamily)>
         {
-            foreach (var color in xshd.Elements.OfType<XshdColor>())
-            {
-                if (color.Name is not null && DarkHighlightColors.TryGetValue(color.Name, out var c))
-                {
-                    if (c.Foreground is Color fg) color.Foreground = new SimpleHighlightingBrush(fg);
-                    if (c.Background is Color bg) color.Background = new SimpleHighlightingBrush(bg);
-                }
-            }
+            ["Strike"]     = (ParseColor(dark ? p.StrikethroughColorDark : p.StrikethroughColorLight), null, null),
+            // Foreground stays null so highlighted text keeps the editor's standard text color.
+            ["Highlight"]  = (null, ParseColor(dark ? p.HighlightBackgroundDark : p.HighlightBackgroundLight), null),
+            ["InlineCode"] = (ParseColor(dark ? p.CodeForegroundDark : p.CodeForegroundLight),
+                               ParseColor(dark ? p.CodeBackgroundDark : p.CodeBackgroundLight), p.CodeFontFamily),
+            ["CodeBlock"]  = (ParseColor(dark ? p.CodeForegroundDark : p.CodeForegroundLight),
+                               ParseColor(dark ? p.CodeBackgroundDark : p.CodeBackgroundLight), p.CodeFontFamily),
+            ["Link"]       = (ParseColor(dark ? p.LinkColorDark : p.LinkColorLight), null, null),
+            ["ListMarker"] = (ParseColor(dark ? p.ListMarkerColorDark : p.ListMarkerColorLight), null, null),
+            ["Comment"]    = (ParseColor(dark ? p.CommentColorDark : p.CommentColorLight), null, null),
+        };
+
+        foreach (var color in xshd.Elements.OfType<XshdColor>())
+        {
+            if (color.Name is null || !overrides.TryGetValue(color.Name, out var o)) continue;
+            if (o.Foreground is Color fg) color.Foreground = new SimpleHighlightingBrush(fg);
+            if (o.Background is Color bg) color.Background = new SimpleHighlightingBrush(bg);
+            if (o.FontFamily is string ff) color.FontFamily = new FontFamily(ff);
         }
 
         return HighlightingLoader.Load(xshd, HighlightingManager.Instance);
+    }
+
+    private static Color ParseColor(string hex) => (Color)ColorConverter.ConvertFromString(hex);
+
+    private static SolidColorBrush FreezeBrush(string hex)
+    {
+        var brush = new SolidColorBrush(ParseColor(hex));
+        brush.Freeze();
+        return brush;
+    }
+
+    // The single entry point for AppSettings.EditorPreferences (Requirements.md §6): rebuilds the
+    // WYSIWYG/code FontFamily objects, pushes every span color into the colorizer/renderer
+    // instances (the same "MainWindow fans state out" pattern ApplyTheme already uses for IsDark),
+    // and recompiles the highlighting definitions (LoadSyntaxHighlighting reads the same settings
+    // through LoadDefinition). Self-contained — also reapplies the theme/live-preview font
+    // selection at the end — so every caller (the constructor, and later the Preferences window's
+    // live-apply callback) gets a fully correct redraw without having to remember the right order.
+    private void ApplyEditorPreferences()
+    {
+        var p = _settings.EditorPreferences;
+
+        _wysiwygFontFamily = new FontFamily(p.WysiwygFontFamily);
+        _sourceFontFamily  = new FontFamily(p.CodeFontFamily);
+        _colorizer.SourceFontFamily = _sourceFontFamily;
+
+        _colorizer.HeadingBrushLight    = FreezeBrush(p.HeadingColorLight);
+        _colorizer.HeadingBrushDark     = FreezeBrush(p.HeadingColorDark);
+        _colorizer.BlockquoteBrushLight = FreezeBrush(p.BlockquoteColorLight);
+        _colorizer.BlockquoteBrushDark  = FreezeBrush(p.BlockquoteColorDark);
+        _colorizer.HRuleBrushLight      = FreezeBrush(p.HorizontalRuleColorLight);
+        _colorizer.HRuleBrushDark       = FreezeBrush(p.HorizontalRuleColorDark);
+
+        // Same color as the blockquote text, as today — not a separate customizable setting.
+        _blockquoteAccentBarRenderer.LightBarBrush = _colorizer.BlockquoteBrushLight;
+        _blockquoteAccentBarRenderer.DarkBarBrush  = _colorizer.BlockquoteBrushDark;
+
+        LoadSyntaxHighlighting();
+        UpdateLivePreviewState();
+        ApplyTheme();
     }
 
     private void UpdateHighlighting(string? path)
@@ -699,7 +737,7 @@ public partial class MainWindow : Window
         // WYSIWYG reads as a document: prose in a proportional font, source mode all-mono.
         // Code spans/blocks stay mono in both modes via Markdown.xshd's fontFamily colors,
         // and revealed construct lines swap back via MarkdownLineColorizer.
-        Editor.FontFamily = _settings.LivePreview ? WysiwygFontFamily : _sourceFontFamily;
+        Editor.FontFamily = _settings.LivePreview ? _wysiwygFontFamily : _sourceFontFamily;
 
         _colorizer.LivePreviewEnabled = _settings.LivePreview;
         _headingMarkerGenerator.Enabled    = _settings.LivePreview;
@@ -826,6 +864,17 @@ public partial class MainWindow : Window
     private void MenuLineBreakZero_Click(object sender, RoutedEventArgs e) => SetLineBreakCharWeight(0);
     private void MenuLineBreakOne_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(1);
     private void MenuLineBreakTwo_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(2);
+
+    // View > Preferences… (Requirements.md §6). The window owns its own Cancel/Reset-to-Default
+    // snapshot logic against the live AppSettings.EditorPreferences instance and applies every
+    // change immediately via the ApplyEditorPreferences callback — this handler just shows it and
+    // persists whatever's left once it closes, the same "save after the dialog returns" shape as
+    // every other settings write in this codebase.
+    private void MenuPreferences_Click(object sender, RoutedEventArgs e)
+    {
+        new PreferencesWindow(_settings, ApplyEditorPreferences) { Owner = this }.ShowDialog();
+        SettingsService.Save(_settings);
+    }
 
     private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
     {
