@@ -14,6 +14,9 @@ internal sealed class AppSettings
     // Most-recently-used file paths, newest first — see the File > Recent Files menu.
     // Kept in shape by Editing/RecentFiles, which also sanitizes it on load.
     public List<string> RecentFiles { get; set; } = [];
+    // The release ("Major.Minor.Build") ReleaseNotes.md was last auto-shown for — see
+    // MainWindow.MaybeShowReleaseNotesOnFirstRun and Editing/ReleaseNotesGate. Empty means never shown.
+    public string LastReleaseNotesVersionShown { get; set; } = "";
 }
 
 internal static class SettingsService

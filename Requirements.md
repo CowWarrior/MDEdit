@@ -179,26 +179,27 @@ edits, rather than the file as last written to disk.
 
 ## 10. Sample Documents
 
-- A set of sample Markdown documents is installed alongside the application, including a `Welcome.md`
-  introducing the product. Further sample documents demonstrating supported Markdown constructs may be
-  added *(planned)*.
-- `Welcome.md` carries a "Recent changes" section describing what changed in each released version, so a
-  user who receives an automatic update can see what is new. It is updated as part of every release, and
-  lists user-visible changes only.
-- The samples are reachable at any time from the Help menu, without the user needing to know where they
-  were installed *(planned)*.
-- Editing a sample and saving it prompts for a new location rather than writing over the installed copy,
-  because the installed copy is replaced whenever the application updates. The user's own edits are never
-  silently lost to an upgrade *(planned)*.
+- A set of sample Markdown documents is installed alongside the application, including a
+  `ReleaseNotes.md` that greets the user and doubles as the changelog. Further sample documents
+  demonstrating supported Markdown constructs may be added *(planned)*.
+- `ReleaseNotes.md` carries a "Recent changes" section describing what changed in each released version,
+  as a bullet list per version, so a user who receives an automatic update can see what is new at a
+  glance. It is updated as part of every release, and lists user-visible changes only.
+- The samples are reachable at any time from Help → Release Notes, without the user needing to know
+  where they were installed.
+- The installed copy of `ReleaseNotes.md` is read-only, so it can't be overwritten by accident: attempting
+  to save over it fails with a message pointing at Save As, which writes the edited copy to a location of
+  the user's choosing instead. This only protects a single session's edits, not edits across an
+  upgrade — the installed copy is replaced wholesale whenever the application updates regardless.
 
-### First run *(planned)*
+### First run
 
-- `Welcome.md` opens automatically the first time the application is run after being installed, and again
-  the first time it is run after being updated to a new version — so a returning user sees what has
+- `ReleaseNotes.md` opens automatically the first time the application is run after being installed, and
+  again the first time it is run after being updated to a new version — so a returning user sees what has
   changed rather than the same greeting on every launch.
 - It opens once per installed version, never on an ordinary launch.
 - It opens as a normal, unmodified document: the user is not prompted to save it on exit unless they have
   actually edited it.
 - If the application was launched to open a specific file — from a file association, a "send to", or a
-  command-line argument — that file takes precedence and the welcome document is not shown. The user's
+  command-line argument — that file takes precedence and the release notes are not shown. The user's
   intent to open a particular document is never overridden.

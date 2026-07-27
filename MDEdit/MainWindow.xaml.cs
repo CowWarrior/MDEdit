@@ -112,6 +112,8 @@ public partial class MainWindow : Window
         var args = Environment.GetCommandLineArgs();
         if (args.Length > 1)
             OpenFile(args[1]);
+        else
+            MaybeShowReleaseNotesOnFirstRun();
     }
 
     // ── Syntax highlighting ───────────────────────────────────────────────
@@ -274,7 +276,10 @@ public partial class MainWindow : Window
         OpenFile(dlg.FileName);
     }
 
-    private void OpenFile(string path)
+    // addToRecentFiles/showErrorOnFailure default to normal Open semantics; MaybeShowReleaseNotesOnFirstRun
+    // passes both false, since an automatic first-run open is not a user-initiated action — it must
+    // fail silently and shouldn't clutter the MRU list the way a deliberate Open does.
+    private void OpenFile(string path, bool addToRecentFiles = true, bool showErrorOnFailure = true)
     {
         try
         {
@@ -284,13 +289,76 @@ public partial class MainWindow : Window
             ResetLivePreviewCaretTracking();
             UpdateTitle();
             UpdateStatusBar();
-            AddToRecentFiles(path); // only on success — a file that failed to open isn't "recent"
+            if (addToRecentFiles)
+                AddToRecentFiles(path); // only on success — a file that failed to open isn't "recent"
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Could not open file:\n{ex.Message}", "MDEdit",
-                MessageBoxButton.OK, MessageBoxImage.Error);
+            if (showErrorOnFailure)
+                MessageBox.Show($"Could not open file:\n{ex.Message}", "MDEdit",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
         }
+    }
+
+    // ── Release notes (Requirements.md §10) ──────────────────────────────────
+    // MDEdit.csproj ships samples\ReleaseNotes.md as Content beside the exe, and ClickOnce
+    // preserves that relative layout in its deployed version folder, so this path is correct in
+    // both a normal build and an installed one.
+    private static string GetReleaseNotesPath() => Path.Combine(AppContext.BaseDirectory, "samples", "ReleaseNotes.md");
+
+    // Applied at open time rather than baked in at publish time: whether ClickOnce's deploy
+    // mechanism (which renames payload files to *.deploy and reconstructs them on the client)
+    // preserves OS file attributes is unverified and not worth depending on. Doing it here is
+    // idempotent and self-heals after every update, since each new version lands in a fresh
+    // folder with default attributes. Best-effort — a failure to mark it read-only shouldn't
+    // block opening the file for reading.
+    private static void EnsureReleaseNotesAreReadOnly(string path)
+    {
+        try
+        {
+            var attributes = File.GetAttributes(path);
+            if ((attributes & FileAttributes.ReadOnly) == 0)
+                File.SetAttributes(path, attributes | FileAttributes.ReadOnly);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+    }
+
+    // Called once from the constructor when there's no file-association/command-line argument
+    // to open instead (that always takes precedence — Requirements.md §10). Shows the page once
+    // per released version: the "last shown" value is recorded BEFORE attempting to open, so a
+    // missing or unreadable file fails silently exactly once per release rather than retrying on
+    // every launch. ReleaseNotesGate compares only Major.Minor.Build (the release), never the
+    // full version or Revision alone — see its comments for why.
+    private void MaybeShowReleaseNotesOnFirstRun()
+    {
+        var release = ReleaseNotesGate.GetReleaseVersion(Assembly.GetExecutingAssembly().GetName().Version);
+        if (release is null || !ReleaseNotesGate.ShouldShow(_settings.LastReleaseNotesVersionShown, release)) return;
+
+        _settings.LastReleaseNotesVersionShown = release;
+        SettingsService.Save(_settings);
+
+        var path = GetReleaseNotesPath();
+        if (!File.Exists(path)) return;
+
+        EnsureReleaseNotesAreReadOnly(path);
+        // Not a user-initiated Open: no error dialog on failure, and it doesn't join Recent Files.
+        OpenFile(path, addToRecentFiles: false, showErrorOnFailure: false);
+    }
+
+    private void MenuOpenReleaseNotes_Click(object sender, RoutedEventArgs e)
+    {
+        if (!CheckUnsavedChanges()) return;
+
+        var path = GetReleaseNotesPath();
+        if (!File.Exists(path))
+        {
+            MessageBox.Show("The release notes document could not be found.", "MDEdit",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        EnsureReleaseNotesAreReadOnly(path);
+        OpenFile(path); // a deliberate Open: joins Recent Files and shows errors normally
     }
 
     // ── Recent files (MRU) ────────────────────────────────────────────────
@@ -382,6 +450,15 @@ public partial class MainWindow : Window
             _isDirty = false;
             UpdateTitle();
             return true;
+        }
+        // Special-cased so a save that fails only because the file is read-only (e.g. the
+        // installed ReleaseNotes.md — see EnsureReleaseNotesAreReadOnly) points at the actual
+        // way out instead of surfacing a raw "Access to the path is denied" OS message.
+        catch (UnauthorizedAccessException)
+        {
+            MessageBox.Show("This file is read-only. Use Save As to save your changes to a new location.",
+                "MDEdit", MessageBoxButton.OK, MessageBoxImage.Error);
+            return false;
         }
         catch (Exception ex)
         {

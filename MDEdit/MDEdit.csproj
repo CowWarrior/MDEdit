@@ -34,10 +34,30 @@
 
   <!-- Sample documents shipped alongside the app. Content (not Resource/EmbeddedResource) so they stay
        ordinary files on disk the user can open, and so ClickOnce carries them in the deployment payload.
-       Welcome.md's "Recent changes" section is the user-facing changelog — update it before every publish. -->
+       ReleaseNotes.md's "Recent changes" section is the user-facing changelog — update it before every publish. -->
   <ItemGroup>
     <Content Include="samples\**\*.md" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
+
+  <!-- Running the app from a local build folder marks its own copy of ReleaseNotes.md read-only
+       (see MainWindow.EnsureReleaseNotesAreReadOnly) — deliberately, so an installed ClickOnce copy
+       can't be overwritten by accident. But a local Debug/Release rebuild reuses that same output
+       folder, and the Content-copy step can't overwrite a read-only destination, failing with
+       MSB3021 "Access to the path is denied". Clearing the attribute here fixes the dev loop
+       without touching the runtime design: a real ClickOnce install never hits this, since every
+       published version lands in a brand-new folder with no read-only baggage carried over.
+       BeforeTargets must name the actual copy target, _CopyOutOfDateSourceItemsToOutputDirectory
+       (confirmed via `dotnet build -v:n`) — not "Build" or "CopyFilesToOutputDirectory": Build has
+       no tasks of its own, so a "BeforeTargets=Build" hook effectively runs after its whole
+       dependency chain (including the real copy) already completed, and CopyFilesToOutputDirectory
+       turned out not to be the target actually performing this particular copy. -->
+  <Target Name="ClearStaleReleaseNotesReadOnly" BeforeTargets="_CopyOutOfDateSourceItemsToOutputDirectory">
+    <!-- The Attrib MSBuild task isn't registered in the .NET SDK's default task set, unlike full-
+         framework MSBuild — attrib.exe does the same job and needs no UsingTask declaration.
+         Best-effort: a failure here shouldn't block the build, only the read-only cleanup. -->
+    <Exec Command="attrib -R &quot;$(OutDir)samples\*.md&quot;"
+          Condition="Exists('$(OutDir)samples')" ContinueOnError="WarnAndContinue" />
+  </Target>
 
   <!-- Deterministic builds strip the PE timestamp, so stamp the build time into assembly metadata instead (read by the About dialog). -->
   <ItemGroup>
