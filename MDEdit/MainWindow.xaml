@@ -112,6 +112,14 @@
                     </Style>
                 </ToolBar.Resources>
 
+                <!-- Editor mode: mirrors View > Editor Mode (MenuEditorModeSource/Wysiwyg), kept in
+                     sync from the same UpdateLivePreviewState() that updates those menu checkmarks. -->
+                <ToggleButton x:Name="BtnEditorModeToggle" Click="BtnEditorModeToggle_Click"
+                              ToolTip="WYSIWYG (live preview) — click to toggle Source / WYSIWYG" Padding="4,2">
+                    <TextBlock>WYSIWYG</TextBlock>
+                </ToggleButton>
+                <Separator/>
+
                 <!-- Inline formatting -->
                 <Button Command="{x:Static local:MainWindow.BoldCommand}"   ToolTip="Bold (Ctrl+B)">
                     <TextBlock FontWeight="Bold" Width="12" TextAlignment="Center">B</TextBlock>

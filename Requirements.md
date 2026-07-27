@@ -166,6 +166,10 @@ common word processors, its established shortcut is used in preference to invent
 
 A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, table, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
+- The toolbar's first section, ahead of the formatting operations, is a single toggle button
+  switching between Source and WYSIWYG editor mode — the toolbar equivalent of View → Editor Mode,
+  kept in sync with it either way.
+
 - Toolbar buttons currently show plain text/symbol labels (`B`, `I`, `H1`, `Link`, and so on) rather
   than icons. Replacing them with a proper icon set — possibly drawn from an icon font such as Font
   Awesome — is *(planned)*.

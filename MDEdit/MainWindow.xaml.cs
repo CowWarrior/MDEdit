@@ -720,6 +720,7 @@ public partial class MainWindow : Window
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
+        BtnEditorModeToggle.IsChecked    = _settings.LivePreview;
     }
 
     private void SetLivePreview(bool enabled)
@@ -732,6 +733,9 @@ public partial class MainWindow : Window
 
     private void MenuEditorModeSource_Click(object sender, RoutedEventArgs e)  => SetLivePreview(false);
     private void MenuEditorModeWysiwyg_Click(object sender, RoutedEventArgs e) => SetLivePreview(true);
+    // The ToggleButton flips its own IsChecked before Click fires, so it already holds the state
+    // the user just asked for — just apply it, the same way the two menu handlers apply a fixed one.
+    private void BtnEditorModeToggle_Click(object sender, RoutedEventArgs e) => SetLivePreview(BtnEditorModeToggle.IsChecked == true);
 
     // ── Event handlers (toolbar / menu) ───────────────────────────────────
     private void BtnStrike_Click(object sender, RoutedEventArgs e)   => WrapSelection("~~", "~~");
