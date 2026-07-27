@@ -123,6 +123,49 @@ internal static class MarkdownSyntax
     /// <see cref="MarkdownLineColorizer"/> uses, so the two can never disagree about whether a
     /// line is a rule or a one-item list.
     /// </summary>
+    /// <summary>
+    /// Detects a task list item — a bullet item whose content starts with "[ ]" or "[x]".
+    /// <paramref name="markerOffset"/>/<paramref name="markerLength"/> bound the bullet character
+    /// through the closing ']' (e.g. all five characters of "- [ ]"), not the following space:
+    /// live preview replaces that whole range with a single checkbox glyph, so the bullet and the
+    /// box are one element rather than a "•" followed by a box.
+    /// </summary>
+    /// <remarks>
+    /// A task line is also a bullet line by <see cref="TryGetBulletListMarker"/>'s definition — that
+    /// is deliberate and correct, since it *is* one — so any caller that renders bullet markers has
+    /// to check this first and stand aside (see <see cref="BulletListMarkerElementGenerator"/>).
+    /// The trailing space is optional so that a just-inserted "- [ ]" whose trailing space has been
+    /// trimmed can still be toggled.
+    /// </remarks>
+    public static bool TryGetTaskListMarker(TextDocument doc, DocumentLine line,
+        out int markerOffset, out int markerLength, out bool isChecked)
+    {
+        markerLength = 0;
+        isChecked    = false;
+        if (!TryGetBulletListMarker(doc, line, out markerOffset)) return false;
+
+        // The bullet char is followed by whitespace (TryGetBulletListMarker guarantees it); skip it.
+        int pos = markerOffset - line.Offset + 1;
+        while (pos < line.Length && doc.GetCharAt(line.Offset + pos) is ' ' or '\t') pos++;
+
+        if (pos + 2 >= line.Length) return false;
+        if (doc.GetCharAt(line.Offset + pos) != '[') return false;
+        if (doc.GetCharAt(line.Offset + pos + 2) != ']') return false;
+
+        switch (doc.GetCharAt(line.Offset + pos + 1))
+        {
+            case ' ':          isChecked = false; break;
+            case 'x' or 'X':   isChecked = true;  break;
+            default:           return false;
+        }
+
+        // Whitespace after the box, or end of line for an item with no text yet.
+        if (pos + 3 < line.Length && doc.GetCharAt(line.Offset + pos + 3) is not (' ' or '\t')) return false;
+
+        markerLength = pos + 3 - (markerOffset - line.Offset);
+        return true;
+    }
+
     public static bool TryGetBulletListMarker(TextDocument doc, DocumentLine line, out int markerOffset)
     {
         markerOffset = 0;

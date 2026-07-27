@@ -60,6 +60,7 @@
                 <MenuItem Header="Emo_ji"        Click="BtnEmoji_Click"/>
                 <Separator/>
                 <MenuItem Header="• Bullet List"    Click="BtnBulletList_Click"/>
+                <MenuItem Header="☐ Tas_k List"     Click="BtnTaskList_Click"/>
                 <MenuItem Header="1. Numbered List" Click="BtnNumberList_Click"/>
                 <MenuItem Header="&gt; Blockquote"  Click="BtnBlockquote_Click"/>
             </MenuItem>
@@ -143,6 +144,7 @@
 
                 <!-- Lists and blockquote -->
                 <Button Click="BtnBulletList_Click"  ToolTip="Bullet List"    Padding="4,2">• List</Button>
+                <Button Click="BtnTaskList_Click"    ToolTip="Task List (toggles an existing item)" Padding="4,2">☐ Task</Button>
                 <Button Click="BtnNumberList_Click"  ToolTip="Numbered List"  Padding="4,2">1. List</Button>
                 <Button Click="BtnBlockquote_Click"  ToolTip="Blockquote"     Padding="4,2">&gt; Quote</Button>
 

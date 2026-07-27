@@ -45,7 +45,7 @@ The editor provides commands to insert or toggle Markdown formatting in any open
 - Blockquote
 - Bullet (unordered) list item
 - Numbered (ordered) list item
-- Task list item — `- [ ] todo` / `- [x] done`; the command inserts an unchecked item, and the user can toggle an existing item between checked and unchecked *(planned)*
+- Task list item — `- [ ] todo` / `- [x] done`; the command inserts an unchecked item, adds a box to an existing bullet item, and toggles an existing task between checked and unchecked
 
 ### Insertions
 - Hyperlink (inserts link syntax with placeholder text and URL)
@@ -69,6 +69,14 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - Underline renders only where the consuming renderer permits inline HTML. A renderer that strips or escapes HTML will drop the effect or show the tags as text.
 - It is the only formatting command that emits HTML rather than Markdown, and the only one whose opening and closing markers differ from each other.
 
+### Known issues
+
+- **Line-based commands apply only to the first line of a multi-line selection.** Selecting several
+  lines and choosing bullet list, numbered list, or task list marks only the line the selection
+  starts on; the remaining lines have to be done one at a time. Blockquote and the heading commands
+  behave the same way, for the same reason. The expected behaviour is for the command to apply to
+  every line the selection touches *(fix planned)*.
+
 ## 4. Syntax Highlighting
 
 - When a Markdown file is open, the editor visually distinguishes Markdown elements using color and style cues (e.g. headings, bold, italic, code, links, blockquotes, list markers).
@@ -76,7 +84,7 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - Highlighting updates in real time as the user types.
 - Highlighted text is shown with a muted yellow background, in both the light and dark themes.
 - Superscript and subscript text is raised or lowered from the baseline and shown smaller than the surrounding text, in both editor modes.
-- The remaining extended constructs listed in §3 (task lists, tables) are highlighted on the same terms as the core constructs *(planned)*.
+- The remaining extended construct listed in §3 (tables) is highlighted on the same terms as the core constructs *(planned)*.
 - Underlined text is shown underlined, in both editor modes.
 
 ## 5. WYSIWYG Mode
@@ -91,7 +99,8 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - A recognized emoji shortcode displays as the emoji character it stands for, reverting to the
   shortcode while the cursor is inside it. The character renders in monochrome rather than colour —
   a limitation of the underlying UI framework, not a defect in the editor.
-- The remaining extended constructs listed in §3 (task lists, tables) are displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
+- A task list item displays as a checkbox, ticked or empty according to its state, reverting to the source text while the cursor is on that line.
+- The remaining extended construct listed in §3 (tables) is displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
 - Underlined text displays as underlined, with its `<u>` and `</u>` tags hidden, on the same terms as the other inline constructs.
 
 ## 6. View Options
@@ -130,7 +139,7 @@ common word processors, its established shortcut is used in preference to invent
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, bullet list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 ## 9. Status Bar
 

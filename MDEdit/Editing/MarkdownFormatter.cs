@@ -38,6 +38,40 @@ internal static class MarkdownFormatter
         return null;
     }
 
+    /// <summary>
+    /// Task list item: toggles the box on a line that already is one, adds a box to a plain bullet
+    /// item, and otherwise inserts a fresh unchecked item — the three states Requirements.md §3 asks
+    /// for ("inserts an unchecked item, and the user can toggle an existing item").
+    /// </summary>
+    /// <remarks>
+    /// The bullet case matters: inserting "- [ ] " onto an existing "- foo" would produce
+    /// "- [ ] - foo". Adding just the box after the existing marker turns it into a task instead,
+    /// which is what pressing the button on a list item is asking for.
+    /// </remarks>
+    public static SelectionRange? TaskListItem(TextDocument doc, SelectionRange sel)
+    {
+        var line = doc.GetLineByOffset(sel.Start);
+
+        if (MarkdownSyntax.TryGetTaskListMarker(doc, line, out int markerOffset, out int markerLength, out bool isChecked))
+        {
+            // The state character sits one before the closing ']'.
+            int stateOffset = markerOffset + markerLength - 2;
+            doc.Replace(stateOffset, 1, isChecked ? " " : "x");
+            return null;
+        }
+
+        if (MarkdownSyntax.TryGetBulletListMarker(doc, line, out int bulletOffset))
+        {
+            int pos = bulletOffset - line.Offset + 1;
+            while (pos < line.Length && doc.GetCharAt(line.Offset + pos) is ' ' or '\t') pos++;
+            doc.Insert(line.Offset + pos, "[ ] ");
+            return null;
+        }
+
+        doc.Insert(line.Offset, "- [ ] ");
+        return null;
+    }
+
     public static SelectionRange? ToggleLinePrefix(TextDocument doc, SelectionRange sel, string prefix)
     {
         var line = doc.GetLineByOffset(sel.Start);

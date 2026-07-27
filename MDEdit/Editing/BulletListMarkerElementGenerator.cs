@@ -41,6 +41,10 @@ internal sealed class BulletListMarkerElementGenerator : VisualLineElementGenera
         // the interesting offset is markerOffset rather than line.Offset — but it's still the
         // only thing on the line for this generator, so anything past it returns -1.
         if (!MarkdownSyntax.TryGetBulletListMarker(doc, line, out int markerOffset)) return -1;
+        // A task item is a bullet item too, but TaskListMarkerElementGenerator replaces the bullet
+        // and the box together with one checkbox glyph — drawing a "•" here as well would render
+        // "• ☐ todo", two markers for one construct.
+        if (MarkdownSyntax.TryGetTaskListMarker(doc, line, out _, out _, out _)) return -1;
         return startOffset <= markerOffset ? markerOffset : -1;
     }
 

@@ -42,6 +42,7 @@ public partial class MainWindow : Window
     private readonly EmojiElementGenerator _emojiGenerator = new();
     private readonly BlockquoteMarkerElementGenerator _blockquoteMarkerGenerator = new();
     private readonly BulletListMarkerElementGenerator _bulletListMarkerGenerator = new();
+    private readonly TaskListMarkerElementGenerator _taskListMarkerGenerator = new();
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
     private bool _isDirty;
@@ -63,6 +64,7 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_underlineMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_emojiGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_blockquoteMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_taskListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_bulletListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_numberedListMarkerGenerator);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
@@ -498,6 +500,7 @@ public partial class MainWindow : Window
         _emojiGenerator.CaretOffset          = offset;
         _blockquoteMarkerGenerator.CaretLine = line;
         _bulletListMarkerGenerator.CaretLine = line;
+        _taskListMarkerGenerator.CaretLine   = line;
         _numberedListMarkerGenerator.CaretLine = line;
 
         RedrawLine(previousLine);
@@ -534,6 +537,7 @@ public partial class MainWindow : Window
         _emojiGenerator.CaretOffset          = _lastCaretOffset;
         _blockquoteMarkerGenerator.CaretLine = _lastCaretLine;
         _bulletListMarkerGenerator.CaretLine = _lastCaretLine;
+        _taskListMarkerGenerator.CaretLine   = _lastCaretLine;
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
     }
 
@@ -548,6 +552,7 @@ public partial class MainWindow : Window
         _emojiGenerator.Enabled            = _settings.LivePreview;
         _blockquoteMarkerGenerator.Enabled = _settings.LivePreview;
         _bulletListMarkerGenerator.Enabled = _settings.LivePreview;
+        _taskListMarkerGenerator.Enabled   = _settings.LivePreview;
         _numberedListMarkerGenerator.Enabled = _settings.LivePreview;
         _blockquoteAccentBarRenderer.Enabled = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
@@ -585,6 +590,8 @@ public partial class MainWindow : Window
     private void BtnBulletList_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("- ");
     private void BtnNumberList_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("1. ");
     private void BtnBlockquote_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("> ");
+    private void BtnTaskList_Click(object sender, RoutedEventArgs e)
+        => ApplyFormat(MarkdownFormatter.TaskListItem(Editor.Document, CurrentSelection));
 
     private void ApplySettings()
     {
