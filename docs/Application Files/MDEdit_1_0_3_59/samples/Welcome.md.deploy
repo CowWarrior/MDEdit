@@ -66,6 +66,15 @@ MDEdit will ask before discarding your work.
 
 ## Recent changes
 
+### Version 1.0.3
+
+Tables now display as real grids in WYSIWYG mode — sized columns, a bold header row, your alignment
+choices honoured — reverting to source whenever your cursor is inside one. WYSIWYG also now shows
+your text in a proper document font, while code and any Markdown revealed at the cursor stay
+fixed-width. Bullet, numbered and task lists, blockquotes and headings now apply to every line you
+have selected, rather than only the first — press once to mark the whole selection, press again to
+clear it, and numbered lists count properly down the selection, 1, 2, 3.
+
 ### Version 1.0.2
 
 Added emoji shortcodes — type `:joy:`, `:rocket:` or any of around 240 others and it becomes the emoji
@@ -86,12 +95,6 @@ Added a Recent Files list to the File menu, keeping the ten documents you opened
 ### Prior versions
 
 Not tracked.
-
-## Known issues
-
-The list commands — bullet, numbered and task — apply only to the first line of a multi-line
-selection, so several lines have to be marked one at a time for now. Blockquote and the heading
-commands behave the same way. A fix is on the way.
 
 ## Where to go next
 
