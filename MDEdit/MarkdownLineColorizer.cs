@@ -20,13 +20,24 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     public bool IsDark { get; set; }
 
     // Set by MainWindow's live-preview toggle. Only affects heading font size (Typora-style
-    // scaling) — colors/weight apply regardless, matching the pre-live-preview behavior.
+    // scaling) and the revealed-source font swap below — colors/weight apply regardless,
+    // matching the pre-live-preview behavior.
     public bool LivePreviewEnabled { get; set; }
+
+    // Set by MainWindow alongside the generators' caret state (live preview only): the
+    // caret's line, so revealed construct lines can swap back to the source font. −1 when
+    // untracked.
+    public int CaretLine { get; set; } = -1;
+
+    // The editor's source-mode mono family, captured once by MainWindow from the XAML stack.
+    public FontFamily? SourceFontFamily { get; set; }
 
     protected override void ColorizeLine(DocumentLine line)
     {
         var doc = CurrentContext.Document;
         if (line.Length == 0) return;
+
+        ApplyRevealedSourceFont(doc, line);
 
         if (MarkdownSyntax.TryGetHeadingLevel(doc, line, out int level, out _))
         {
@@ -73,6 +84,42 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 
         StyleScriptSpans(doc, line);
     }
+
+    // In live preview, revealed markdown renders in the source font — the reveal means
+    // "you're editing source here": the caret's own line when it carries a line-scoped
+    // construct (heading, blockquote, bullet/task/numbered item — task lines are bullet
+    // lines by TryGetBulletListMarker's definition), and every line of a table whose block
+    // contains the caret, since tables reveal whole. Runs BEFORE the color/weight styling,
+    // which rebuilds each run's Typeface from its current family and so preserves the swap.
+    // Code fences need nothing here: Markdown.xshd's CodeBlock/InlineCode colors pin the
+    // mono family in every mode. Plain prose lines and per-span reveals (bold, links, emoji)
+    // deliberately stay in the document font — swapping a whole line's metrics whenever the
+    // caret crosses into a mid-sentence bold run would make the text jump underfoot, and
+    // doing it on every caret line would make paragraphs jiggle while arrowing through them.
+    private void ApplyRevealedSourceFont(TextDocument doc, DocumentLine line)
+    {
+        if (!LivePreviewEnabled || SourceFontFamily is null) return;
+
+        bool revealed = line.LineNumber == CaretLine && HasLineScopedConstruct(doc, line);
+        if (!revealed && doc.GetCharAt(line.Offset) == '|'
+            && MarkdownSyntax.TryGetTableBlock(doc, line.LineNumber, out int start, out int end))
+        {
+            revealed = CaretLine >= start && CaretLine <= end;
+        }
+        if (!revealed) return;
+
+        ChangeLinePart(line.Offset, line.EndOffset, el =>
+        {
+            var old = el.TextRunProperties.Typeface;
+            el.TextRunProperties.SetTypeface(new Typeface(SourceFontFamily, old.Style, old.Weight, old.Stretch));
+        });
+    }
+
+    private static bool HasLineScopedConstruct(TextDocument doc, DocumentLine line)
+        => MarkdownSyntax.TryGetHeadingLevel(doc, line, out _, out _)
+        || MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _)
+        || MarkdownSyntax.TryGetBulletListMarker(doc, line, out _)
+        || MarkdownSyntax.TryGetNumberedListMarker(doc, line, out _, out _);
 
     // Superscript/subscript are raised or lowered and shrunk. Deliberately NOT gated on
     // LivePreviewEnabled: like bold rendering bold in source mode, the baseline shift *is* the

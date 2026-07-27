@@ -106,6 +106,11 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   shortcode while the cursor is inside it. The character renders in monochrome rather than colour —
   a limitation of the underlying UI framework, not a defect in the editor.
 - A task list item displays as a checkbox, ticked or empty according to its state, reverting to the source text while the cursor is on that line.
+- Document text displays in a proportional document font, so writing feels like editing a document
+  rather than code. Code blocks and inline code keep the editor's fixed-width font. Markdown
+  revealed around the cursor — a heading, list, or blockquote line being edited, or a table
+  reverted to its source — also shows in the fixed-width font, signalling that source text is
+  being edited there. The source view is unaffected and remains entirely fixed-width.
 - A table displays as a grid: columns sized to their widest cell, a bold shaded header row, the
   delimiter row hidden, and the delimiter row's column alignments honored. Moving the cursor into
   the table reverts the whole table to its source text — like a fenced code block — so it is always

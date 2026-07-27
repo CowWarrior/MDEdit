@@ -79,6 +79,14 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
         if (!Enabled) return -1;
 
         var props = CurrentContext.GlobalTextRunProperties;
+        // A font change (the WYSIWYG document-font flip) invalidates every measured width
+        // even though the document hasn't changed, which the version-keyed cache can't see —
+        // so compare the captured properties themselves. Typeface has value equality.
+        if (!Equals(_typeface, props.Typeface) || _emSize != props.FontRenderingEmSize)
+        {
+            _layouts.Clear();
+            _layoutsVersion = null;
+        }
         _typeface     = props.Typeface;
         _emSize       = props.FontRenderingEmSize;
         _pixelsPerDip = props.PixelsPerDip;

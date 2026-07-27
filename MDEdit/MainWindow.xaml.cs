@@ -48,6 +48,12 @@ public partial class MainWindow : Window
     private readonly TableRowElementGenerator _tableRowGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
     private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
+    // WYSIWYG renders prose in a document font; source mode keeps the XAML mono stack
+    // (captured into _sourceFontFamily in the constructor rather than duplicated here).
+    // Deliberately side by side: the planned font picker (Requirements.md §6) would make
+    // both configurable, and this is the seam it will find.
+    private static readonly FontFamily WysiwygFontFamily = new("Arial");
+    private readonly FontFamily _sourceFontFamily;
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -59,6 +65,8 @@ public partial class MainWindow : Window
     {
         _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
         InitializeComponent();
+        _sourceFontFamily = Editor.FontFamily; // the XAML mono stack, single source of truth
+        _colorizer.SourceFontFamily = _sourceFontFamily;
         LoadSyntaxHighlighting();
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
         Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
@@ -543,6 +551,7 @@ public partial class MainWindow : Window
         _taskListMarkerGenerator.CaretLine   = line;
         _numberedListMarkerGenerator.CaretLine = line;
         _tableRowGenerator.CaretLine         = line;
+        _colorizer.CaretLine                 = line;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
@@ -592,10 +601,16 @@ public partial class MainWindow : Window
         _taskListMarkerGenerator.CaretLine   = _lastCaretLine;
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
         _tableRowGenerator.CaretLine         = _lastCaretLine;
+        _colorizer.CaretLine                 = _lastCaretLine;
     }
 
     private void UpdateLivePreviewState()
     {
+        // WYSIWYG reads as a document: prose in a proportional font, source mode all-mono.
+        // Code spans/blocks stay mono in both modes via Markdown.xshd's fontFamily colors,
+        // and revealed construct lines swap back via MarkdownLineColorizer.
+        Editor.FontFamily = _settings.LivePreview ? WysiwygFontFamily : _sourceFontFamily;
+
         _colorizer.LivePreviewEnabled = _settings.LivePreview;
         _headingMarkerGenerator.Enabled    = _settings.LivePreview;
         _emphasisMarkerGenerator.Enabled   = _settings.LivePreview;

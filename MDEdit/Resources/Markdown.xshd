@@ -11,8 +11,12 @@
   <!-- Underline is inline HTML rather than Markdown (Requirements.md §3) — styled here so the
        effect shows in source mode too, the same way Bold/Italic do. -->
   <Color name="Underline"  underline="true" />
-  <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
-  <Color name="CodeBlock"  foreground="#C7254E" background="#FEF2F2" fontFamily="Consolas" />
+  <!-- fontFamily pins code to the editor's own mono stack (same as MainWindow.xaml's editor
+       font) in BOTH editor modes — this is what keeps code fixed-width when WYSIWYG swaps
+       the editor's base font to the document font. Applied at render time by AvalonEdit's
+       HighlightingColorizer; MarkdownXshdTests pins the attribute's presence. -->
+  <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Cascadia Code, Consolas, Courier New" />
+  <Color name="CodeBlock"  foreground="#C7254E" background="#FEF2F2" fontFamily="Cascadia Code, Consolas, Courier New" />
   <Color name="Link"       foreground="#0065BD" />
   <Color name="ListMarker" foreground="#005CC5" />
   <Color name="Comment"    foreground="#888888" fontStyle="italic" />

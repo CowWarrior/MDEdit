@@ -27,4 +27,24 @@ public class MarkdownXshdTests
         // so check both collections rather than assuming rule counts.
         Assert.True(definition.MainRuleSet.Rules.Count + definition.MainRuleSet.Spans.Count > 0);
     }
+
+    // The fontFamily on these colors is what keeps code fixed-width when WYSIWYG swaps the
+    // editor's base font to the document font — nothing else would catch the attribute being
+    // stripped, since the loss is only visible by eye and only in WYSIWYG mode.
+    [Theory]
+    [InlineData("InlineCode")]
+    [InlineData("CodeBlock")]
+    public void MarkdownXshd_CodeColors_PinAFontFamily(string colorName)
+    {
+        using var stream = typeof(MarkdownSyntax).Assembly
+            .GetManifestResourceStream("MDEdit.Resources.Markdown.xshd");
+        Assert.NotNull(stream);
+
+        using var reader = new XmlTextReader(stream);
+        var definition = HighlightingLoader.Load(HighlightingLoader.LoadXshd(reader), HighlightingManager.Instance);
+
+        var color = definition.GetNamedColor(colorName);
+        Assert.NotNull(color);
+        Assert.NotNull(color.FontFamily);
+    }
 }
