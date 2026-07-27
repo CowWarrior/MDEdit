@@ -553,6 +553,9 @@ public partial class MainWindow : Window
     private void InsertLink()
         => ApplyFormat(MarkdownFormatter.Link(Editor.Document, CurrentSelection));
 
+    private void InsertTable()
+        => ApplyFormat(MarkdownFormatter.Table(Editor.Document, CurrentSelection));
+
     // ── Dirty / title / status ────────────────────────────────────────────
     private void MarkDirty()
     {
@@ -740,6 +743,7 @@ public partial class MainWindow : Window
     // Wrapping in ':' gives both halves of the convention for free: with a word selected it becomes
     // ":word:", and with nothing selected it leaves the caret between two colons ready to type a name.
     private void BtnEmoji_Click(object sender, RoutedEventArgs e)      => WrapSelection(":", ":");
+    private void BtnTable_Click(object sender, RoutedEventArgs e)      => InsertTable();
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);
     private void BtnH3_Click(object sender, RoutedEventArgs e)       => InsertHeading(3);

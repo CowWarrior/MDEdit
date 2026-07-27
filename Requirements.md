@@ -61,7 +61,7 @@ carries a number is renumbered in place.
 
 ### Insertions
 - Hyperlink (inserts link syntax with placeholder text and URL)
-- Table — inserts a starter table (header row, delimiter row, one body row) with the cursor placed in the first header cell *(planned)*. Column alignment via `:---` (left), `:---:` (center), and `---:` (right) is supported in the delimiter row
+- Table — inserts a starter table (header row, delimiter row, three body rows) with the cursor placed in the first header cell. Column alignment via `:---` (left), `:---:` (center), and `---:` (right) is supported in the delimiter row
 - Emoji — inserts an emoji shortcode such as `:joy:`. Shortcodes are drawn from a catalogue shipped
   with the application; a `:name:` that is not in the catalogue is ordinary text, so everyday writing
   such as `10:30:45` is never mistaken for an emoji
@@ -157,7 +157,7 @@ common word processors, its established shortcut is used in preference to invent
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, table, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 ## 9. Status Bar
 

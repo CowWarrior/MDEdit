@@ -323,4 +323,33 @@ internal static class MarkdownFormatter
         doc.Insert(sel.Start, "[link text](url)");
         return new SelectionRange(sel.Start + 1, 9);
     }
+
+    /// <summary>
+    /// Inserts a starter table (header row, delimiter row, three body rows), selecting "Header 1"
+    /// so the first keystroke replaces it — the same placeholder-selection idiom as
+    /// <see cref="Link"/>. Any existing selection is replaced outright rather than wrapped: unlike
+    /// bold/italic/link, there's no sensible way to fold selected text into a table.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MarkdownSyntax.IsTableRowLine"/> requires each row to start at column 0 with '|',
+    /// so unlike <see cref="CodeBlock"/> (which has this same latent limitation and is left as-is),
+    /// this normalizes onto its own lines: a leading newline is added when the cursor isn't already
+    /// at the start of its line, and a trailing one when it isn't at the end — so the table always
+    /// renders correctly immediately regardless of where the cursor was.
+    /// </remarks>
+    public static SelectionRange? Table(TextDocument doc, SelectionRange sel)
+    {
+        const string table = "| Header 1 | Header 2 |\n| --- | --- |\n| Cell 1 | Cell 2 |\n| Cell 3 | Cell 4 |\n| Cell 5 | Cell 6 |";
+
+        var startLine = doc.GetLineByOffset(sel.Start);
+        var endLine   = doc.GetLineByOffset(sel.Start + sel.Length);
+        bool needsLeadingBreak  = sel.Start > startLine.Offset;
+        bool needsTrailingBreak = sel.Start + sel.Length < endLine.EndOffset;
+
+        var text = (needsLeadingBreak ? "\n" : "") + table + (needsTrailingBreak ? "\n" : "");
+        doc.Replace(sel.Start, sel.Length, text);
+
+        int headerCellStart = sel.Start + (needsLeadingBreak ? 1 : 0) + 2; // past "| "
+        return new SelectionRange(headerCellStart, 8); // "Header 1" is 8 characters
+    }
 }

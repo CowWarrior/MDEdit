@@ -58,6 +58,7 @@
                 <MenuItem Header="Code _Block"   Click="BtnCodeBlock_Click"/>
                 <MenuItem Header="_Link…"        Click="BtnLink_Click"/>
                 <MenuItem Header="Emo_ji"        Click="BtnEmoji_Click"/>
+                <MenuItem Header="_Table"        Click="BtnTable_Click"/>
                 <Separator/>
                 <MenuItem Header="• Bullet List"    Click="BtnBulletList_Click"/>
                 <MenuItem Header="☐ Tas_k List"     Click="BtnTaskList_Click"/>
@@ -147,6 +148,7 @@
                 <Button Click="BtnLink_Click"      ToolTip="Insert Link"       Padding="4,2">Link</Button>
                 <Button Click="BtnCode_Click"      ToolTip="Inline Code"       Padding="4,2">` `</Button>
                 <Button Click="BtnCodeBlock_Click" ToolTip="Code Block"        Padding="4,2">```</Button>
+                <Button Click="BtnTable_Click"     ToolTip="Insert Table"      Padding="4,2">Table</Button>
                 <Separator/>
 
                 <!-- Lists and blockquote -->
