@@ -46,8 +46,10 @@ public partial class MainWindow : Window
     private readonly TaskListMarkerElementGenerator _taskListMarkerGenerator = new();
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
     private readonly TableRowElementGenerator _tableRowGenerator = new();
+    private readonly HorizontalRuleElementGenerator _horizontalRuleGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
     private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
+    private readonly HorizontalRuleRenderer _horizontalRuleRenderer; // needs _horizontalRuleGenerator, so built in the ctor
     // WYSIWYG renders prose in a document font; source mode keeps the XAML mono stack
     // (captured into _sourceFontFamily in the constructor rather than duplicated here).
     // Deliberately side by side: the planned font picker (Requirements.md §6) would make
@@ -64,6 +66,7 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
+        _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator);
         InitializeComponent();
         _sourceFontFamily = Editor.FontFamily; // the XAML mono stack, single source of truth
         _colorizer.SourceFontFamily = _sourceFontFamily;
@@ -80,8 +83,10 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_bulletListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_numberedListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_tableRowGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_horizontalRuleGenerator);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_tableGridRenderer);
+        Editor.TextArea.TextView.BackgroundRenderers.Add(_horizontalRuleRenderer);
         RegisterCommands();
         RegisterKeyBindings();
         SearchPanel.Install(Editor);
@@ -551,6 +556,7 @@ public partial class MainWindow : Window
         _taskListMarkerGenerator.CaretLine   = line;
         _numberedListMarkerGenerator.CaretLine = line;
         _tableRowGenerator.CaretLine         = line;
+        _horizontalRuleGenerator.CaretLine   = line;
         _colorizer.CaretLine                 = line;
         _colorizer.CaretOffset               = offset;
 
@@ -602,6 +608,7 @@ public partial class MainWindow : Window
         _taskListMarkerGenerator.CaretLine   = _lastCaretLine;
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
         _tableRowGenerator.CaretLine         = _lastCaretLine;
+        _horizontalRuleGenerator.CaretLine   = _lastCaretLine;
         _colorizer.CaretLine                 = _lastCaretLine;
         _colorizer.CaretOffset               = _lastCaretOffset;
     }
@@ -625,8 +632,10 @@ public partial class MainWindow : Window
         _taskListMarkerGenerator.Enabled   = _settings.LivePreview;
         _numberedListMarkerGenerator.Enabled = _settings.LivePreview;
         _tableRowGenerator.Enabled           = _settings.LivePreview;
+        _horizontalRuleGenerator.Enabled     = _settings.LivePreview;
         _blockquoteAccentBarRenderer.Enabled = _settings.LivePreview;
         _tableGridRenderer.Enabled           = _settings.LivePreview;
+        _horizontalRuleRenderer.Enabled      = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
@@ -690,6 +699,7 @@ public partial class MainWindow : Window
         _colorizer.IsDark = dark;
         _blockquoteAccentBarRenderer.IsDark = dark;
         _tableGridRenderer.IsDark = dark;
+        _horizontalRuleRenderer.IsDark = dark;
         Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
         UpdateHighlighting(_files.CurrentPath);
         Editor.TextArea.TextView.Redraw();

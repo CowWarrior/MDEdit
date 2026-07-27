@@ -10,11 +10,15 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 {
     private static readonly SolidColorBrush LightHeadingBrush    = Freeze(Color.FromRgb(0x00, 0x57, 0xAE));
     private static readonly SolidColorBrush LightBlockquoteBrush = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    private static readonly SolidColorBrush LightHRuleBrush      = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
+    // internal: HorizontalRuleRenderer draws the WYSIWYG rule line in this same color, so the
+    // rendered rule and the raw "---" text revealed under the caret never look like different
+    // constructs — read from here rather than duplicated, the BlockquoteMarkerElementGenerator
+    // shared-constant convention.
+    internal static readonly SolidColorBrush LightHRuleBrush = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
 
     private static readonly SolidColorBrush DarkHeadingBrush    = Freeze(Color.FromRgb(0x58, 0xA6, 0xFF));
     private static readonly SolidColorBrush DarkBlockquoteBrush = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
-    private static readonly SolidColorBrush DarkHRuleBrush      = Freeze(Color.FromRgb(0x48, 0x4F, 0x58));
+    internal static readonly SolidColorBrush DarkHRuleBrush = Freeze(Color.FromRgb(0x48, 0x4F, 0x58));
 
     // Set by MainWindow.ApplyTheme; a TextView.Redraw() afterwards re-runs ColorizeLine.
     public bool IsDark { get; set; }
@@ -145,7 +149,8 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         => MarkdownSyntax.TryGetHeadingLevel(doc, line, out _, out _)
         || MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _)
         || MarkdownSyntax.TryGetBulletListMarker(doc, line, out _)
-        || MarkdownSyntax.TryGetNumberedListMarker(doc, line, out _, out _);
+        || MarkdownSyntax.TryGetNumberedListMarker(doc, line, out _, out _)
+        || MarkdownSyntax.IsHorizontalRule(doc.GetText(line));
 
     // Superscript/subscript are raised or lowered and shrunk. Deliberately NOT gated on
     // LivePreviewEnabled: like bold rendering bold in source mode, the baseline shift *is* the
