@@ -595,9 +595,10 @@ public partial class MainWindow : Window
         long bytes = Encoding.UTF8.GetPreamble().Length + Encoding.UTF8.GetByteCount(text);
 
         StatusFileSize.Text  = StatusFormatter.FormatFileSize(bytes);
-        // TextLength counts a CRLF line break as the two characters it is. Offering the
-        // count-as-one alternative is Requirements.md §9's remaining planned item.
-        StatusCharCount.Text = StatusFormatter.FormatCharacterCount(Editor.Document.TextLength);
+        // The user's chosen weight (View > Line Breaks Count) — 0, 1, or 2 characters per
+        // line break, regardless of what it actually is in the raw text. See CharacterCounter.
+        var charCount = CharacterCounter.Count(Editor.Document, _settings.LineBreakCharWeight);
+        StatusCharCount.Text = StatusFormatter.FormatCharacterCount(charCount);
     }
 
     // ── Live preview (WYSIWYG) ────────────────────────────────────────────
@@ -764,6 +765,7 @@ public partial class MainWindow : Window
         RebuildRecentFilesMenu();
         UpdateLivePreviewState();
         ApplyTheme();
+        ApplyLineBreakCharWeight();
     }
 
     // ── Theme ─────────────────────────────────────────────────────────────
@@ -796,6 +798,26 @@ public partial class MainWindow : Window
     private void MenuThemeLight_Click(object sender, RoutedEventArgs e)  => SetTheme(AppTheme.Light);
     private void MenuThemeDark_Click(object sender, RoutedEventArgs e)   => SetTheme(AppTheme.Dark);
     private void MenuThemeSystem_Click(object sender, RoutedEventArgs e) => SetTheme(AppTheme.System);
+
+    // ── Line break character count (Requirements.md §9) ──────────────────────
+    private void ApplyLineBreakCharWeight()
+    {
+        MenuLineBreakZero.IsChecked = _settings.LineBreakCharWeight == 0;
+        MenuLineBreakOne.IsChecked  = _settings.LineBreakCharWeight == 1;
+        MenuLineBreakTwo.IsChecked  = _settings.LineBreakCharWeight == 2;
+    }
+
+    private void SetLineBreakCharWeight(int weight)
+    {
+        _settings.LineBreakCharWeight = weight;
+        SettingsService.Save(_settings);
+        ApplyLineBreakCharWeight();
+        UpdateDocumentStats(); // recompute the displayed count against the new weight immediately
+    }
+
+    private void MenuLineBreakZero_Click(object sender, RoutedEventArgs e) => SetLineBreakCharWeight(0);
+    private void MenuLineBreakOne_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(1);
+    private void MenuLineBreakTwo_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(2);
 
     private void OnUserPreferenceChanged(object sender, UserPreferenceChangedEventArgs e)
     {

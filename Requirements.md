@@ -124,6 +124,8 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - The user can toggle line numbers on or off.
 - The user can toggle word wrap on or off.
 - The user can choose the application theme: Light, Dark, or System (follows the Windows app theme, including live OS theme changes).
+- The user can choose how the status bar's character count charges a line break: as 0, 1, or 2
+  characters (§9).
 - The user can change the editor's display font via a Font item in the View menu *(planned)*.
 
 ## 7. Keyboard Shortcuts
@@ -174,8 +176,10 @@ title bar already carries both, and repeating them wastes the space.
 Both the size and the character count reflect the document as it currently stands, including unsaved
 edits, rather than the file as last written to disk.
 
-- The character count treats a CRLF line break as the two characters it is. Offering the count-as-one
-  alternative, as an option or by displaying both counts, is *(planned)*.
+- The character count charges each line break — however many raw characters it actually is —
+  according to a user-chosen weight of 0, 1, or 2 characters, set from View → Line Breaks Count.
+  The default is 2, matching a literal CRLF, so an existing document's displayed count is
+  unaffected unless the user changes the setting.
 
 ## 10. Sample Documents
 

@@ -78,6 +78,11 @@
                     <MenuItem x:Name="MenuEditorModeSource"   Header="_Source"  IsCheckable="True" IsChecked="True" Click="MenuEditorModeSource_Click"/>
                     <MenuItem x:Name="MenuEditorModeWysiwyg" Header="_WYSIWYG (live preview)" IsCheckable="True" Click="MenuEditorModeWysiwyg_Click"/>
                 </MenuItem>
+                <MenuItem Header="_Line Breaks Count">
+                    <MenuItem x:Name="MenuLineBreakZero" Header="_0 Characters" IsCheckable="True" Click="MenuLineBreakZero_Click"/>
+                    <MenuItem x:Name="MenuLineBreakOne"  Header="_1 Character"  IsCheckable="True" Click="MenuLineBreakOne_Click"/>
+                    <MenuItem x:Name="MenuLineBreakTwo"  Header="_2 Characters" IsCheckable="True" IsChecked="True" Click="MenuLineBreakTwo_Click"/>
+                </MenuItem>
             </MenuItem>
 
             <MenuItem Header="_Help">

@@ -17,6 +17,11 @@ internal sealed class AppSettings
     // The release ("Major.Minor.Build") ReleaseNotes.md was last auto-shown for — see
     // MainWindow.MaybeShowReleaseNotesOnFirstRun and Editing/ReleaseNotesGate. Empty means never shown.
     public string LastReleaseNotesVersionShown { get; set; } = "";
+    // How many characters the status bar's character count charges per line break — 0, 1, or 2
+    // (Requirements.md §9). Defaults to 2 so an upgrading user's displayed count doesn't change:
+    // that was the only behavior before this setting existed (Editor.Document.TextLength counts
+    // a CRLF literally). See Editing/CharacterCounter.
+    public int LineBreakCharWeight { get; set; } = 2;
 }
 
 internal static class SettingsService
