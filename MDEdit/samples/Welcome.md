@@ -66,6 +66,12 @@ MDEdit will ask before discarding your work.
 
 ## Recent changes
 
+### Version 1.0.3
+
+Bullet, numbered and task lists, blockquotes and headings now apply to every line you have selected,
+rather than only the first. Select a block of text, press the button once, and the whole thing is
+marked — press again to clear it. Numbered lists count properly down the selection, 1, 2, 3.
+
 ### Version 1.0.2
 
 Added emoji shortcodes — type `:joy:`, `:rocket:` or any of around 240 others and it becomes the emoji
@@ -86,12 +92,6 @@ Added a Recent Files list to the File menu, keeping the ten documents you opened
 ### Prior versions
 
 Not tracked.
-
-## Known issues
-
-The list commands — bullet, numbered and task — apply only to the first line of a multi-line
-selection, so several lines have to be marked one at a time for now. Blockquote and the heading
-commands behave the same way. A fix is on the way.
 
 ## Where to go next
 

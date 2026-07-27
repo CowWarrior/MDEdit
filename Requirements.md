@@ -29,6 +29,18 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 
 The editor provides commands to insert or toggle Markdown formatting in any open document, regardless of file type. When text is selected, the command wraps the selection; when no text is selected, the command inserts the syntax and positions the cursor ready for input.
 
+Commands that work on whole lines — bullet list, numbered list, task list, blockquote, and the
+headings — apply to **every line the selection touches**, not only the first. Where a selection spans
+a mixture, the command normalizes rather than flipping each line independently: it marks the lines
+that aren't yet marked, so pressing it a second time clears them all. Blank lines inside a multi-line
+selection are left alone, though the command still applies to a blank line when it is the only one
+selected, since that is how a list is started. The whole affected block stays selected afterwards, and
+one undo reverses the entire change.
+
+The numbered list command numbers the selected lines in sequence — 1, 2, 3 — rather than repeating the
+same number. Numbering continues across any blank lines within the selection, and a line that already
+carries a number is renumbered in place.
+
 ### Inline formatting
 - Bold
 - Italic
@@ -68,14 +80,6 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 
 - Underline renders only where the consuming renderer permits inline HTML. A renderer that strips or escapes HTML will drop the effect or show the tags as text.
 - It is the only formatting command that emits HTML rather than Markdown, and the only one whose opening and closing markers differ from each other.
-
-### Known issues
-
-- **Line-based commands apply only to the first line of a multi-line selection.** Selecting several
-  lines and choosing bullet list, numbered list, or task list marks only the line the selection
-  starts on; the remaining lines have to be done one at a time. Blockquote and the heading commands
-  behave the same way, for the same reason. The expected behaviour is for the command to apply to
-  every line the selection touches *(fix planned)*.
 
 ## 4. Syntax Highlighting
 

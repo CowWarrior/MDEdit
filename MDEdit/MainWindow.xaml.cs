@@ -623,7 +623,9 @@ public partial class MainWindow : Window
     private void BtnCodeBlock_Click(object sender, RoutedEventArgs e)=> InsertCodeBlock();
     private void BtnLink_Click(object sender, RoutedEventArgs e)     => InsertLink();
     private void BtnBulletList_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("- ");
-    private void BtnNumberList_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("1. ");
+    // Not InsertLinePrefix("1. ") — the marker has to count across a multi-line selection.
+    private void BtnNumberList_Click(object sender, RoutedEventArgs e)
+        => ApplyFormat(MarkdownFormatter.NumberedList(Editor.Document, CurrentSelection));
     private void BtnBlockquote_Click(object sender, RoutedEventArgs e)  => InsertLinePrefix("> ");
     private void BtnTaskList_Click(object sender, RoutedEventArgs e)
         => ApplyFormat(MarkdownFormatter.TaskListItem(Editor.Document, CurrentSelection));
