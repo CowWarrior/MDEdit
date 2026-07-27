@@ -126,7 +126,14 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - The user can choose the application theme: Light, Dark, or System (follows the Windows app theme, including live OS theme changes).
 - The user can choose how the status bar's character count charges a line break: as 0, 1, or 2
   characters (§9).
-- The user can change the editor's display font via a Font item in the View menu *(planned)*.
+- The user can customize the editor's appearance from a Preferences window, opened via View →
+  Preferences *(planned)*:
+  - A separate font choice for WYSIWYG document text and for code (inline code and fenced code
+    blocks), rather than today's fixed WYSIWYG font (Arial) and fixed monospace stack.
+  - Text and background colors for the various formatted spans (headings, links, highlights,
+    blockquotes, and the like), rather than today's fixed per-theme palette.
+  - A Reset to Default action, restoring every font and color choice on the form to its original
+    fixed value in one step.
 
 ## 7. Keyboard Shortcuts
 
@@ -158,6 +165,10 @@ common word processors, its established shortcut is used in preference to invent
 ## 8. Toolbar
 
 A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, table, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+
+- Toolbar buttons currently show plain text/symbol labels (`B`, `I`, `H1`, `Link`, and so on) rather
+  than icons. Replacing them with a proper icon set — possibly drawn from an icon font such as Font
+  Awesome — is *(planned)*.
 
 ## 9. Status Bar
 
