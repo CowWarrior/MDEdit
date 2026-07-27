@@ -66,6 +66,13 @@ MDEdit will ask before discarding your work.
 
 ## Recent changes
 
+### Version 1.0.2
+
+Added emoji shortcodes — type `:joy:`, `:rocket:` or any of around 240 others and it becomes the emoji
+as you write — and task lists, which show as tick boxes you can toggle from the toolbar. The status bar
+now shows the document's size, its character count, and how much text you have selected. Also corrected
+the version number shown in Help → About.
+
 ### Version 1.0.1
 
 Added highlighting, superscript, subscript and underline, with Word's shortcut keys for underline
@@ -79,6 +86,12 @@ Added a Recent Files list to the File menu, keeping the ten documents you opened
 ### Prior versions
 
 Not tracked.
+
+## Known issues
+
+The list commands — bullet, numbered and task — apply only to the first line of a multi-line
+selection, so several lines have to be marked one at a time for now. Blockquote and the heading
+commands behave the same way. A fix is on the way.
 
 ## Where to go next
 
