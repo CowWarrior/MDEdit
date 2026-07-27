@@ -6,6 +6,14 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.0.4
+
+- Horizontal rules (`---`) now display as an actual divider line in WYSIWYG mode, reverting to the raw dashes while your cursor is on that line.
+- This page now opens automatically the first time you launch MDEdit after an update, and is always reachable from Help → Release Notes.
+- Added a Table command — on the toolbar and under Format — that inserts a starter table ready to fill in.
+- Added a Line Breaks Count option under View, letting you choose whether the character count treats a line break as 0, 1, or 2 characters.
+- Added a Source/WYSIWYG toggle button to the toolbar.
+
 ### Version 1.0.3
 
 - Tables now display as real grids in WYSIWYG mode — sized columns, a bold header row, and your alignment choices honoured — reverting to source whenever your cursor is inside one.
