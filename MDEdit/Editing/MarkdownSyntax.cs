@@ -54,6 +54,13 @@ internal readonly record struct LinkSpan(int Start, int TextStart, int TextEnd, 
 internal enum FenceKind { None, Backtick, Tilde }
 
 /// <summary>
+/// A table column's alignment, from the delimiter row's colons: ":---" and "---" are
+/// <see cref="Left"/> (GFM's default alignment is left, so the two render the same),
+/// "---:" is <see cref="Right"/>, ":---:" is <see cref="Center"/>.
+/// </summary>
+internal enum TableColumnAlignment { Left, Center, Right }
+
+/// <summary>
 /// Shared line-level Markdown construct detection, used by both <see cref="MarkdownLineColorizer"/>
 /// (coloring/sizing) and the live-preview element generators (marker hiding) so the two always
 /// agree on what counts as a given construct — kept UI-free so it can be unit tested directly.
@@ -594,6 +601,155 @@ internal static class MarkdownSyntax
             return true;
         }
 
+        return false;
+    }
+
+    /// <summary>
+    /// Whether a line is shaped like a table row: '|' at column 0, and the last non-whitespace
+    /// character also '|'. Deliberately stricter than GFM, which allows the outer pipes to be
+    /// omitted and the row to be indented — the same reasoning as the line-start-only list
+    /// markers: "a | b" prose must never render as a table row, and requiring both outer pipes
+    /// makes an accidental table nearly impossible.
+    /// </summary>
+    public static bool IsTableRowLine(TextDocument doc, DocumentLine line)
+    {
+        if (line.Length < 2) return false;
+        if (doc.GetCharAt(line.Offset) != '|') return false;
+        int end = line.Length - 1;
+        while (end > 0 && doc.GetCharAt(line.Offset + end) is ' ' or '\t') end--;
+        return end > 0 && doc.GetCharAt(line.Offset + end) == '|';
+    }
+
+    /// <summary>
+    /// The offsets (relative to the line's text) of every cell-splitting '|'. A pipe preceded
+    /// by a backslash ("\|") is escaped — a literal '|' inside cell content, GFM's one
+    /// table-specific escape — and does not split. Shared by <see cref="GetTableCells"/> and
+    /// <see cref="MarkdownLineColorizer"/>'s pipe dimming so the two can never disagree about
+    /// which pipes are structure and which are content.
+    /// </summary>
+    public static IReadOnlyList<int> GetTablePipeOffsets(string text)
+    {
+        var pipes = new List<int>();
+        for (int i = 0; i < text.Length; i++)
+        {
+            if (text[i] == '\\') { i++; continue; }
+            if (text[i] == '|') pipes.Add(i);
+        }
+        return pipes;
+    }
+
+    /// <summary>
+    /// Splits a table row line's text into its cells: the trimmed segments between consecutive
+    /// unescaped '|' characters. Start/Length are relative to <paramref name="text"/>; a cell's
+    /// raw content may still contain "\|" escapes — display code unescapes them, detection code
+    /// never needs to. Text before the first pipe or after the last is not a cell
+    /// (<see cref="IsTableRowLine"/> requires both outer pipes, so on a real row that text is
+    /// empty or trailing whitespace).
+    /// </summary>
+    public static IReadOnlyList<(int Start, int Length)> GetTableCells(string text)
+    {
+        var pipes = GetTablePipeOffsets(text);
+        var cells = new List<(int, int)>();
+        for (int p = 0; p + 1 < pipes.Count; p++)
+        {
+            int start = pipes[p] + 1;
+            int end   = pipes[p + 1];
+            while (start < end && text[start] is ' ' or '\t') start++;
+            while (end > start && text[end - 1] is ' ' or '\t') end--;
+            cells.Add((start, end - start));
+        }
+        return cells;
+    }
+
+    /// <summary>
+    /// Whether a line is a table delimiter row: a row line whose every cell is ":---"-shaped —
+    /// optional colon, three or more dashes, optional colon. Three dashes minimum rather than
+    /// GFM's one, the same "min N chars" discipline as Markdown.xshd's patterns and
+    /// <see cref="IsHorizontalRule"/>'s three-character floor.
+    /// </summary>
+    public static bool IsTableDelimiterLine(TextDocument doc, DocumentLine line)
+    {
+        if (!IsTableRowLine(doc, line)) return false;
+        var text  = doc.GetText(line);
+        var cells = GetTableCells(text);
+        if (cells.Count == 0) return false;
+        foreach (var (start, length) in cells)
+        {
+            if (!IsDelimiterCell(text, start, length)) return false;
+        }
+        return true;
+    }
+
+    private static bool IsDelimiterCell(string text, int start, int length)
+    {
+        int i = start, end = start + length;
+        if (i < end && text[i] == ':') i++;
+        int dashes = 0;
+        while (i < end && text[i] == '-') { dashes++; i++; }
+        if (dashes < 3) return false;
+        if (i < end && text[i] == ':') i++;
+        return i == end;
+    }
+
+    /// <summary>
+    /// The per-column alignments declared by a delimiter row's colons (see
+    /// <see cref="TableColumnAlignment"/>). Callers pass the delimiter line's text; a body row
+    /// with more cells than the delimiter has columns simply has no declared alignment for the
+    /// extras, and renderers default those to left.
+    /// </summary>
+    public static IReadOnlyList<TableColumnAlignment> GetTableAlignments(string delimiterText)
+    {
+        var cells  = GetTableCells(delimiterText);
+        var result = new TableColumnAlignment[cells.Count];
+        for (int i = 0; i < cells.Count; i++)
+        {
+            var (start, length) = cells[i];
+            if (length == 0) continue;
+            bool left  = delimiterText[start] == ':';
+            bool right = delimiterText[start + length - 1] == ':';
+            result[i] = left && right ? TableColumnAlignment.Center
+                      : right         ? TableColumnAlignment.Right
+                      :                 TableColumnAlignment.Left;
+        }
+        return result;
+    }
+
+    /// <summary>
+    /// Finds the table (1-based, inclusive line numbers) that <paramref name="lineNumber"/>
+    /// falls within. A table is a header row line, a delimiter line directly below it with the
+    /// same cell count (GFM's pairing rule — a mismatch means no table at all), and every
+    /// contiguous row line after that; a blank or non-row line ends it. Like fences the block
+    /// spans lines, but unlike fence pairing it's a contiguity property, so this walks the
+    /// line's neighborhood rather than the whole document. The header is the *topmost* row
+    /// line in the contiguous run whose next line is a matching delimiter — row-shaped prose
+    /// sitting directly above a real table is left out rather than poisoning the pairing.
+    /// </summary>
+    public static bool TryGetTableBlock(TextDocument doc, int lineNumber, out int startLine, out int endLine)
+    {
+        startLine = endLine = 0;
+        if (lineNumber < 1 || lineNumber > doc.LineCount) return false;
+        if (!IsTableRowLine(doc, doc.GetLineByNumber(lineNumber))) return false;
+
+        int top = lineNumber;
+        while (top > 1 && IsTableRowLine(doc, doc.GetLineByNumber(top - 1))) top--;
+
+        for (int h = top; h <= lineNumber && h < doc.LineCount; h++)
+        {
+            var delimiter = doc.GetLineByNumber(h + 1);
+            if (!IsTableDelimiterLine(doc, delimiter)) continue;
+            if (GetTableCells(doc.GetText(doc.GetLineByNumber(h))).Count
+                != GetTableCells(doc.GetText(delimiter)).Count) continue;
+
+            int end = h + 1;
+            while (end < doc.LineCount && IsTableRowLine(doc, doc.GetLineByNumber(end + 1))) end++;
+
+            // lineNumber ≥ h by the loop bounds, and end ≥ lineNumber because every line from
+            // h down to lineNumber is a row line (that's how `top` was found), so the block
+            // always contains the queried line.
+            startLine = h;
+            endLine   = end;
+            return true;
+        }
         return false;
     }
 }

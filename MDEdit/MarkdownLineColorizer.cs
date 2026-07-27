@@ -49,6 +49,28 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
             return;
         }
 
+        // Table lines (Requirements.md §4): the delimiter row is pure syntax and is dimmed
+        // whole; on header/body rows only the pipes are dimmed, leaving cell text styled
+        // normally — no return, so script spans inside cells still apply below. The hrule
+        // brushes are reused deliberately: both constructs are structural syntax rather than
+        // content, so they share one visual language (the accent-bar/blockquote-text pairing
+        // uses the same reasoning). Gated on the cheap first-char check before the block walk,
+        // same cost discipline as IsFenceDelimiterLine before TryGetEnclosingFenceBlock.
+        if (text[0] == '|' && MarkdownSyntax.TryGetTableBlock(doc, line.LineNumber, out int tableStart, out _))
+        {
+            var brush = IsDark ? DarkHRuleBrush : LightHRuleBrush;
+            if (line.LineNumber == tableStart + 1)
+            {
+                ColorLine(line, brush, FontWeights.Normal);
+                return;
+            }
+            foreach (int pipe in MarkdownSyntax.GetTablePipeOffsets(text))
+            {
+                ChangeLinePart(line.Offset + pipe, line.Offset + pipe + 1,
+                    el => el.TextRunProperties.SetForegroundBrush(brush));
+            }
+        }
+
         StyleScriptSpans(doc, line);
     }
 

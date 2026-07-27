@@ -45,7 +45,9 @@ public partial class MainWindow : Window
     private readonly BulletListMarkerElementGenerator _bulletListMarkerGenerator = new();
     private readonly TaskListMarkerElementGenerator _taskListMarkerGenerator = new();
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
+    private readonly TableRowElementGenerator _tableRowGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
+    private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
@@ -55,6 +57,7 @@ public partial class MainWindow : Window
     // ── Constructor ───────────────────────────────────────────────────────
     public MainWindow()
     {
+        _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
         InitializeComponent();
         LoadSyntaxHighlighting();
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
@@ -68,7 +71,9 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_taskListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_bulletListMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_numberedListMarkerGenerator);
+        Editor.TextArea.TextView.ElementGenerators.Add(_tableRowGenerator);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
+        Editor.TextArea.TextView.BackgroundRenderers.Add(_tableGridRenderer);
         RegisterCommands();
         RegisterKeyBindings();
         SearchPanel.Install(Editor);
@@ -537,11 +542,14 @@ public partial class MainWindow : Window
         _bulletListMarkerGenerator.CaretLine = line;
         _taskListMarkerGenerator.CaretLine   = line;
         _numberedListMarkerGenerator.CaretLine = line;
+        _tableRowGenerator.CaretLine         = line;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
         RedrawEnclosingFenceLines(previousLine);
         if (line != previousLine) RedrawEnclosingFenceLines(line);
+        RedrawEnclosingTableLines(previousLine);
+        if (line != previousLine) RedrawEnclosingTableLines(line);
     }
 
     private void RedrawLine(int lineNumber)
@@ -555,6 +563,15 @@ public partial class MainWindow : Window
         if (!MarkdownSyntax.TryGetEnclosingFenceBlock(Editor.Document, lineNumber, out int start, out int end)) return;
         RedrawLine(start);
         if (end != start) RedrawLine(end);
+    }
+
+    // Tables reveal per block like code fences, but crossing the boundary changes the
+    // appearance of every line in the block (rows flip between grid and raw source), not just
+    // the two delimiters — so the whole block is redrawn. Tables are small; this is bounded.
+    private void RedrawEnclosingTableLines(int lineNumber)
+    {
+        if (!MarkdownSyntax.TryGetTableBlock(Editor.Document, lineNumber, out int start, out int end)) return;
+        for (int n = start; n <= end; n++) RedrawLine(n);
     }
 
     // Called after loading a new/opened document, whose caret always resets to line 1 —
@@ -574,6 +591,7 @@ public partial class MainWindow : Window
         _bulletListMarkerGenerator.CaretLine = _lastCaretLine;
         _taskListMarkerGenerator.CaretLine   = _lastCaretLine;
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
+        _tableRowGenerator.CaretLine         = _lastCaretLine;
     }
 
     private void UpdateLivePreviewState()
@@ -589,7 +607,9 @@ public partial class MainWindow : Window
         _bulletListMarkerGenerator.Enabled = _settings.LivePreview;
         _taskListMarkerGenerator.Enabled   = _settings.LivePreview;
         _numberedListMarkerGenerator.Enabled = _settings.LivePreview;
+        _tableRowGenerator.Enabled           = _settings.LivePreview;
         _blockquoteAccentBarRenderer.Enabled = _settings.LivePreview;
+        _tableGridRenderer.Enabled           = _settings.LivePreview;
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
@@ -652,6 +672,7 @@ public partial class MainWindow : Window
         var dark = ThemeService.IsDarkEffective(theme);
         _colorizer.IsDark = dark;
         _blockquoteAccentBarRenderer.IsDark = dark;
+        _tableGridRenderer.IsDark = dark;
         Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
         UpdateHighlighting(_files.CurrentPath);
         Editor.TextArea.TextView.Redraw();

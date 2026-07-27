@@ -61,7 +61,7 @@ carries a number is renumbered in place.
 
 ### Insertions
 - Hyperlink (inserts link syntax with placeholder text and URL)
-- Table — inserts a starter table (header row, delimiter row, one body row) with the cursor placed in the first header cell. Column alignment via `:---` (left), `:---:` (center), and `---:` (right) is supported in the delimiter row *(planned)*
+- Table — inserts a starter table (header row, delimiter row, one body row) with the cursor placed in the first header cell *(planned)*. Column alignment via `:---` (left), `:---:` (center), and `---:` (right) is supported in the delimiter row
 - Emoji — inserts an emoji shortcode such as `:joy:`. Shortcodes are drawn from a catalogue shipped
   with the application; a `:name:` that is not in the catalogue is ordinary text, so everyday writing
   such as `10:30:45` is never mistaken for an emoji
@@ -88,7 +88,9 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - Highlighting updates in real time as the user types.
 - Highlighted text is shown with a muted yellow background, in both the light and dark themes.
 - Superscript and subscript text is raised or lowered from the baseline and shown smaller than the surrounding text, in both editor modes.
-- The remaining extended construct listed in §3 (tables) is highlighted on the same terms as the core constructs *(planned)*.
+- Table rows are recognized when a header row sits directly above a delimiter row: the pipes and the
+  delimiter row are visually muted so the cell content stays prominent. A row must start and end with
+  a pipe to count — prose containing pipes is never mistaken for a table.
 - Underlined text is shown underlined, in both editor modes.
 
 ## 5. WYSIWYG Mode
@@ -104,7 +106,11 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   shortcode while the cursor is inside it. The character renders in monochrome rather than colour —
   a limitation of the underlying UI framework, not a defect in the editor.
 - A task list item displays as a checkbox, ticked or empty according to its state, reverting to the source text while the cursor is on that line.
-- The remaining extended construct listed in §3 (tables) is displayed in WYSIWYG mode on the same terms as the core constructs *(planned)*.
+- A table displays as a grid: columns sized to their widest cell, a bold shaded header row, the
+  delimiter row hidden, and the delimiter row's column alignments honored. Moving the cursor into
+  the table reverts the whole table to its source text — like a fenced code block — so it is always
+  edited as raw Markdown. Cell text is shown as written; rendering inline formatting (bold, emoji,
+  links) inside cells is *(planned)*.
 - Underlined text displays as underlined, with its `<u>` and `</u>` tags hidden, on the same terms as the other inline constructs.
 
 ## 6. View Options
