@@ -68,9 +68,12 @@ MDEdit will ask before discarding your work.
 
 ### Version 1.0.3
 
-Bullet, numbered and task lists, blockquotes and headings now apply to every line you have selected,
-rather than only the first. Select a block of text, press the button once, and the whole thing is
-marked — press again to clear it. Numbered lists count properly down the selection, 1, 2, 3.
+Tables now display as real grids in WYSIWYG mode — sized columns, a bold header row, your alignment
+choices honoured — reverting to source whenever your cursor is inside one. WYSIWYG also now shows
+your text in a proper document font, while code and any Markdown revealed at the cursor stay
+fixed-width. Bullet, numbered and task lists, blockquotes and headings now apply to every line you
+have selected, rather than only the first — press once to mark the whole selection, press again to
+clear it, and numbered lists count properly down the selection, 1, 2, 3.
 
 ### Version 1.0.2
 

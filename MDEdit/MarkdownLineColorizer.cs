@@ -25,9 +25,10 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     public bool LivePreviewEnabled { get; set; }
 
     // Set by MainWindow alongside the generators' caret state (live preview only): the
-    // caret's line, so revealed construct lines can swap back to the source font. −1 when
-    // untracked.
+    // caret's line and offset, so revealed construct lines and revealed inline spans can
+    // swap back to the source font. −1 when untracked.
     public int CaretLine { get; set; } = -1;
+    public int CaretOffset { get; set; } = -1;
 
     // The editor's source-mode mono family, captured once by MainWindow from the XAML stack.
     public FontFamily? SourceFontFamily { get; set; }
@@ -86,32 +87,57 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     }
 
     // In live preview, revealed markdown renders in the source font — the reveal means
-    // "you're editing source here": the caret's own line when it carries a line-scoped
-    // construct (heading, blockquote, bullet/task/numbered item — task lines are bullet
-    // lines by TryGetBulletListMarker's definition), and every line of a table whose block
-    // contains the caret, since tables reveal whole. Runs BEFORE the color/weight styling,
-    // which rebuilds each run's Typeface from its current family and so preserves the swap.
-    // Code fences need nothing here: Markdown.xshd's CodeBlock/InlineCode colors pin the
-    // mono family in every mode. Plain prose lines and per-span reveals (bold, links, emoji)
-    // deliberately stay in the document font — swapping a whole line's metrics whenever the
-    // caret crosses into a mid-sentence bold run would make the text jump underfoot, and
-    // doing it on every caret line would make paragraphs jiggle while arrowing through them.
+    // "you're editing source here". Two grains, matching the reveal scopes exactly:
+    //  - Whole line: the caret's own line when it carries a line-scoped construct (heading,
+    //    blockquote, bullet/task/numbered item — task lines are bullet lines by
+    //    TryGetBulletListMarker's definition), and every line of a table whose block contains
+    //    the caret, since tables reveal whole.
+    //  - Per span: whichever inline runs the caret is inside on its own line (emphasis,
+    //    links, underline, emoji), using the same inclusive-of-both-edges rule as the marker
+    //    generators (see EmphasisMarkerElementGenerator.IsCaretInside) so the mono region and
+    //    the revealed markers can never disagree. The span's layout already shifts at that
+    //    same instant — its markers appear — so the font swap adds no new movement; that's
+    //    what makes per-span acceptable here where an every-caret-line swap would not be
+    //    (plain prose lines deliberately stay in the document font, so paragraphs don't
+    //    jiggle while arrowing through them).
+    // Runs BEFORE the color/weight styling, which rebuilds each run's Typeface from its
+    // current family and so preserves the swap. Code fences need nothing here:
+    // Markdown.xshd's CodeBlock/InlineCode colors pin the mono family in every mode.
     private void ApplyRevealedSourceFont(TextDocument doc, DocumentLine line)
     {
         if (!LivePreviewEnabled || SourceFontFamily is null) return;
 
-        bool revealed = line.LineNumber == CaretLine && HasLineScopedConstruct(doc, line);
-        if (!revealed && doc.GetCharAt(line.Offset) == '|'
+        bool wholeLine = line.LineNumber == CaretLine && HasLineScopedConstruct(doc, line);
+        if (!wholeLine && doc.GetCharAt(line.Offset) == '|'
             && MarkdownSyntax.TryGetTableBlock(doc, line.LineNumber, out int start, out int end))
         {
-            revealed = CaretLine >= start && CaretLine <= end;
+            wholeLine = CaretLine >= start && CaretLine <= end;
         }
-        if (!revealed) return;
+        if (wholeLine)
+        {
+            SwapToSourceFont(line.Offset, line.EndOffset);
+            return;
+        }
 
-        ChangeLinePart(line.Offset, line.EndOffset, el =>
+        // Span-scoped reveals are only possible on the caret's own line.
+        if (line.LineNumber != CaretLine) return;
+
+        foreach (var span in MarkdownSyntax.FindEmphasisSpans(doc, line))
+            if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
+        foreach (var span in MarkdownSyntax.FindLinkSpans(doc, line))
+            if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
+        foreach (var span in MarkdownSyntax.FindUnderlineSpans(doc, line))
+            if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
+        foreach (var span in MarkdownSyntax.FindEmojiSpans(doc, line))
+            if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
+    }
+
+    private void SwapToSourceFont(int startOffset, int endOffset)
+    {
+        ChangeLinePart(startOffset, endOffset, el =>
         {
             var old = el.TextRunProperties.Typeface;
-            el.TextRunProperties.SetTypeface(new Typeface(SourceFontFamily, old.Style, old.Weight, old.Stretch));
+            el.TextRunProperties.SetTypeface(new Typeface(SourceFontFamily!, old.Style, old.Weight, old.Stretch));
         });
     }
 

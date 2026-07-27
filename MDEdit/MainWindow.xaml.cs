@@ -552,6 +552,7 @@ public partial class MainWindow : Window
         _numberedListMarkerGenerator.CaretLine = line;
         _tableRowGenerator.CaretLine         = line;
         _colorizer.CaretLine                 = line;
+        _colorizer.CaretOffset               = offset;
 
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
@@ -602,6 +603,7 @@ public partial class MainWindow : Window
         _numberedListMarkerGenerator.CaretLine = _lastCaretLine;
         _tableRowGenerator.CaretLine         = _lastCaretLine;
         _colorizer.CaretLine                 = _lastCaretLine;
+        _colorizer.CaretOffset               = _lastCaretOffset;
     }
 
     private void UpdateLivePreviewState()
