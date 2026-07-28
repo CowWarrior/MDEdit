@@ -759,6 +759,18 @@ public partial class MainWindow : Window
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
         BtnEditorModeToggle.IsChecked    = _settings.LivePreview;
+
+        // Icon/tooltip show the mode a click switches TO, not the current one.
+        if (_settings.LivePreview)
+        {
+            BtnEditorModeToggleIcon.Data = (Geometry)FindResource("IconEyeClosed");
+            BtnEditorModeToggle.ToolTip = "Toggle to code view";
+        }
+        else
+        {
+            BtnEditorModeToggleIcon.Data = (Geometry)FindResource("IconEye");
+            BtnEditorModeToggle.ToolTip = "Toggle to WYSIWYG view";
+        }
     }
 
     private void SetLivePreview(bool enabled)
@@ -834,6 +846,12 @@ public partial class MainWindow : Window
         Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
         UpdateHighlighting(_files.CurrentPath);
         Editor.TextArea.TextView.Redraw();
+
+        // Toolbar Highlight swatch (Requirements.md §6/§8): reads live from EditorPreferences here
+        // rather than a fixed color, so both a theme switch and a Preferences change (which routes
+        // through ApplyEditorPreferences -> ApplyTheme) keep it in sync automatically.
+        var p = _settings.EditorPreferences;
+        BtnHighlightSwatch.Background = FreezeBrush(dark ? p.HighlightBackgroundDark : p.HighlightBackgroundLight);
 
         MenuThemeLight.IsChecked  = theme == AppTheme.Light;
         MenuThemeDark.IsChecked   = theme == AppTheme.Dark;

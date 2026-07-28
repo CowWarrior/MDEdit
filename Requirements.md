@@ -173,15 +173,19 @@ common word processors, its established shortcut is used in preference to invent
 
 ## 8. Toolbar
 
-A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, table, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
+A toolbar provides one-click access to the most common formatting operations: bold, italic, strikethrough, highlight, superscript, subscript, underline, headings 1–3, inline code, code block, link, table, emoji, bullet list, task list, numbered list, and blockquote. File operations (new, open, save) and the word wrap toggle are available from the menu and keyboard shortcuts rather than the toolbar.
 
 - The toolbar's first section, ahead of the formatting operations, is a single toggle button
   switching between Source and WYSIWYG editor mode — the toolbar equivalent of View → Editor Mode,
   kept in sync with it either way.
 
-- Toolbar buttons currently show plain text/symbol labels (`B`, `I`, `H1`, `Link`, and so on) rather
-  than icons. Replacing them with a proper icon set — possibly drawn from an icon font such as Font
-  Awesome — is *(planned)*.
+- Toolbar buttons show icons rather than plain text/symbol labels. The Source/WYSIWYG toggle's icon
+  and tooltip reflect the mode a click would switch *to*, not the current mode: an open eye with
+  "Toggle to WYSIWYG view" while in Source, a closed eye with "Toggle to code view" while in WYSIWYG.
+
+- The toolbar's last section, after every formatting operation, is a single button opening the
+  Preferences window (§6) — a faster path to the same dialog View → Preferences already opens, not
+  a separate feature.
 
 ## 9. Status Bar
 

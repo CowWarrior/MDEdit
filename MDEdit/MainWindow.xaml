@@ -107,66 +107,129 @@
                 <!-- Toolbar buttons get their style from ToolBar.ButtonStyleKey in the active
                      theme, which doesn't inherit the ToolBar's Foreground. An implicit TextBlock
                      style reaches both explicit TextBlock content and string content (rendered
-                     via auto-generated TextBlocks), keeping labels readable in both themes. -->
+                     via auto-generated TextBlocks), keeping labels readable in both themes. The
+                     WYSIWYG toggle is the only remaining TextBlock user — every formatting command
+                     below is an icon instead (Requirements.md §8). Icons are Tabler Icons' outline
+                     set (see Resources/ToolbarIcons.xaml) — stroke geometry, not filled silhouettes,
+                     so this styles Stroke/StrokeThickness/line caps rather than Fill. -->
                 <ToolBar.Resources>
                     <Style TargetType="TextBlock">
                         <Setter Property="Foreground" Value="{DynamicResource AppChromeForegroundBrush}"/>
                     </Style>
+                    <Style TargetType="Path">
+                        <Setter Property="Stroke" Value="{DynamicResource AppChromeForegroundBrush}"/>
+                        <Setter Property="StrokeThickness" Value="2"/>
+                        <Setter Property="StrokeStartLineCap" Value="Round"/>
+                        <Setter Property="StrokeEndLineCap" Value="Round"/>
+                        <Setter Property="StrokeLineJoin" Value="Round"/>
+                        <Setter Property="Width" Value="16"/>
+                        <Setter Property="Height" Value="16"/>
+                        <Setter Property="Stretch" Value="Uniform"/>
+                    </Style>
                 </ToolBar.Resources>
 
                 <!-- Editor mode: mirrors View > Editor Mode (MenuEditorModeSource/Wysiwyg), kept in
-                     sync from the same UpdateLivePreviewState() that updates those menu checkmarks. -->
-                <ToggleButton x:Name="BtnEditorModeToggle" Click="BtnEditorModeToggle_Click"
-                              ToolTip="WYSIWYG (live preview) — click to toggle Source / WYSIWYG" Padding="4,2">
-                    <TextBlock>WYSIWYG</TextBlock>
+                     sync from the same UpdateLivePreviewState() that updates those menu checkmarks.
+                     Icon and tooltip show the mode a click switches TO, not the current mode (an
+                     open eye + "Toggle to WYSIWYG view" in source mode; a closed eye + "Toggle to
+                     code view" in WYSIWYG), set imperatively in UpdateLivePreviewState() rather than a XAML
+                     trigger, matching this codebase's existing pattern of syncing this button's
+                     state from code-behind rather than native/declarative state binding. -->
+                <!-- Background/BorderBrush are pinned to Transparent as local values specifically to
+                     beat the Fluent theme's default checked-state accent fill (Application.ThemeMode
+                     paints a ToggleButton's IsChecked state with the OS accent color otherwise —
+                     purple on this machine — which read as a stray colored blob behind the icon;
+                     a local value on the same property takes precedence over the theme's own
+                     trigger/visual-state value). -->
+                <ToggleButton x:Name="BtnEditorModeToggle" Click="BtnEditorModeToggle_Click" Padding="4,2"
+                              Background="Transparent" BorderBrush="Transparent">
+                    <Path x:Name="BtnEditorModeToggleIcon"/>
                 </ToggleButton>
                 <Separator/>
 
                 <!-- Inline formatting -->
-                <Button Command="{x:Static local:MainWindow.BoldCommand}"   ToolTip="Bold (Ctrl+B)">
-                    <TextBlock FontWeight="Bold" Width="12" TextAlignment="Center">B</TextBlock>
+                <Button Command="{x:Static local:MainWindow.BoldCommand}" ToolTip="Bold (Ctrl+B)" Padding="4,2">
+                    <Path Data="{StaticResource IconBold}"/>
                 </Button>
-                <Button Command="{x:Static local:MainWindow.ItalicCommand}" ToolTip="Italic (Ctrl+I)">
-                    <TextBlock FontStyle="Italic" Width="12" TextAlignment="Center">I</TextBlock>
+                <Button Command="{x:Static local:MainWindow.ItalicCommand}" ToolTip="Italic (Ctrl+I)" Padding="4,2">
+                    <Path Data="{StaticResource IconItalic}"/>
                 </Button>
-                <Button Click="BtnUnderline_Click" ToolTip="Underline, Ctrl+U (inserts HTML &lt;u&gt; tags)">
-                    <TextBlock TextDecorations="Underline" Width="12" TextAlignment="Center">U</TextBlock>
+                <Button Click="BtnUnderline_Click" ToolTip="Underline, Ctrl+U (inserts HTML &lt;u&gt; tags)" Padding="4,2">
+                    <Path Data="{StaticResource IconUnderline}"/>
                 </Button>
-                <Button Click="BtnStrike_Click" ToolTip="Strikethrough">
-                    <TextBlock TextDecorations="Strikethrough" Width="12" TextAlignment="Center">S</TextBlock>
+                <Button Click="BtnStrike_Click" ToolTip="Strikethrough" Padding="4,2">
+                    <Path Data="{StaticResource IconStrikethrough}"/>
                 </Button>
-                <Button Click="BtnSubscript_Click" ToolTip="Subscript (Ctrl+Shift+_)">
-                    <TextBlock Width="14" TextAlignment="Center">X₂</TextBlock>
+                <Button Click="BtnSubscript_Click" ToolTip="Subscript (Ctrl+Shift+_)" Padding="4,2">
+                    <Path Data="{StaticResource IconSubscript}"/>
                 </Button>
-                <Button Click="BtnSuperscript_Click" ToolTip="Superscript (Ctrl+Shift++)">
-                    <TextBlock Width="14" TextAlignment="Center">X²</TextBlock>
+                <Button Click="BtnSuperscript_Click" ToolTip="Superscript (Ctrl+Shift++)" Padding="4,2">
+                    <Path Data="{StaticResource IconSuperscript}"/>
                 </Button>
-                <Button Click="BtnHighlight_Click" ToolTip="Highlight">
-                    <!-- Swatch matches Markdown.xshd's Highlight background. Foreground is pinned
-                         because the swatch stays pale in both themes, unlike the editor's own. -->
-                    <TextBlock Background="#F5E7A3" Foreground="#1E1E1E" Width="12" TextAlignment="Center">H</TextBlock>
+                <Button Click="BtnHighlight_Click" ToolTip="Highlight" Padding="4,2">
+                    <!-- Swatch background is set imperatively in ApplyTheme() from
+                         EditorPreferences.HighlightBackgroundLight/Dark (Requirements.md §6) rather
+                         than a fixed color, so it always matches whatever the user picked in
+                         Preferences and updates live on both a Preferences change and a theme
+                         switch, the same way MarkdownLineColorizer's brushes do. -->
+                    <Border x:Name="BtnHighlightSwatch" CornerRadius="2" Padding="2">
+                        <Path Data="{StaticResource IconHighlight}"/>
+                    </Border>
                 </Button>
                 <Separator/>
 
                 <!-- Headings -->
-                <Button Click="BtnH1_Click" ToolTip="Heading 1 (Ctrl+1)" Padding="4,2">H1</Button>
-                <Button Click="BtnH2_Click" ToolTip="Heading 2 (Ctrl+2)" Padding="4,2">H2</Button>
-                <Button Click="BtnH3_Click" ToolTip="Heading 3 (Ctrl+3)" Padding="4,2">H3</Button>
+                <Button Click="BtnH1_Click" ToolTip="Heading 1 (Ctrl+1)" Padding="4,2">
+                    <Path Data="{StaticResource IconHeading1}"/>
+                </Button>
+                <Button Click="BtnH2_Click" ToolTip="Heading 2 (Ctrl+2)" Padding="4,2">
+                    <Path Data="{StaticResource IconHeading2}"/>
+                </Button>
+                <Button Click="BtnH3_Click" ToolTip="Heading 3 (Ctrl+3)" Padding="4,2">
+                    <Path Data="{StaticResource IconHeading3}"/>
+                </Button>
                 <Separator/>
 
                 <!-- Insert -->
-                <Button Click="BtnLink_Click"      ToolTip="Insert Link"       Padding="4,2">Link</Button>
-                <Button Click="BtnCode_Click"      ToolTip="Inline Code"       Padding="4,2">` `</Button>
-                <Button Click="BtnCodeBlock_Click" ToolTip="Code Block"        Padding="4,2">```</Button>
-                <Button Click="BtnEmoji_Click"     ToolTip="Insert Emoji"      Padding="4,2">🙂</Button>
-                <Button Click="BtnTable_Click"     ToolTip="Insert Table"      Padding="4,2">Table</Button>
+                <Button Click="BtnLink_Click" ToolTip="Insert Link" Padding="4,2">
+                    <Path Data="{StaticResource IconLink}"/>
+                </Button>
+                <Button Click="BtnCode_Click" ToolTip="Inline Code" Padding="4,2">
+                    <Path Data="{StaticResource IconInlineCode}"/>
+                </Button>
+                <Button Click="BtnCodeBlock_Click" ToolTip="Code Block" Padding="4,2">
+                    <Path Data="{StaticResource IconCodeBlock}"/>
+                </Button>
+                <Button Click="BtnEmoji_Click" ToolTip="Insert Emoji" Padding="4,2">
+                    <Path Data="{StaticResource IconEmoji}"/>
+                </Button>
+                <Button Click="BtnTable_Click" ToolTip="Insert Table" Padding="4,2">
+                    <Path Data="{StaticResource IconTable}"/>
+                </Button>
                 <Separator/>
 
                 <!-- Lists and blockquote -->
-                <Button Click="BtnBulletList_Click"  ToolTip="Bullet List"    Padding="4,2">• List</Button>
-                <Button Click="BtnTaskList_Click"    ToolTip="Task List (toggles an existing item)" Padding="4,2">☐ Task</Button>
-                <Button Click="BtnNumberList_Click"  ToolTip="Numbered List"  Padding="4,2">1. List</Button>
-                <Button Click="BtnBlockquote_Click"  ToolTip="Blockquote"     Padding="4,2">&gt; Quote</Button>
+                <Button Click="BtnBulletList_Click" ToolTip="Bullet List" Padding="4,2">
+                    <Path Data="{StaticResource IconBulletList}"/>
+                </Button>
+                <Button Click="BtnTaskList_Click" ToolTip="Task List (toggles an existing item)" Padding="4,2">
+                    <Path Data="{StaticResource IconTaskList}"/>
+                </Button>
+                <Button Click="BtnNumberList_Click" ToolTip="Numbered List" Padding="4,2">
+                    <Path Data="{StaticResource IconNumberedList}"/>
+                </Button>
+                <Button Click="BtnBlockquote_Click" ToolTip="Blockquote" Padding="4,2">
+                    <Path Data="{StaticResource IconBlockquote}"/>
+                </Button>
+                <Separator/>
+
+                <!-- Preferences: same handler as View > Preferences… (MenuPreferences_Click), just a
+                     second, faster path to the same dialog — not part of Requirements.md §8's
+                     formatting-command list, so it gets its own trailing section rather than folding
+                     into one of the groups above. -->
+                <Button Click="MenuPreferences_Click" ToolTip="Preferences" Padding="4,2">
+                    <Path Data="{StaticResource IconSettings}"/>
+                </Button>
 
             </ToolBar>
         </ToolBarTray>

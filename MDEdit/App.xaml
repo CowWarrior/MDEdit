@@ -9,6 +9,10 @@
                 <!-- Replaced at runtime by ThemeService.Apply; merged here so DynamicResource
                      lookups resolve during window initialization, before the first Apply. -->
                 <ResourceDictionary Source="Themes/Light.xaml"/>
+                <!-- Toolbar icon geometry (Requirements.md §8) — theme-independent, so unlike
+                     Themes/Light.xaml above this is merged once and never touched by
+                     ThemeService.Apply's swap (which only matches "Themes/Light.xaml"/"Dark.xaml"). -->
+                <ResourceDictionary Source="Resources/ToolbarIcons.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>
