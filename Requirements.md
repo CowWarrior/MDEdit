@@ -67,7 +67,7 @@ carries a number is renumbered in place.
   such as `10:30:45` is never mistaken for an emoji
 - Emoji picker — the user can browse and search the shipped catalogue and insert an emoji from it,
   without having to remember the shortcode name. Selecting an entry inserts its **shortcode**, not the
-  literal character, so the document stays consistent with emoji typed by hand *(planned)*
+  literal character, so the document stays consistent with emoji typed by hand
 - Convert emoji to shortcodes — a command that replaces literal emoji characters with their catalogue
   shortcodes, across the selection if there is one and the whole document otherwise. This makes a
   pasted or imported document consistent with the shortcode form MDEdit writes, and keeps the source
@@ -106,6 +106,12 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   shortcode while the cursor is inside it. The character renders in monochrome rather than colour —
   a limitation of the underlying UI framework, not a defect in the editor.
 - A task list item displays as a checkbox, ticked or empty according to its state, reverting to the source text while the cursor is on that line.
+- An image reference (`![alt](path)`) displays as the rendered picture in place of its Markdown,
+  reverting to the source syntax while the cursor is inside it — the same reveal-and-render treatment
+  as an emoji shortcode. This lands in two phases: local, file-relative images first; images loaded
+  from a remote `http(s)://` URL second, since fetching one automatically discloses that the document
+  was opened, the same tracking-pixel concern email clients guard against — a decision to make
+  deliberately, not a default to fall into *(planned)*
 - Document text displays in a proportional document font, so writing feels like editing a document
   rather than code. Code blocks and inline code keep the editor's fixed-width font. Markdown
   revealed around the cursor — a heading, list, or blockquote line being edited, a table
@@ -132,6 +138,9 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
     blocks), rather than today's fixed WYSIWYG font (Arial) and fixed monospace stack.
   - Text and background colors for the various formatted spans (headings, links, highlights,
     blockquotes, and the like), rather than today's fixed per-theme palette.
+  - A separate font choice per customizable construct — for example, a different font for headings
+    than for bold text — rather than today's single WYSIWYG font applied uniformly to every construct.
+    This extends the same per-construct customization already offered for colors to fonts *(planned)*
   - A Reset to Default action, restoring every font and color choice on the form to its original
     fixed value in one step.
 
