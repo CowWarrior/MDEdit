@@ -37,6 +37,21 @@ public class MarkdownSyntaxEmojiTests
         Assert.False(EmojiCatalog.TryGet("JOY", out _));
     }
 
+    // Guards the emoji picker's data source: All and TryGet are built from the same Load() pass
+    // (see EmojiCatalog.cs), so every entry in one must round-trip through the other.
+    [Fact]
+    public void Catalog_All_IsNonEmptyAndMatchesTryGet()
+    {
+        Assert.Equal(EmojiCatalog.Count, EmojiCatalog.All.Count);
+        Assert.True(EmojiCatalog.All.Count > 100);
+
+        foreach (var (shortcode, emoji) in EmojiCatalog.All)
+        {
+            Assert.True(EmojiCatalog.TryGet(shortcode, out var lookedUp));
+            Assert.Equal(emoji, lookedUp);
+        }
+    }
+
     [Fact]
     public void FindEmojiSpans_WholeLine_ReturnsSpanWithReplacement()
     {

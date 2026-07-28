@@ -222,4 +222,30 @@ public class MarkdownFormatterTests
         Assert.Equal(1, start);
         Assert.Equal(5, end);
     }
+
+    // ── InsertEmoji ─────────────────────────────────────────────────────────
+
+    [Fact]
+    public void InsertEmoji_NoSelection_InsertsShortcodeAndPositionsCaretAfter()
+    {
+        var doc = new TextDocument("Hello ");
+        var sel = new SelectionRange(6, 0);
+
+        var result = MarkdownFormatter.InsertEmoji(doc, sel, "joy");
+
+        Assert.Equal("Hello :joy:", doc.Text);
+        Assert.Equal(new SelectionRange(11, 0), result);
+    }
+
+    [Fact]
+    public void InsertEmoji_WithSelection_ReplacesSelectionOutright()
+    {
+        var doc = new TextDocument("before SELECTED after");
+        var sel = new SelectionRange(7, 8); // "SELECTED"
+
+        var result = MarkdownFormatter.InsertEmoji(doc, sel, "rocket");
+
+        Assert.Equal("before :rocket: after", doc.Text);
+        Assert.Equal(new SelectionRange(15, 0), result);
+    }
 }

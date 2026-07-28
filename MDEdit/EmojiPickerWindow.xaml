@@ -1,0 +1,26 @@
+<Window x:Class="MDEdit.EmojiPickerWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Insert Emoji"
+        Icon="Resources/AppIcon.ico"
+        Width="420" Height="480"
+        WindowStartupLocation="CenterOwner"
+        ShowInTaskbar="False">
+
+    <DockPanel Margin="12">
+
+        <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Margin="0,0,0,8" Padding="4"
+                 TextChanged="SearchBox_TextChanged" PreviewKeyDown="SearchBox_PreviewKeyDown"/>
+
+        <Button DockPanel.Dock="Bottom" Content="Close" IsCancel="True"
+                Width="80" HorizontalAlignment="Right" Margin="0,8,0,0" Padding="4"/>
+
+        <!-- Filled in code-behind, one Button per catalogue entry (see EmojiPickerWindow.xaml.cs's
+             BuildPanel) — no ItemsControl/DataTemplate, matching PreferencesWindow's color grid,
+             the only other per-item UI list in this codebase. -->
+        <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <WrapPanel x:Name="EmojiPanel"/>
+        </ScrollViewer>
+
+    </DockPanel>
+</Window>

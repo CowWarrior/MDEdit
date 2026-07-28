@@ -782,9 +782,15 @@ public partial class MainWindow : Window
     private void BtnSubscript_Click(object sender, RoutedEventArgs e)  => WrapSelection("~", "~");
     // The only formatting command that emits HTML rather than Markdown — see Requirements.md §3.
     private void BtnUnderline_Click(object sender, RoutedEventArgs e)  => WrapSelection("<u>", "</u>");
-    // Wrapping in ':' gives both halves of the convention for free: with a word selected it becomes
-    // ":word:", and with nothing selected it leaves the caret between two colons ready to type a name.
-    private void BtnEmoji_Click(object sender, RoutedEventArgs e)      => WrapSelection(":", ":");
+    // Opens the browsable/searchable picker (Requirements.md §3) rather than wrapping the selection
+    // in bare colons — picking an entry inserts its shortcode text, not the raw emoji character, so
+    // a picked emoji is indistinguishable from one typed by hand.
+    private void BtnEmoji_Click(object sender, RoutedEventArgs e)
+    {
+        var picker = new EmojiPickerWindow { Owner = this };
+        if (picker.ShowDialog() == true)
+            ApplyFormat(MarkdownFormatter.InsertEmoji(Editor.Document, CurrentSelection, picker.SelectedShortcode!));
+    }
     private void BtnTable_Click(object sender, RoutedEventArgs e)      => InsertTable();
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);

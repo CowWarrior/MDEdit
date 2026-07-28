@@ -325,6 +325,19 @@ internal static class MarkdownFormatter
     }
 
     /// <summary>
+    /// Inserts a <c>:shortcode:</c> chosen from the emoji picker. Any existing selection is
+    /// replaced outright, the same as <see cref="Table"/> — there's no sensible way to fold
+    /// selected text into a shortcode. The caret lands right after it with nothing selected, the
+    /// same place it would sit had the shortcode been typed by hand.
+    /// </summary>
+    public static SelectionRange? InsertEmoji(TextDocument doc, SelectionRange sel, string shortcode)
+    {
+        var text = $":{shortcode}:";
+        doc.Replace(sel.Start, sel.Length, text);
+        return new SelectionRange(sel.Start + text.Length, 0);
+    }
+
+    /// <summary>
     /// Inserts a starter table (header row, delimiter row, three body rows), selecting "Header 1"
     /// so the first keystroke replaces it — the same placeholder-selection idiom as
     /// <see cref="Link"/>. Any existing selection is replaced outright rather than wrapped: unlike

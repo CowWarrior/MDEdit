@@ -19,21 +19,30 @@ namespace MDEdit.Editing;
 /// </remarks>
 internal static class EmojiCatalog
 {
-    private static readonly Lazy<Dictionary<string, string>> Entries = new(Load);
+    // Dictionary for TryGet's O(1) lookup, plus the same entries as an ordered list for the emoji
+    // picker to browse — Dictionary enumeration order is not a documented guarantee, so the picker
+    // needs a real list rather than iterating Entries.Value directly. Built in one pass over the
+    // same file so the two views can never drift apart.
+    private static readonly Lazy<(Dictionary<string, string> ByShortcode, List<(string Shortcode, string Emoji)> Ordered)> Data = new(Load);
 
     /// <summary>Number of shortcodes in the catalogue. Exposed for tests and diagnostics.</summary>
-    public static int Count => Entries.Value.Count;
+    public static int Count => Data.Value.Ordered.Count;
+
+    /// <summary>Every shortcode/emoji pair, in <c>Emoji.txt</c>'s file order. For the emoji picker.</summary>
+    public static IReadOnlyList<(string Shortcode, string Emoji)> All => Data.Value.Ordered;
 
     public static bool TryGet(string shortcode, out string emoji)
-        => Entries.Value.TryGetValue(shortcode, out emoji!);
+        => Data.Value.ByShortcode.TryGetValue(shortcode, out emoji!);
 
-    private static Dictionary<string, string> Load()
+    private static (Dictionary<string, string>, List<(string, string)>) Load()
     {
-        var entries = new Dictionary<string, string>(StringComparer.Ordinal);
+        var byShortcode = new Dictionary<string, string>(StringComparer.Ordinal);
+        var ordered = new List<(string, string)>();
+        var orderedIndex = new Dictionary<string, int>(StringComparer.Ordinal); // name -> its slot in `ordered`
 
         using var stream = typeof(EmojiCatalog).Assembly
             .GetManifestResourceStream("MDEdit.Resources.Emoji.txt");
-        if (stream is null) return entries;   // Missing resource shouldn't take the editor down.
+        if (stream is null) return (byShortcode, ordered);   // Missing resource shouldn't take the editor down.
 
         using var reader = new StreamReader(stream, Encoding.UTF8);
         while (reader.ReadLine() is string line)
@@ -49,9 +58,19 @@ internal static class EmojiCatalog
             var emoji = trimmed[(split + 1)..].Trim();
             if (emoji.Length == 0) continue;
 
-            entries[name] = emoji;   // Last definition wins, so a duplicate line is an override.
+            byShortcode[name] = emoji;   // Last definition wins, so a duplicate line is an override.
+
+            // Duplicate shortcode: update its existing slot in place (at its original position)
+            // rather than appending a second entry, so `ordered` never disagrees with `byShortcode`.
+            if (orderedIndex.TryGetValue(name, out var index))
+                ordered[index] = (name, emoji);
+            else
+            {
+                orderedIndex[name] = ordered.Count;
+                ordered.Add((name, emoji));
+            }
         }
 
-        return entries;
+        return (byShortcode, ordered);
     }
 }
