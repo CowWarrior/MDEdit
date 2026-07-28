@@ -6,6 +6,12 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.0.5
+
+- Added a Preferences window (View → Preferences) for customizing the WYSIWYG and code fonts, and the colors used for headings, links, and other formatted text.
+- Added an emoji picker — browse and search the built-in catalog and insert an emoji without memorizing its shortcode.
+- The toolbar now uses icons instead of text labels, and gained a button for quick access to Preferences.
+
 ### Version 1.0.4
 
 - Horizontal rules (`---`) now display as an actual divider line in WYSIWYG mode, reverting to the raw dashes while your cursor is on that line.
