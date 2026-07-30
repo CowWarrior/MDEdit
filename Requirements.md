@@ -23,7 +23,7 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 
 - The user can type and edit text freely regardless of file format.
 - The editor supports standard text operations: undo, redo, cut, copy, paste, and select all.
-- The editor supports a find/search function within the current document.
+- The editor supports a find/search function within the current document, reachable via Ctrl+F or Edit → Find.
 
 ## 3. Markdown Formatting
 

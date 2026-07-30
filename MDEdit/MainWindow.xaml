@@ -37,6 +37,8 @@
                 <MenuItem Header="_Paste"        Command="Paste"      InputGestureText="Ctrl+V"/>
                 <Separator/>
                 <MenuItem Header="Select _All"   Command="SelectAll"  InputGestureText="Ctrl+A"/>
+                <Separator/>
+                <MenuItem Header="_Find…"        Command="Find"       InputGestureText="Ctrl+F"/>
             </MenuItem>
 
             <MenuItem Header="F_ormat">
