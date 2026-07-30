@@ -106,12 +106,16 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   shortcode while the cursor is inside it. The character renders in monochrome rather than colour —
   a limitation of the underlying UI framework, not a defect in the editor.
 - A task list item displays as a checkbox, ticked or empty according to its state, reverting to the source text while the cursor is on that line.
-- An image reference (`![alt](path)`) displays as the rendered picture in place of its Markdown,
-  reverting to the source syntax while the cursor is inside it — the same reveal-and-render treatment
-  as an emoji shortcode. This lands in two phases: local, file-relative images first; images loaded
-  from a remote `http(s)://` URL second, since fetching one automatically discloses that the document
-  was opened, the same tracking-pixel concern email clients guard against — a decision to make
-  deliberately, not a default to fall into *(planned)*
+- An image reference (`![alt](path)`) whose target is a local file — relative to the document's
+  own location, or an absolute path — displays as the rendered picture in place of its Markdown,
+  at its natural size up to a height cap, reverting to the source syntax while the cursor is
+  inside it — the same reveal-and-render treatment as an emoji shortcode. A local image that
+  cannot be loaded (missing file, unreadable format) shows a broken-image placeholder with the
+  alt text; an image in a document that has not yet been saved anywhere, or whose target is not
+  a local file, displays as its alt text the way a link does. Images loaded from a remote
+  `http(s)://` URL are a deliberate later phase, since fetching one automatically discloses that
+  the document was opened, the same tracking-pixel concern email clients guard against — a
+  decision to make deliberately, not a default to fall into *(planned)*
 - Document text displays in a proportional document font, so writing feels like editing a document
   rather than code. Code blocks and inline code keep the editor's fixed-width font. Markdown
   revealed around the cursor — a heading, list, or blockquote line being edited, a table

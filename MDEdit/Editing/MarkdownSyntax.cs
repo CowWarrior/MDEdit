@@ -48,8 +48,12 @@ internal readonly record struct EmojiSpan(int Start, int End, string Emoji);
 /// visible and hides the rest: [Start, TextStart) is the "[" or "![" prefix, [TextEnd, End) is
 /// the "](url)" or "][ref]" suffix. Unlike <see cref="EmphasisSpan"/>'s symmetric MarkerLength,
 /// prefix and suffix lengths differ — the URL/reference portion has no fixed width.
+/// IsImage distinguishes "![alt](url)" (rendered as a picture by ImageElementGenerator when the
+/// target is a resolvable local file); Url carries the raw parenthesized target for the two
+/// inline forms — the <see cref="EmojiSpan"/> carry-the-payload precedent — and is null for
+/// reference links, which have no inline URL to resolve.
 /// </summary>
-internal readonly record struct LinkSpan(int Start, int TextStart, int TextEnd, int End);
+internal readonly record struct LinkSpan(int Start, int TextStart, int TextEnd, int End, bool IsImage, string? Url);
 
 internal enum FenceKind { None, Backtick, Tilde }
 
@@ -304,16 +308,16 @@ internal static class MarkdownSyntax
     private const int UnderlineOpenLength  = 3;   // "<u>"
     private const int UnderlineCloseLength = 4;   // "</u>"
 
-    private static readonly Regex[] LinkPatterns =
+    private static readonly (Regex Pattern, bool IsImage)[] LinkPatterns =
     [
-        new Regex(@"\G!\[([^\]\n]+)\]\([^\)\n]+\)"),
-        new Regex(@"\G\[([^\]\n]+)\]\([^\)\n]+\)"),
-        new Regex(@"\G\[([^\]\n]+)\]\[[^\]\n]+\]"),
+        (new Regex(@"\G!\[([^\]\n]+)\]\(([^\)\n]+)\)"), true),
+        (new Regex(@"\G\[([^\]\n]+)\]\(([^\)\n]+)\)"), false),
+        (new Regex(@"\G\[([^\]\n]+)\]\[[^\]\n]+\]"), false),   // reference form — no URL group
     ];
 
     private static bool TryMatchLinkPattern(string text, int pos, out int length)
     {
-        foreach (var pattern in LinkPatterns)
+        foreach (var (pattern, _) in LinkPatterns)
         {
             var m = pattern.Match(text, pos);
             if (m.Success) { length = m.Length; return true; }
@@ -514,7 +518,7 @@ internal static class MarkdownSyntax
             }
 
             var matched = false;
-            foreach (var pattern in LinkPatterns)
+            foreach (var (pattern, isImage) in LinkPatterns)
             {
                 var m = pattern.Match(text, pos);
                 if (!m.Success) continue;
@@ -524,7 +528,9 @@ internal static class MarkdownSyntax
                     line.Offset + pos,
                     line.Offset + label.Index,
                     line.Offset + label.Index + label.Length,
-                    line.Offset + pos + m.Length));
+                    line.Offset + pos + m.Length,
+                    isImage,
+                    m.Groups[2].Success ? m.Groups[2].Value : null));
 
                 pos += m.Length;
                 matched = true;

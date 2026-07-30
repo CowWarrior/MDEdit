@@ -49,6 +49,50 @@ public class MarkdownSyntaxLinkTests
         Assert.Equal(text.Length, span.End);
     }
 
+    [Fact]
+    public void FindLinkSpans_InlineLink_IsNotImageAndCapturesUrl()
+    {
+        var span = Single("[link text](https://example.com)");
+
+        Assert.False(span.IsImage);
+        Assert.Equal("https://example.com", span.Url);
+    }
+
+    [Fact]
+    public void FindLinkSpans_Image_IsImageAndCapturesUrl()
+    {
+        var span = Single("![alt text](image.png)");
+
+        Assert.True(span.IsImage);
+        Assert.Equal("image.png", span.Url);
+    }
+
+    // The reference form has no inline URL to resolve, so Url stays null — ImageElementGenerator
+    // never renders it, and the marker-hiding path treats it as before.
+    [Fact]
+    public void FindLinkSpans_ReferenceLink_IsNotImageAndUrlIsNull()
+    {
+        var span = Single("[link text][ref]");
+
+        Assert.False(span.IsImage);
+        Assert.Null(span.Url);
+    }
+
+    [Fact]
+    public void FindLinkSpans_ImageAndLinkOnOneLine_FlagsEachCorrectly()
+    {
+        var doc  = new TextDocument("![a](x.png) and [b](y)");
+        var line = doc.GetLineByNumber(1);
+
+        var spans = MarkdownSyntax.FindLinkSpans(doc, line);
+
+        Assert.Equal(2, spans.Count);
+        Assert.True(spans[0].IsImage);
+        Assert.Equal("x.png", spans[0].Url);
+        Assert.False(spans[1].IsImage);
+        Assert.Equal("y", spans[1].Url);
+    }
+
     [Theory]
     [InlineData("no link here")]
     [InlineData("")]

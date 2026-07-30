@@ -38,6 +38,7 @@ public partial class MainWindow : Window
     private readonly HeadingMarkerElementGenerator _headingMarkerGenerator = new();
     private readonly EmphasisMarkerElementGenerator _emphasisMarkerGenerator = new();
     private readonly CodeBlockFenceElementGenerator _codeBlockFenceGenerator = new();
+    private readonly ImageElementGenerator _imageGenerator = new();
     private readonly LinkMarkerElementGenerator _linkMarkerGenerator = new();
     private readonly UnderlineMarkerElementGenerator _underlineMarkerGenerator = new();
     private readonly EmojiElementGenerator _emojiGenerator = new();
@@ -74,6 +75,10 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_emphasisMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_codeBlockFenceGenerator);
+        // The image generator must precede the link generator: both advertise an image span's
+        // Start offset, and registration order breaks the tie — a rendered image consumes the
+        // whole span, while a declined one falls through to the link generator's marker hiding.
+        Editor.TextArea.TextView.ElementGenerators.Add(_imageGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_linkMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_underlineMarkerGenerator);
         Editor.TextArea.TextView.ElementGenerators.Add(_emojiGenerator);
@@ -228,6 +233,19 @@ public partial class MainWindow : Window
         Editor.SyntaxHighlighting = ext is ".md" or ".markdown"
             ? (dark ? _markdownDark : _markdownLight)
             : null;
+
+        // Images resolve relative to the document's own directory — the one generator fed
+        // anything from FileService. Set here because this method is already the single funnel
+        // for every path change (New/Open/SaveAs; ApplyTheme re-passes the unchanged path,
+        // harmlessly under the guard). The redraw matters for Save As: giving an unsaved
+        // document a directory makes its relative images resolvable, and nothing else
+        // repaints then.
+        var documentDirectory = path is null ? null : Path.GetDirectoryName(path);
+        if (!string.Equals(_imageGenerator.DocumentDirectory, documentDirectory, StringComparison.OrdinalIgnoreCase))
+        {
+            _imageGenerator.DocumentDirectory = documentDirectory; // setter clears the bitmap cache
+            Editor.TextArea.TextView.Redraw();
+        }
     }
 
     // ── Command bindings ──────────────────────────────────────────────────
@@ -683,6 +701,7 @@ public partial class MainWindow : Window
         _headingMarkerGenerator.CaretLine    = line;
         _emphasisMarkerGenerator.CaretOffset = offset;
         _codeBlockFenceGenerator.CaretLine   = line;
+        _imageGenerator.CaretOffset          = offset;
         _linkMarkerGenerator.CaretOffset     = offset;
         _underlineMarkerGenerator.CaretOffset = offset;
         _emojiGenerator.CaretOffset          = offset;
@@ -735,6 +754,7 @@ public partial class MainWindow : Window
         _headingMarkerGenerator.CaretLine    = _lastCaretLine;
         _emphasisMarkerGenerator.CaretOffset = _lastCaretOffset;
         _codeBlockFenceGenerator.CaretLine   = _lastCaretLine;
+        _imageGenerator.CaretOffset          = _lastCaretOffset;
         _linkMarkerGenerator.CaretOffset     = _lastCaretOffset;
         _underlineMarkerGenerator.CaretOffset = _lastCaretOffset;
         _emojiGenerator.CaretOffset          = _lastCaretOffset;
@@ -759,6 +779,7 @@ public partial class MainWindow : Window
         _headingMarkerGenerator.Enabled    = _settings.LivePreview;
         _emphasisMarkerGenerator.Enabled   = _settings.LivePreview;
         _codeBlockFenceGenerator.Enabled   = _settings.LivePreview;
+        _imageGenerator.Enabled            = _settings.LivePreview;
         _linkMarkerGenerator.Enabled       = _settings.LivePreview;
         _underlineMarkerGenerator.Enabled  = _settings.LivePreview;
         _emojiGenerator.Enabled            = _settings.LivePreview;
