@@ -1,0 +1,186 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:search="clr-namespace:ICSharpCode.AvalonEdit.Search;assembly=ICSharpCode.AvalonEdit">
+
+    <!-- Find (Ctrl+F) is AvalonEdit's own SearchPanel (see MainWindow's search wiring) — a custom
+         control neither of MDEdit's two theming mechanisms reaches on its own: Application.ThemeMode
+         doesn't know about third-party control types, and Themes/Light.xaml / Dark.xaml only define
+         MDEdit's own six brush keys, which SearchPanel's built-in default template (baked into the
+         AvalonEdit assembly) never references — it uses fixed SystemColors / hardcoded PNG icons
+         instead, which don't track this app's theme at all. Fixing that turned out to need three
+         independent things, not one — full account in CLAUDE.md's SearchPanelStyle.xaml entry, worth
+         reading before changing anything here: (1) DynamicResource references in this file are a
+         fallback only — MainWindow.ApplySearchPanelColors is what actually pushes correct colors,
+         explicitly, as local values; (2) that push has to happen on SearchPanel.IsVisibleChanged, not
+         at window startup, because the panel's adorner isn't connected to a live visual tree until
+         the user's first Ctrl+F; (3) Prev/Next/Close needed SearchPanelFlatButtonStyle below because
+         Fluent's default Button template doesn't paint content in the resting state at all. Only two
+         part names are load-bearing — PART_searchTextBox and PART_dropdownPopup, per
+         SearchPanel.OnApplyTemplate — everything else was free to restyle. Merged once in App.xaml,
+         like Resources/ToolbarIcons.xaml, since every color reference here is DynamicResource. -->
+
+    <!-- DropDownButton's Foreground is deliberately left on DynamicResource alone, unlike everything
+         else in this file — it isn't reached by MainWindow.ApplySearchPanelColors, since it's a
+         separate control with its own template (a SearchPanel.Template.FindName lookup can't see
+         inside it). Confirmed working as-is; if it's ever found not to be, the fix is the same
+         code-behind push pattern used everywhere else here, reached via its own ApplyTemplate(). -->
+    <Style TargetType="search:DropDownButton">
+        <Setter Property="Foreground" Value="{DynamicResource AppChromeForegroundBrush}"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="2"/>
+        <Setter Property="HorizontalAlignment" Value="Center"/>
+        <Setter Property="VerticalAlignment" Value="Center"/>
+        <Setter Property="HorizontalContentAlignment" Value="Center"/>
+        <Setter Property="VerticalContentAlignment" Value="Center"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="search:DropDownButton">
+                    <Border x:Name="OuterBorder"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            Background="{TemplateBinding Background}"
+                            SnapsToDevicePixels="True">
+                        <StackPanel Orientation="Horizontal">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                               VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                            <!-- Arrow glyph: AvalonEdit's own default is a Path Fill'd from
+                                 SystemColors.ControlTextBrushKey — fixed, doesn't track the app
+                                 theme. This is the one part of the old panel the user could actually
+                                 see, and only because that fixed dark fill happened to read fine
+                                 against the equally-unthemed white SystemColors.WindowBrushKey
+                                 background behind it; re-themed here so it keeps working once that
+                                 background becomes AppChromeBackgroundBrush below. -->
+                            <Path Margin="0,2,4,2" Data="M0,0 L1,0 0.5,1 Z" Fill="{TemplateBinding Foreground}"
+                                  Width="7" Height="3.5" Stretch="Fill"/>
+                        </StackPanel>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="OuterBorder" Value="{DynamicResource AppChromeDividerBrush}"/>
+                        </Trigger>
+                        <Trigger Property="IsDropDownContentOpen" Value="True">
+                            <Setter Property="Background" TargetName="OuterBorder" Value="{DynamicResource AppChromeDividerBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Prev/Next/Close use this instead of Fluent's default Button template. Confirmed live (a
+         diagnostic showed Background/Stroke both resolving to correct, high-contrast values, yet
+         nothing painted, and no border until hover): Fluent's own default Button template evidently
+         doesn't paint its chrome — or, it turns out, its ContentPresenter — in the resting state at
+         all, only on hover, as an intentional flat/minimal design. That's fine for a toolbar button
+         sitting in a ToolBar (which gets ToolBar.ButtonStyleKey instead, a different template
+         entirely), but it means content set here is invisible until hovered — not a color problem,
+         a template problem. This mirrors DropDownButton's own custom template above, which is why
+         its arrow has been visible throughout this investigation while these three weren't. -->
+    <Style x:Key="SearchPanelFlatButtonStyle" TargetType="Button">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Chrome" Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="1"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" TargetName="Chrome" Value="{DynamicResource AppChromeDividerBrush}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <Style TargetType="search:SearchPanel">
+        <Setter Property="Background" Value="{DynamicResource AppChromeBackgroundBrush}"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppChromeForegroundBrush}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource AppChromeDividerBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="search:SearchPanel">
+                    <Border x:Name="PART_outerBorder" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="1" HorizontalAlignment="Right" VerticalAlignment="Top" Cursor="Arrow">
+                        <StackPanel Orientation="Horizontal">
+                            <!-- Every color below is a fallback only — see the file header comment.
+                                 Every themed part gets an x:Name so MainWindow.ApplySearchPanelColors
+                                 can reach it via SearchPanel.Template.FindName after ApplyTemplate(). -->
+                            <TextBox x:Name="PART_searchTextBox" Focusable="True" Width="150" Height="24" Margin="3,3,3,0"
+                                     Background="{DynamicResource EditorBackgroundBrush}"
+                                     Foreground="{DynamicResource EditorForegroundBrush}"
+                                     BorderBrush="{DynamicResource AppChromeDividerBrush}">
+                                <TextBox.Text>
+                                    <Binding Path="SearchPattern" RelativeSource="{RelativeSource TemplatedParent}" UpdateSourceTrigger="PropertyChanged">
+                                        <Binding.ValidationRules>
+                                            <ExceptionValidationRule/>
+                                        </Binding.ValidationRules>
+                                    </Binding>
+                                </TextBox.Text>
+                            </TextBox>
+                            <search:DropDownButton Height="24">
+                                <search:DropDownButton.DropDownContent>
+                                    <Popup StaysOpen="False" Name="PART_dropdownPopup">
+                                        <Border x:Name="PART_dropdownBorder" Background="{DynamicResource AppChromeBackgroundBrush}"
+                                                BorderBrush="{DynamicResource AppChromeDividerBrush}" BorderThickness="1">
+                                            <StackPanel Orientation="Vertical">
+                                                <!-- CheckBox's own chrome is left to Fluent (same as
+                                                     every checkbox elsewhere in this app); only
+                                                     Foreground is pinned, since the label text is
+                                                     what was actually illegible, not the box itself. -->
+                                                <CheckBox x:Name="PART_matchCaseCheckBox" Foreground="{DynamicResource AppChromeForegroundBrush}" Margin="3"
+                                                          IsChecked="{Binding MatchCase, RelativeSource={RelativeSource TemplatedParent}}"
+                                                          Content="{Binding Localization.MatchCaseText, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                                <CheckBox x:Name="PART_wholeWordsCheckBox" Foreground="{DynamicResource AppChromeForegroundBrush}" Margin="3"
+                                                          IsChecked="{Binding WholeWords, RelativeSource={RelativeSource TemplatedParent}}"
+                                                          Content="{Binding Localization.MatchWholeWordsText, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                                <CheckBox x:Name="PART_useRegexCheckBox" Foreground="{DynamicResource AppChromeForegroundBrush}" Margin="3"
+                                                          IsChecked="{Binding UseRegex, RelativeSource={RelativeSource TemplatedParent}}"
+                                                          Content="{Binding Localization.UseRegexText, RelativeSource={RelativeSource TemplatedParent}}"/>
+                                            </StackPanel>
+                                        </Border>
+                                    </Popup>
+                                </search:DropDownButton.DropDownContent>
+                            </search:DropDownButton>
+                            <!-- Previous/Next: AvalonEdit's defaults are Image controls pointing at
+                                 embedded prev.png/next.png — small fixed-color raster glyphs, the
+                                 other main source of illegibility once sitting over any dark
+                                 surface. Replaced with the same Stroke-geometry Path convention
+                                 Resources/ToolbarIcons.xaml uses, so these track the theme exactly
+                                 like every toolbar icon does. Style="{StaticResource
+                                 SearchPanelFlatButtonStyle}" (see above) is required — without it,
+                                 Fluent's default Button template doesn't paint content in the
+                                 resting state at all, regardless of any Background/Stroke value.
+                                 Background/BorderBrush are also pushed from code-behind (see
+                                 MainWindow.ApplySearchPanelColors) so the custom template's chrome
+                                 tracks the theme too. -->
+                            <Button x:Name="PART_prevButton" Style="{StaticResource SearchPanelFlatButtonStyle}" Margin="3" Height="24" Width="24" Command="search:SearchCommands.FindPrevious"
+                                    ToolTip="{Binding Localization.FindPreviousText, RelativeSource={RelativeSource TemplatedParent}}">
+                                <Path x:Name="PART_prevIcon" Data="M6 15l6 -6l6 6" Stretch="Uniform" Width="12" Height="12"
+                                      Stroke="{DynamicResource AppChromeForegroundBrush}" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                            </Button>
+                            <Button x:Name="PART_nextButton" Style="{StaticResource SearchPanelFlatButtonStyle}" Margin="3" Height="24" Width="24" Command="search:SearchCommands.FindNext"
+                                    ToolTip="{Binding Localization.FindNextText, RelativeSource={RelativeSource TemplatedParent}}">
+                                <Path x:Name="PART_nextIcon" Data="M6 9l6 6l6 -6" Stretch="Uniform" Width="12" Height="12"
+                                      Stroke="{DynamicResource AppChromeForegroundBrush}" StrokeThickness="2"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
+                            </Button>
+                            <Button x:Name="PART_closeButton" Style="{StaticResource SearchPanelFlatButtonStyle}" Height="16" Width="16" HorizontalAlignment="Right" VerticalAlignment="Top"
+                                    Command="search:SearchCommands.CloseSearchPanel"
+                                    VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Focusable="False">
+                                <Path x:Name="PART_closeIcon" Data="M 0,0 L 8,8 M 8,0 L 0,8" Stroke="{DynamicResource AppChromeForegroundBrush}" StrokeThickness="1"/>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

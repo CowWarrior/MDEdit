@@ -61,6 +61,7 @@ public partial class MainWindow : Window
     private int _lastCaretOffset = -1;
     private IHighlightingDefinition? _markdownLight;
     private IHighlightingDefinition? _markdownDark;
+    private SearchPanel? _searchPanel;
 
     // ── Constructor ───────────────────────────────────────────────────────
     public MainWindow()
@@ -87,7 +88,22 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.BackgroundRenderers.Add(_horizontalRuleRenderer);
         RegisterCommands();
         RegisterKeyBindings();
-        SearchPanel.Install(Editor);
+        // SearchPanel.AttachInternal already registers CommandBindings for FindNext/FindPrevious/
+        // CloseSearchPanel directly on the panel itself, so its own buttons work without this —
+        // RegisterCommands additionally exposes those same commands on the window's own
+        // CommandBindings, for if MDEdit ever wants to trigger Find from outside the panel (e.g. a
+        // future Edit menu entry).
+        _searchPanel = SearchPanel.Install(Editor);
+        _searchPanel.RegisterCommands(CommandBindings);
+        // IsVisibleChanged, not Loaded/ContentRendered: SearchPanel.Open()/Close() (AvalonEdit's own
+        // source) add/remove the panel's adorner from the TextArea's AdornerLayer on demand, and it
+        // starts closed — the adorner isn't connected to a live visual tree until the user's first
+        // Ctrl+F, so anything pushed before that doesn't survive the later, first real connection.
+        // See ApplySearchPanelColors and CLAUDE.md's SearchPanelStyle.xaml entry for the full story.
+        _searchPanel.IsVisibleChanged += (_, _) =>
+        {
+            if (_searchPanel.IsVisible) ApplySearchPanelColors();
+        };
         ApplySettings();
 
         Editor.TextArea.Caret.PositionChanged += (_, _) => OnCaretPositionChanged();
@@ -853,10 +869,74 @@ public partial class MainWindow : Window
         var p = _settings.EditorPreferences;
         BtnHighlightSwatch.Background = FreezeBrush(dark ? p.HighlightBackgroundDark : p.HighlightBackgroundLight);
 
+        ApplySearchPanelColors();
+
         MenuThemeLight.IsChecked  = theme == AppTheme.Light;
         MenuThemeDark.IsChecked   = theme == AppTheme.Dark;
         MenuThemeSystem.IsChecked = theme == AppTheme.System;
     }
+
+    // Pushes colors onto Resources/SearchPanelStyle.xaml's named parts explicitly rather than
+    // trusting its DynamicResource references, the same "resolve once from a properly-connected
+    // element (MainWindow), then assign as a local value" pattern BtnHighlightSwatch/_colorizer's
+    // brushes already use. Called from the IsVisibleChanged handler above, so this runs against a
+    // panel that's actually connected to a live visual tree, not one that hasn't been opened yet.
+    // ApplyTemplate() is required first — Template.FindName returns null until it has run at least
+    // once. Full history (three separate causes behind the illegibility bug this fixes, not one) is
+    // in CLAUDE.md's SearchPanelStyle.xaml entry.
+    private void ApplySearchPanelColors()
+    {
+        if (_searchPanel is null) return;
+        _searchPanel.ApplyTemplate();
+
+        var chromeBackground = (Brush)FindResource("AppChromeBackgroundBrush");
+        var chromeForeground = (Brush)FindResource("AppChromeForegroundBrush");
+        var chromeDivider    = (Brush)FindResource("AppChromeDividerBrush");
+        var editorBackground = (Brush)FindResource("EditorBackgroundBrush");
+        var editorForeground = (Brush)FindResource("EditorForegroundBrush");
+
+        if (FindSearchPanelPart<Border>("PART_outerBorder") is { } outerBorder)
+        {
+            outerBorder.Background = chromeBackground;
+            outerBorder.BorderBrush = chromeDivider;
+        }
+        if (FindSearchPanelPart<TextBox>("PART_searchTextBox") is { } textBox)
+        {
+            textBox.Background = editorBackground;
+            textBox.Foreground = editorForeground;
+            textBox.BorderBrush = chromeDivider;
+        }
+        if (FindSearchPanelPart<Border>("PART_dropdownBorder") is { } dropdownBorder)
+        {
+            dropdownBorder.Background = chromeBackground;
+            dropdownBorder.BorderBrush = chromeDivider;
+        }
+        foreach (var name in new[] { "PART_matchCaseCheckBox", "PART_wholeWordsCheckBox", "PART_useRegexCheckBox" })
+        {
+            if (FindSearchPanelPart<CheckBox>(name) is { } checkBox)
+                checkBox.Foreground = chromeForeground;
+        }
+        foreach (var name in new[] { "PART_prevIcon", "PART_nextIcon", "PART_closeIcon" })
+        {
+            if (FindSearchPanelPart<System.Windows.Shapes.Path>(name) is { } icon)
+                icon.Stroke = chromeForeground;
+        }
+        // SearchPanelFlatButtonStyle's custom template (see SearchPanelStyle.xaml — Fluent's own
+        // default Button template doesn't paint content in the resting state at all, which is why
+        // these three need a custom template) reads its chrome from TemplateBinding Background, so
+        // it needs a real value pushed here the same way every other part above does.
+        foreach (var name in new[] { "PART_prevButton", "PART_nextButton", "PART_closeButton" })
+        {
+            if (FindSearchPanelPart<Button>(name) is { } button)
+            {
+                button.Background = chromeBackground;
+                button.BorderBrush = Brushes.Transparent;
+            }
+        }
+    }
+
+    private T? FindSearchPanelPart<T>(string name) where T : class
+        => _searchPanel!.Template.FindName(name, _searchPanel) as T;
 
     private void SetTheme(AppTheme theme)
     {

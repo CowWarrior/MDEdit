@@ -13,6 +13,10 @@
                      Themes/Light.xaml above this is merged once and never touched by
                      ThemeService.Apply's swap (which only matches "Themes/Light.xaml"/"Dark.xaml"). -->
                 <ResourceDictionary Source="Resources/ToolbarIcons.xaml"/>
+                <!-- Find (Ctrl+F) panel styling — see Resources/SearchPanelStyle.xaml's own comment
+                     for why AvalonEdit's SearchPanel needs this. Theme-independent for the same
+                     reason ToolbarIcons.xaml above is: every color is DynamicResource. -->
+                <ResourceDictionary Source="Resources/SearchPanelStyle.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

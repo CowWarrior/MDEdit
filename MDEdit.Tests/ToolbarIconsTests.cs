@@ -1,4 +1,3 @@
-using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 
@@ -22,12 +21,12 @@ public class ToolbarIconsTests
 
     [Fact]
     public void ToolbarIcons_EveryExpectedKey_ResolvesToNonEmptyGeometry()
-        => RunOnSta(() =>
+        => WpfTestApplication.RunOnSta(() =>
         {
             // The "pack" URI scheme is normally registered by Application's static constructor;
             // nothing else in this headless test process ever runs it, so ResourceDictionary.Source
             // below would otherwise fail to parse with "Invalid URI: Invalid port specified".
-            if (Application.Current is null) _ = new Application();
+            WpfTestApplication.EnsureApplicationCreated();
 
             var dict = new ResourceDictionary
             {
@@ -41,17 +40,4 @@ public class ToolbarIconsTests
                 Assert.False(geometry.IsEmpty(), $"'{key}' parsed to an empty geometry");
             }
         });
-
-    private static void RunOnSta(Action action)
-    {
-        Exception? ex = null;
-        var thread = new Thread(() =>
-        {
-            try { action(); } catch (Exception e) { ex = e; }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-        if (ex != null) throw ex;
-    }
 }

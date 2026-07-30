@@ -25,7 +25,7 @@ public class ApplyFormatSelectionTests
     [InlineData("~~", "~~")]
     [InlineData("`", "`")]
     public void Wrap_SelectionReachesEndOfDocument_ReselectsWithoutThrowing(string prefix, string suffix)
-        => RunOnSta(() =>
+        => WpfTestApplication.RunOnSta(() =>
         {
             var editor = new TextEditor { Text = "hi bold" }; // "bold" is the last 4 chars
             editor.Measure(new Size(800, 600));
@@ -40,17 +40,4 @@ public class ApplyFormatSelectionTests
             Assert.Equal("bold", editor.SelectedText);
             Assert.Equal($"hi {prefix}bold{suffix}", editor.Text);
         });
-
-    private static void RunOnSta(Action action)
-    {
-        Exception? ex = null;
-        var thread = new Thread(() =>
-        {
-            try { action(); } catch (Exception e) { ex = e; }
-        });
-        thread.SetApartmentState(ApartmentState.STA);
-        thread.Start();
-        thread.Join();
-        if (ex != null) throw ex;
-    }
 }
