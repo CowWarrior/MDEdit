@@ -15,6 +15,50 @@
         <Menu DockPanel.Dock="Top" Padding="2"
               Background="{DynamicResource AppChromeBackgroundBrush}"
               Foreground="{DynamicResource AppChromeForegroundBrush}">
+            <Menu.Resources>
+                <!-- Aligns submenu-header rows (Theme, Editor Mode, Line Breaks Count) with the
+                     ordinary rows above and below them, so every item's text starts at one column.
+
+                     Fluent gives the two MenuItem roles different grids (verified against
+                     PresentationFramework.Fluent/Styles/MenuItem.xaml, not inferred). SubmenuItem —
+                     Word Wrap, Preferences… — leads with a 20px checkbox column
+                     (SharedSizeGroup="MenuItemCheckBoxIconColumnGroup") before the shared icon
+                     column; SubmenuHeader has no checkbox column at all. Fluent sets
+                     Grid.IsSharedSizeScope on the TopLevelHeader, so the moment one item in a
+                     dropdown is checkable that column is 20 wide for *every* SubmenuItem in it —
+                     which is why Preferences… sits indented despite having no checkmark of its
+                     own, while the submenu headers hug the left edge 20px further out. Preferences…
+                     being short made that read as centered text; it was never centered.
+
+                     The 26 is that missing column read straight off the template: the checkbox
+                     Border is Width="20" with Margin="0,0,6,0". It is not a magic screen-pixel
+                     number and does not need per-resolution tuning — XAML units are
+                     device-independent (1/96"), so this padding and the 20+6 it compensates for
+                     scale by the same factor at every DPI. What it IS coupled to is Fluent's
+                     template constants, so a future .NET could change them; the symptom would be a
+                     small misalignment here, nothing worse.
+
+                     Padding is the supported lever: both role templates apply
+                     Margin="{TemplateBinding Padding}" to the header ContentPresenter, and Fluent's
+                     default style never sets Padding, so this replaces 0 and costs no built-in
+                     spacing. Two things that look like cleaner fixes and are not — don't retry
+                     them: giving the headers an invisible Icon can't work, because the icon column
+                     is SharedSizeGroup="MenuItemIconColumnGroup" in BOTH roles, so widening it
+                     pushes the ordinary rows right by the same amount and the relative offset never
+                     changes; and HorizontalContentAlignment does nothing, because neither role
+                     template binds the header presenter's HorizontalAlignment to it.
+
+                     Fourth Fluent-template surprise in this codebase, after the clipped
+                     StatusBarItem, the accent-filled checked ToggleButton, and the Find panel's
+                     invisible resting-state buttons. -->
+                <Style TargetType="MenuItem">
+                    <Style.Triggers>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter Property="Padding" Value="26,0,0,0"/>
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Menu.Resources>
             <MenuItem Header="_File">
                 <MenuItem Header="_New"         Command="New"                              InputGestureText="Ctrl+N"/>
                 <MenuItem Header="_Open…"        Command="Open"                             InputGestureText="Ctrl+O"/>

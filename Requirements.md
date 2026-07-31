@@ -220,9 +220,9 @@ edits, rather than the file as last written to disk.
 
 ## 10. Sample Documents
 
-- A set of sample Markdown documents is installed alongside the application, including a
-  `ReleaseNotes.md` that greets the user and doubles as the changelog. Further sample documents
-  demonstrating supported Markdown constructs may be added *(planned)*.
+- A `ReleaseNotes.md` that greets the user and doubles as the changelog is installed alongside the
+  application. Further sample documents demonstrating supported Markdown constructs were
+  considered and deliberately dropped — they add no value to the product.
 - `ReleaseNotes.md` carries a "Recent changes" section describing what changed in each released version,
   as a bullet list per version, so a user who receives an automatic update can see what is new at a
   glance. It is updated as part of every release, and lists user-visible changes only.
