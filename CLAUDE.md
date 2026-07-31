@@ -2,6 +2,16 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+**This file is large and deliberately stays one file — don't propose splitting it into nested
+`CLAUDE.md` files to save context.** That was measured on 2026-07-31 against the previous 12
+sessions: `MDEdit/` and `MDEdit/Resources/` were touched in **100%** of them, `MDEdit/Services/` in
+83%, `MDEdit/Editing/` in 67%. A nested file loads as soon as any file under its directory is
+touched, so in this repo it would load anyway almost every session and save nothing while making the
+content harder to find. Extracting a genuinely separate, occasional *task* is different and does
+work — see the `publish-clickonce` skill. Content also isn't padding: it's mostly gotchas, rejected
+alternatives, and design rationale that reading the code cannot reconstruct, which is exactly what
+maintenance work needs.
+
 ## Project
 
 MDEdit is a WPF desktop Markdown editor (.NET, `net10.0-windows`) built around the AvalonEdit text editor control. See `Requirements.md` for the full product spec (document management, editing, Markdown formatting commands, syntax highlighting, keyboard shortcuts, toolbar, status bar).
