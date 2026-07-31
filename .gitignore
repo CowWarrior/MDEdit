@@ -10,5 +10,7 @@ obj/
 # Rider
 .idea/
 
-# Claude Code local settings
-.claude/
+# Claude Code local settings — everything except shared skills, which are
+# project documentation and belong in the repo.
+.claude/*
+!.claude/skills/
