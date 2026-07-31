@@ -91,6 +91,15 @@ public partial class MainWindow : Window
         Editor.TextArea.TextView.BackgroundRenderers.Add(_blockquoteAccentBarRenderer);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_tableGridRenderer);
         Editor.TextArea.TextView.BackgroundRenderers.Add(_horizontalRuleRenderer);
+        // A remote image's bitmap arrives long after ConstructElement returned, and AvalonEdit
+        // captures an inline object's DesiredSize at construction time — so a late arrival can't
+        // resize its own line. The loader asks for a redraw instead, which re-runs
+        // ConstructElement against the now-populated cache. Pushed from here rather than captured
+        // from CurrentContext.TextView: that's the imperative-property-push convention every
+        // other generator already follows, and CurrentContext is non-null only during a
+        // construction pass. Completions are coalesced inside the loader, so a burst of finished
+        // images costs one full redraw, not one each.
+        _imageGenerator.RequestRedraw = () => Editor.TextArea.TextView.Redraw();
         RegisterCommands();
         RegisterKeyBindings();
         // SearchPanel.AttachInternal already registers CommandBindings for FindNext/FindPrevious/
@@ -867,6 +876,7 @@ public partial class MainWindow : Window
         UpdateLivePreviewState();
         ApplyTheme();
         ApplyLineBreakCharWeight();
+        ApplyLoadRemoteImages();
     }
 
     // ── Theme ─────────────────────────────────────────────────────────────
@@ -989,6 +999,28 @@ public partial class MainWindow : Window
     private void MenuLineBreakZero_Click(object sender, RoutedEventArgs e) => SetLineBreakCharWeight(0);
     private void MenuLineBreakOne_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(1);
     private void MenuLineBreakTwo_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(2);
+
+    // ── Remote images (Requirements.md §5) ────────────────────────────────
+    private void ApplyLoadRemoteImages()
+    {
+        MenuLoadRemoteImages.IsChecked = _settings.LoadRemoteImages;
+        // The generator's setter invalidates the remote loader on a real change, so turning this
+        // off cancels in-flight fetches and drops cached bitmaps immediately rather than at the
+        // next document open.
+        _imageGenerator.LoadRemoteImages = _settings.LoadRemoteImages;
+    }
+
+    // IsCheckable flips IsChecked before Click fires, so the handler reads the new state back
+    // (MenuWordWrap_Click's shape); the save/apply/redraw tail is SetLivePreview's. Deliberately
+    // not routed through UpdateLivePreviewState — this isn't a live-preview mode, it's a separate
+    // opt-in that only has any effect while live preview is on.
+    private void MenuLoadRemoteImages_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.LoadRemoteImages = MenuLoadRemoteImages.IsChecked;
+        SettingsService.Save(_settings);
+        ApplyLoadRemoteImages();
+        Editor.TextArea.TextView.Redraw();
+    }
 
     // View > Preferences… (Requirements.md §6). The window owns its own Cancel/Reset-to-Default
     // snapshot logic against the live AppSettings.EditorPreferences instance and applies every

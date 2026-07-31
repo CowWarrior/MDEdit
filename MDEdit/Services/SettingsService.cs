@@ -11,6 +11,16 @@ internal sealed class AppSettings
     public string Theme { get; set; } = "System";
     // Live-preview ("WYSIWYG") editor mode toggle — see the View > Editor Mode menu.
     public bool LivePreview { get; set; }
+    // Whether WYSIWYG mode fetches and renders http(s):// images (Requirements.md §5), from
+    // View > Load Remote Images. Defaults to FALSE and must stay that way: fetching a remote
+    // image just from having a document open discloses to its host that the document was opened —
+    // the tracking-pixel concern email clients guard against. With this off MDEdit issues no
+    // network request for a document's images at all; see ImageElementGenerator.RemoteEnabled
+    // and RemoteImageLoader's class comment for how that is structurally guaranteed.
+    // Deliberately NOT in EditorPreferences: that object is replaced wholesale by
+    // PreferencesWindow's Cancel and Reset, and it is purely presentational — a privacy setting
+    // must not be revertible by a dialog that never showed it.
+    public bool LoadRemoteImages { get; set; }
     // Most-recently-used file paths, newest first — see the File > Recent Files menu.
     // Kept in shape by Editing/RecentFiles, which also sanitizes it on load.
     public List<string> RecentFiles { get; set; } = [];

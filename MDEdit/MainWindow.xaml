@@ -71,6 +71,11 @@
             <MenuItem Header="_View">
                 <MenuItem x:Name="MenuWordWrap"    Header="_Word Wrap"    IsCheckable="True" Click="MenuWordWrap_Click"/>
                 <MenuItem x:Name="MenuLineNumbers" Header="Line _Numbers" IsCheckable="True" IsChecked="True" Click="MenuLineNumbers_Click"/>
+                <MenuItem x:Name="MenuLoadRemoteImages"
+                          Header="Load _Remote Images"
+                          IsCheckable="True"
+                          ToolTip="Off by default: fetching an image from the web tells its host that this document was opened."
+                          Click="MenuLoadRemoteImages_Click"/>
                 <Separator/>
                 <MenuItem Header="_Theme">
                     <MenuItem x:Name="MenuThemeLight"  Header="_Light"                    IsCheckable="True" Click="MenuThemeLight_Click"/>

@@ -111,11 +111,16 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   at its natural size up to a height cap, reverting to the source syntax while the cursor is
   inside it — the same reveal-and-render treatment as an emoji shortcode. A local image that
   cannot be loaded (missing file, unreadable format) shows a broken-image placeholder with the
-  alt text; an image in a document that has not yet been saved anywhere, or whose target is not
-  a local file, displays as its alt text the way a link does. Images loaded from a remote
-  `http(s)://` URL are a deliberate later phase, since fetching one automatically discloses that
-  the document was opened, the same tracking-pixel concern email clients guard against — a
-  decision to make deliberately, not a default to fall into *(planned)*
+  alt text; an image in a document that has not yet been saved anywhere, or whose target is
+  neither a local file nor a remote `http(s)://` URL, displays as its alt text the way a link
+  does.
+- Images from a remote `http(s)://` URL are **off by default** and switched on per user from
+  View → Load Remote Images, because fetching one automatically discloses to its host that the
+  document was opened — the same tracking-pixel concern email clients guard against. While the
+  setting is off, no remote image is ever requested and each one displays as its alt text. While
+  it is on, a remote image displays as the rendered picture on the same terms as a local one,
+  showing a loading placeholder while it is being fetched and the broken-image placeholder if
+  the fetch or the decode fails.
 - Document text displays in a proportional document font, so writing feels like editing a document
   rather than code. Code blocks and inline code keep the editor's fixed-width font. Markdown
   revealed around the cursor — a heading, list, or blockquote line being edited, a table
