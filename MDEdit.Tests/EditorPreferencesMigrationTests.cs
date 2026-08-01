@@ -168,6 +168,44 @@ public class EditorPreferencesMigrationTests
     }
 
     [Fact]
+    public void UntouchedLegacyValues_AdoptDefaultsChangedSinceThatVersion()
+    {
+        // The reason migration compares against the v1 defaults instead of copying blindly. The
+        // code palette changed after per-element styling shipped; a user who never customized it
+        // must land on the new palette, not stay pinned to the old one with nothing in the UI to
+        // explain why they look different from a fresh install.
+        var json = """
+        {
+          "EditorPreferences": {
+            "CodeForegroundLight": "#C7254E", "CodeForegroundDark": "#FF7B72",
+            "CodeBackgroundLight": "#FEF2F2", "CodeBackgroundDark": "#30363D"
+          }
+        }
+        """;
+
+        var code = SettingsService.Deserialize(json).EditorPreferences.Source.Elements[StyledElements.InlineCode];
+
+        Assert.Equal("#00FF33", code.ForegroundLight);
+        Assert.Equal("#000000", code.BackgroundLight);
+    }
+
+    [Fact]
+    public void CustomizedLegacyValues_StillWinOverChangedDefaults()
+    {
+        // The other side of the same rule: a value the user actually changed is theirs and survives,
+        // even for an element whose default moved underneath it.
+        var json = """
+        { "EditorPreferences": { "CodeForegroundLight": "#ABCDEF" } }
+        """;
+
+        var code = SettingsService.Deserialize(json).EditorPreferences.Source.Elements[StyledElements.InlineCode];
+
+        Assert.Equal("#ABCDEF", code.ForegroundLight);
+        // Untouched half of the same element still moves to the new default.
+        Assert.Equal("#000000", code.BackgroundLight);
+    }
+
+    [Fact]
     public void Migration_ClearsTheLegacyPropertiesSoTheyLeaveTheFile()
     {
         // Nulled once folded, and JsonIgnore drops them on the next save. Leaving them populated

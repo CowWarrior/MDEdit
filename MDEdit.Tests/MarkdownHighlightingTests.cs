@@ -86,14 +86,26 @@ public class MarkdownHighlightingTests
     }
 
     [Fact]
-    public void StrikethroughDefault_IsGreyTextAndNotActuallyStruck()
+    public void SourceStrikethrough_IsStruckAndStillGrey()
     {
-        // How strikethrough has always rendered here. Turning on a real strike is newly available,
-        // but must not become the default — that would change every existing document's appearance.
+        // Source keeps the grey as a second cue while reading raw syntax, and now strikes as well.
         var color = Color(ModeStyles.SourceDefaults(), dark: false, "Strike");
 
+        Assert.True(color.Strikethrough);
         Assert.Equal("#FF888888", color.Foreground!.ToString());
-        Assert.NotEqual(true, color.Strikethrough);
+    }
+
+    [Fact]
+    public void WysiwygStrikethrough_IsStruckAtOrdinaryTextColour()
+    {
+        // The other half: with the markers hidden, the line through the text is the only thing that
+        // says the text is struck, so the grey is dropped rather than stacked on top of it.
+        // Asserted on the compiled definition because the strike travels through
+        // XshdColor.Strikethrough to reach the screen.
+        var color = Color(ModeStyles.WysiwygDefaults(), dark: false, "Strike");
+
+        Assert.True(color.Strikethrough);
+        Assert.Null(color.Foreground);
     }
 
     [Fact]
@@ -137,6 +149,15 @@ public class MarkdownHighlightingTests
     public void SourcePinsNoFamilyBecauseTheBaseIsAlreadyMono(string xshdName)
     {
         Assert.Null(Color(ModeStyles.SourceDefaults(), dark: false, xshdName).FontFamily);
+    }
+
+    [Fact]
+    public void WysiwygUnderlinesHyperlinksAndSourceDoesNot()
+    {
+        // Asserted on the compiled definitions rather than the settings, since underlining is what
+        // the reader actually sees and it travels through XshdColor.Underline to get there.
+        Assert.True(Color(ModeStyles.WysiwygDefaults(), dark: false, "Link").Underline);
+        Assert.NotEqual(true, Color(ModeStyles.SourceDefaults(), dark: false, "Link").Underline);
     }
 
     [Fact]

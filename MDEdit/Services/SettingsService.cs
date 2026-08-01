@@ -153,10 +153,10 @@ internal sealed class EditorPreferences
         ApplyLegacyColorsTo(Wysiwyg);
         ApplyLegacyColorsTo(Source);
 
-        if (WysiwygFontFamily is string proseFont)
+        if (Customized(WysiwygFontFamily, V1.ProseFont) is string proseFont)
             Wysiwyg.BaseFontFamily = proseFont;
 
-        if (CodeFontFamily is string codeFont)
+        if (Customized(CodeFontFamily, V1.CodeFont) is string codeFont)
         {
             Source.BaseFontFamily = codeFont;
             Style(Wysiwyg, StyledElements.InlineCode).FontFamily = codeFont;
@@ -165,6 +165,50 @@ internal sealed class EditorPreferences
 
         ClearLegacy();
         Version = CurrentVersion;
+    }
+
+    /// <summary>
+    /// The legacy value if the user actually changed it, otherwise null — meaning "leave the
+    /// current default alone".
+    /// </summary>
+    /// <remarks>
+    /// Without this, migration carries every value forward indiscriminately, which sounds
+    /// conservative and is not: a default changed in a later release would then reach fresh installs
+    /// only, leaving upgrading users pinned to the old look with nothing in the UI to explain why.
+    /// The code palette is exactly that case. The cost is that someone who deliberately set a colour
+    /// to what happened to be the old default loses that choice — a far smaller harm, and
+    /// indistinguishable from never having touched it.
+    /// </remarks>
+    private static string? Customized(string? value, string v1Default)
+        => value is null || string.Equals(value, v1Default, StringComparison.OrdinalIgnoreCase) ? null : value;
+
+    // The pre-per-element defaults, kept solely as the comparison baseline above. Frozen by
+    // definition — these are what shipped, not what ships now, so they must never be "corrected" to
+    // match current defaults.
+    private static class V1
+    {
+        public const string ProseFont = "Arial";
+        public const string CodeFont = "Cascadia Code, Consolas, Courier New";
+        public const string HeadingLight = "#0057AE";
+        public const string HeadingDark = "#58A6FF";
+        public const string BlockquoteLight = "#6A737D";
+        public const string BlockquoteDark = "#8B949E";
+        public const string HorizontalRuleLight = "#BBBBBB";
+        public const string HorizontalRuleDark = "#484F58";
+        public const string HighlightLight = "#F5E7A3";
+        public const string HighlightDark = "#6A5E2E";
+        public const string StrikethroughLight = "#888888";
+        public const string StrikethroughDark = "#8B949E";
+        public const string CodeForegroundLight = "#C7254E";
+        public const string CodeForegroundDark = "#FF7B72";
+        public const string CodeBackgroundLight = "#FEF2F2";
+        public const string CodeBackgroundDark = "#30363D";
+        public const string LinkLight = "#0065BD";
+        public const string LinkDark = "#58A6FF";
+        public const string ListMarkerLight = "#005CC5";
+        public const string ListMarkerDark = "#79C0FF";
+        public const string CommentLight = "#888888";
+        public const string CommentDark = "#8B949E";
     }
 
     // Nulled once folded so the next Save drops them from the file (see the JsonIgnore above).
@@ -187,24 +231,37 @@ internal sealed class EditorPreferences
 
     private void ApplyLegacyColorsTo(ModeStyles mode)
     {
+        // Every value goes through Customized, so an untouched legacy file changes nothing here and
+        // lands on the current defaults — see that method for why carrying everything over would be
+        // the worse default.
         for (int level = 1; level <= 6; level++)
-            SetForeground(mode, StyledElements.Heading(level), HeadingColorLight, HeadingColorDark);
+            SetForeground(mode, StyledElements.Heading(level),
+                Customized(HeadingColorLight, V1.HeadingLight), Customized(HeadingColorDark, V1.HeadingDark));
 
-        SetForeground(mode, StyledElements.Blockquote, BlockquoteColorLight, BlockquoteColorDark);
-        SetForeground(mode, StyledElements.HorizontalRule, HorizontalRuleColorLight, HorizontalRuleColorDark);
-        SetForeground(mode, StyledElements.Strikethrough, StrikethroughColorLight, StrikethroughColorDark);
-        SetForeground(mode, StyledElements.Link, LinkColorLight, LinkColorDark);
-        SetForeground(mode, StyledElements.ListMarker, ListMarkerColorLight, ListMarkerColorDark);
-        SetForeground(mode, StyledElements.Comment, CommentColorLight, CommentColorDark);
+        SetForeground(mode, StyledElements.Blockquote,
+            Customized(BlockquoteColorLight, V1.BlockquoteLight), Customized(BlockquoteColorDark, V1.BlockquoteDark));
+        SetForeground(mode, StyledElements.HorizontalRule,
+            Customized(HorizontalRuleColorLight, V1.HorizontalRuleLight), Customized(HorizontalRuleColorDark, V1.HorizontalRuleDark));
+        SetForeground(mode, StyledElements.Strikethrough,
+            Customized(StrikethroughColorLight, V1.StrikethroughLight), Customized(StrikethroughColorDark, V1.StrikethroughDark));
+        SetForeground(mode, StyledElements.Link,
+            Customized(LinkColorLight, V1.LinkLight), Customized(LinkColorDark, V1.LinkDark));
+        SetForeground(mode, StyledElements.ListMarker,
+            Customized(ListMarkerColorLight, V1.ListMarkerLight), Customized(ListMarkerColorDark, V1.ListMarkerDark));
+        SetForeground(mode, StyledElements.Comment,
+            Customized(CommentColorLight, V1.CommentLight), Customized(CommentColorDark, V1.CommentDark));
 
-        SetBackground(mode, StyledElements.Highlight, HighlightBackgroundLight, HighlightBackgroundDark);
+        SetBackground(mode, StyledElements.Highlight,
+            Customized(HighlightBackgroundLight, V1.HighlightLight), Customized(HighlightBackgroundDark, V1.HighlightDark));
 
         // Inline code and fenced blocks shared one palette; they become independently editable, but
-        // migrate identically so nothing changes for an upgrading user.
+        // migrate identically so a customized palette stays consistent across both.
         foreach (var key in new[] { StyledElements.InlineCode, StyledElements.CodeBlock })
         {
-            SetForeground(mode, key, CodeForegroundLight, CodeForegroundDark);
-            SetBackground(mode, key, CodeBackgroundLight, CodeBackgroundDark);
+            SetForeground(mode, key,
+                Customized(CodeForegroundLight, V1.CodeForegroundLight), Customized(CodeForegroundDark, V1.CodeForegroundDark));
+            SetBackground(mode, key,
+                Customized(CodeBackgroundLight, V1.CodeBackgroundLight), Customized(CodeBackgroundDark, V1.CodeBackgroundDark));
         }
     }
 
@@ -318,6 +375,19 @@ internal sealed class ModeStyles
         elements[StyledElements.InlineCode].FontFamily = CodeFontStack;
         elements[StyledElements.CodeBlock].FontFamily = CodeFontStack;
 
+        // Hyperlinks underline in WYSIWYG only: there the markers are hidden and the link text
+        // reads as a document's link, where underlining is the near-universal convention. In source
+        // mode the surrounding [text](url) is visible and already says "link", so underlining it as
+        // well would just be noise on syntax the user is looking straight at.
+        elements[StyledElements.Link].Decoration = ElementStyle.DecorationUnderline;
+
+        // Both modes strike (see SharedElementDefaults); WYSIWYG additionally drops the grey, so
+        // struck text reads at ordinary document colour rather than doubly deleted. Source keeps the
+        // grey, where dimming is a useful second cue while reading raw syntax.
+        var strikethrough = elements[StyledElements.Strikethrough];
+        strikethrough.ForegroundLight = null;
+        strikethrough.ForegroundDark = null;
+
         return new ModeStyles
         {
             BaseFontFamily = ProseFont,
@@ -372,11 +442,12 @@ internal sealed class ModeStyles
         [StyledElements.Italic] = new() { Italic = true },
         [StyledElements.BoldItalic] = new() { FontWeight = ElementStyle.WeightBold, Italic = true },
 
-        // Grey, deliberately *not* struck: that is how strikethrough has always rendered here.
-        // Decoration stays null so nothing changes, but "Strikethrough" is now reachable for anyone
-        // who wants a real strike.
+        // Actually struck, in both modes. Before per-element styling this was grey text and nothing
+        // more — AvalonEdit could always draw the strike, nothing ever asked it to. Source mode
+        // keeps the grey alongside it (the WYSIWYG delta drops it; see WysiwygDefaults).
         [StyledElements.Strikethrough] = new()
         {
+            Decoration = ElementStyle.DecorationStrikethrough,
             ForegroundLight = "#888888",
             ForegroundDark = "#8B949E",
         },
@@ -422,11 +493,17 @@ internal sealed class ModeStyles
 
     // Inline code and fenced code blocks share one palette, as they always have. A fresh instance
     // per element rather than a shared one: they are independently editable in Preferences.
+    //
+    // A deliberate terminal look, chosen rather than inherited: green on black in light theme,
+    // amber on the dark surface in dark theme. These are NOT the pre-§6 values (#C7254E on #FEF2F2
+    // / #FF7B72), so they are the one place the "unmodified install renders identically" bar is
+    // knowingly given up — which is exactly why Migrate now carries over only values the user
+    // actually changed, so an upgrading install lands on these too.
     private static ElementStyle CodeColors() => new()
     {
-        ForegroundLight = "#C7254E",
-        ForegroundDark = "#FF7B72",
-        BackgroundLight = "#FEF2F2",
+        ForegroundLight = "#00FF33",
+        ForegroundDark = "#FFB000",
+        BackgroundLight = "#000000",
         BackgroundDark = "#30363D",
     };
 }

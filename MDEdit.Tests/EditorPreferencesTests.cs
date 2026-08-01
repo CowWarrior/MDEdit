@@ -138,16 +138,20 @@ public class EditorPreferencesTests
         AssertStyle(e[StyledElements.Italic], italic: true);
         AssertStyle(e[StyledElements.BoldItalic], weight: "Bold", italic: true);
 
-        // Grey, not struck — Decoration stays null, matching how strikethrough has always rendered.
-        AssertStyle(e[StyledElements.Strikethrough], fgLight: "#888888", fgDark: "#8B949E");
+        // Grey AND struck in source mode: the colour is as it always was, the strike is new — see
+        // BothModes_StrikeStrikethroughAndOnlyWysiwygDropsTheGrey.
+        AssertStyle(e[StyledElements.Strikethrough],
+            decoration: "Strikethrough", fgLight: "#888888", fgDark: "#8B949E");
 
         AssertStyle(e[StyledElements.Highlight], bgLight: "#F5E7A3", bgDark: "#6A5E2E");
         AssertStyle(e[StyledElements.Underline], decoration: "Underline");
 
+        // The code palette is the one element deliberately NOT matching its pre-§6 value — see
+        // CodeDefaults_AreTheTerminalPalette.
         AssertStyle(e[StyledElements.InlineCode],
-            fgLight: "#C7254E", fgDark: "#FF7B72", bgLight: "#FEF2F2", bgDark: "#30363D");
+            fgLight: "#00FF33", fgDark: "#FFB000", bgLight: "#000000", bgDark: "#30363D");
         AssertStyle(e[StyledElements.CodeBlock],
-            fgLight: "#C7254E", fgDark: "#FF7B72", bgLight: "#FEF2F2", bgDark: "#30363D");
+            fgLight: "#00FF33", fgDark: "#FFB000", bgLight: "#000000", bgDark: "#30363D");
 
         AssertStyle(e[StyledElements.Link], fgLight: "#0065BD", fgDark: "#58A6FF");
         AssertStyle(e[StyledElements.ListMarker], fgLight: "#005CC5", fgDark: "#79C0FF");
@@ -192,11 +196,12 @@ public class EditorPreferencesTests
     }
 
     [Fact]
-    public void WysiwygDefaults_DifferFromSourceOnlyByHeadingScaleAndCodeFamily()
+    public void WysiwygDefaults_DifferFromSourceOnlyByTheDocumentedDeltas()
     {
         // The whole point of the two-mode model is that the modes start identical apart from a
         // named, reviewable set of deltas. Any other divergence between the two default tables is a
-        // mistake, and this is the test that says so rather than leaving it to a reader.
+        // mistake, and this is the test that says so rather than leaving it to a reader. Adding a
+        // delta means adding it here too — deliberately, so it can't happen by accident.
         var prefs = new EditorPreferences();
         var scaled = new[]
         {
@@ -204,6 +209,8 @@ public class EditorPreferencesTests
             StyledElements.Heading4, StyledElements.Heading5,
         };
         var refamilied = new[] { StyledElements.InlineCode, StyledElements.CodeBlock };
+        var redecorated = new[] { StyledElements.Link };
+        var recoloured = new[] { StyledElements.Strikethrough };
 
         foreach (var element in StyledElements.All)
         {
@@ -212,16 +219,70 @@ public class EditorPreferencesTests
 
             Assert.Equal(source.FontWeight, wysiwyg.FontWeight);
             Assert.Equal(source.Italic, wysiwyg.Italic);
-            Assert.Equal(source.Decoration, wysiwyg.Decoration);
-            Assert.Equal(source.ForegroundLight, wysiwyg.ForegroundLight);
-            Assert.Equal(source.ForegroundDark, wysiwyg.ForegroundDark);
             Assert.Equal(source.BackgroundLight, wysiwyg.BackgroundLight);
             Assert.Equal(source.BackgroundDark, wysiwyg.BackgroundDark);
+
+            if (!recoloured.Contains(element.Key))
+            {
+                Assert.Equal(source.ForegroundLight, wysiwyg.ForegroundLight);
+                Assert.Equal(source.ForegroundDark, wysiwyg.ForegroundDark);
+            }
 
             if (!scaled.Contains(element.Key))
                 Assert.Equal(source.FontScale, wysiwyg.FontScale);
             if (!refamilied.Contains(element.Key))
                 Assert.Equal(source.FontFamily, wysiwyg.FontFamily);
+            if (!redecorated.Contains(element.Key))
+                Assert.Equal(source.Decoration, wysiwyg.Decoration);
+        }
+    }
+
+    [Fact]
+    public void WysiwygDefaults_UnderlineHyperlinks()
+    {
+        // WYSIWYG only: there the [text](url) markers are hidden and the link text reads as a
+        // document's link, where underlining is the near-universal convention. In source mode the
+        // surrounding syntax is visible and already says "link".
+        var prefs = new EditorPreferences();
+
+        Assert.Equal("Underline", prefs.Wysiwyg.Elements[StyledElements.Link].Decoration);
+        Assert.Null(prefs.Source.Elements[StyledElements.Link].Decoration);
+    }
+
+    [Fact]
+    public void BothModes_StrikeStrikethroughAndOnlyWysiwygDropsTheGrey()
+    {
+        // Both modes actually strike — before per-element styling neither did, the construct was
+        // grey text and nothing more. They differ only in the colour: WYSIWYG drops the grey so
+        // struck text reads at ordinary document colour rather than doubly deleted, while source
+        // keeps it as a useful second cue while reading raw syntax.
+        var prefs = new EditorPreferences();
+
+        var wysiwyg = prefs.Wysiwyg.Elements[StyledElements.Strikethrough];
+        Assert.Equal("Strikethrough", wysiwyg.Decoration);
+        Assert.Null(wysiwyg.ForegroundLight);
+        Assert.Null(wysiwyg.ForegroundDark);
+
+        var source = prefs.Source.Elements[StyledElements.Strikethrough];
+        Assert.Equal("Strikethrough", source.Decoration);
+        Assert.Equal("#888888", source.ForegroundLight);
+        Assert.Equal("#8B949E", source.ForegroundDark);
+    }
+
+    [Fact]
+    public void CodeDefaults_AreTheTerminalPalette()
+    {
+        // Deliberately NOT the pre-§6 values (#C7254E on #FEF2F2 / #FF7B72) — the one place the
+        // "renders identically" bar is knowingly given up. Inline code and code blocks share it.
+        var prefs = new EditorPreferences();
+
+        foreach (var key in new[] { StyledElements.InlineCode, StyledElements.CodeBlock })
+        {
+            var style = prefs.Source.Elements[key];
+            Assert.Equal("#00FF33", style.ForegroundLight);
+            Assert.Equal("#000000", style.BackgroundLight);
+            Assert.Equal("#FFB000", style.ForegroundDark);
+            Assert.Equal("#30363D", style.BackgroundDark);
         }
     }
 

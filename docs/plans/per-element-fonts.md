@@ -151,9 +151,19 @@ Every current special case becomes an ordinary default, and the code implementin
 | WYSIWYG prose is Arial | `Wysiwyg.BaseFontFamily = "Arial"` |
 | Heading scaling is WYSIWYG-only | `Source["heading1"].FontScale = null` (⇒ 1.0); `Wysiwyg["heading1"].FontScale = 1.6` |
 | Code stays mono when WYSIWYG flips the base | `Wysiwyg["codeBlock"].FontFamily` set explicitly; `Source["codeBlock"].FontFamily = null` |
+| Hyperlinks underline in WYSIWYG only (added after the fact) | `Wysiwyg["link"].Decoration = "Underline"`; `Source["link"].Decoration = null` — in source the `[text](url)` syntax is visible and already reads as a link |
+| Strikethrough strikes in both modes (added after the fact) | `Decoration = "Strikethrough"` in the shared defaults; WYSIWYG additionally clears the grey foreground, since greyed *and* struck reads as doubly deleted. Source keeps the grey as a second cue while reading raw syntax |
+
+**Two later changes broke the "renders identically" bar deliberately** (beyond the WYSIWYG bullet
+colour noted below): the code palette became green-on-black in light theme and amber in dark, and
+`Migrate` gained a `Customized`/`V1` comparison so it carries over **only values the user actually
+changed**. The second exists because of the first — without it, a default changed after §6 shipped
+would reach fresh installs only, pinning upgrading users to the old look with nothing in the UI to
+explain why. It only helps files still at version 0; once stamped, a later default change reaches a
+file only via Reset to Default.
 | Bold renders bold in both modes | `FontWeight = "Bold"` in both sets |
 | Blockquote is italic in both modes | `Italic = true` in both sets |
-| Strikethrough is grey, not actually struck | `ForegroundLight = "#888888"`, `Decoration = null` |
+| Strikethrough is grey, not actually struck | `ForegroundLight = "#888888"`, `Decoration = null` — **no longer true**: both modes now strike, deliberately. See the deltas above |
 
 `MarkdownLineColorizer.HeadingScale` and the `LivePreviewEnabled` gate on it both disappear. Base
 size is 14 in both sets — the editor's current `MainWindow.xaml` value.
