@@ -6,6 +6,12 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.1.0
+
+- Preferences now styles each kind of text separately — headings, code, links, quotes and more — each with its own font, size, weight and colours, set independently for WYSIWYG and Source modes.
+- Images now display in the document in WYSIWYG mode. Pictures from the web are off by default; switch them on under View → Load Remote Images.
+- Added Edit → Find, and the Find panel is now readable in both the light and dark themes.
+
 ### Version 1.0.5
 
 - Added a Preferences window (View → Preferences) for customizing the WYSIWYG and code fonts, and the colors used for headings, links, and other formatted text.
@@ -48,6 +54,23 @@ update, so you always know what's new.
 ### Prior versions
 
 Not tracked.
+
+## Known issues
+
+Things that do not work correctly today, listed so they do not come as a surprise:
+
+- Switching the theme while the Find panel is open closes the panel, and it cannot be reopened. Restarting MDEdit restores it.
+- A backslash does not escape formatting: `\*text\*` still renders as italic instead of showing the asterisks.
+- An underscore inside a word starts italics, so a name like `snake_case_name` renders partly italicised. Use `*` for emphasis to avoid this.
+- Emoji display in black and white rather than colour. This is a limitation of the Windows text engine MDEdit draws with, not a setting.
+
+## Planned
+
+Specified and intended for a future release, with no date attached:
+
+- Convert emoji to shortcodes — a command to replace literal emoji characters with their `:shortcode:` equivalents, across your selection or the whole document.
+- Formatting inside table cells — bold, links and emoji inside a table will render in WYSIWYG mode instead of showing their raw markers.
+- Improved Markdown conformance — better handling of less common Markdown syntax and edge cases.
 
 ---
 
