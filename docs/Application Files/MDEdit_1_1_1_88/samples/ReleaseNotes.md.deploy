@@ -6,6 +6,10 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.1.1
+
+- Help → About now links to MDEdit's licence and to the licences of the components it is built on, both of which now ship with the application.
+
 ### Version 1.1.0
 
 - Preferences now styles each kind of text separately — headings, code, links, quotes and more — each with its own font, size, weight and colours, set independently for WYSIWYG and Source modes.
