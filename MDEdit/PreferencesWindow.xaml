@@ -3,31 +3,19 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Preferences"
         Icon="Resources/AppIcon.ico"
-        Width="520" Height="620"
+        Width="760" Height="660"
+        MinWidth="640" MinHeight="520"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False">
 
-    <DockPanel Margin="16">
+    <!-- Every change applies live (Requirements.md §6) — there's no separate Apply step; Cancel
+         reverts a snapshot taken when this window opened.
 
-        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,12">
-            <TextBlock Text="Fonts" FontWeight="Bold" Margin="0,0,0,6"/>
-            <Grid Margin="0,0,0,6">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="WYSIWYG font:" VerticalAlignment="Center"/>
-                <ComboBox Grid.Column="1" x:Name="WysiwygFontCombo" SelectionChanged="WysiwygFontCombo_SelectionChanged"/>
-            </Grid>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="120"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <TextBlock Grid.Column="0" Text="Code font:" VerticalAlignment="Center"/>
-                <ComboBox Grid.Column="1" x:Name="CodeFontCombo" SelectionChanged="CodeFontCombo_SelectionChanged"/>
-            </Grid>
-        </StackPanel>
+         One tab per editor mode, because WYSIWYG and source mode carry fully independent styling:
+         the same document is rendered for different purposes, so a heading may be large and
+         proportional in one and plain mono in the other. Both tabs' contents are built by a single
+         ModeStyleEditor instance each — see PreferencesWindow.xaml.cs. -->
+    <DockPanel Margin="16">
 
         <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
             <Button Content="Reset to Default" Click="BtnResetToDefault_Click" Padding="8,4" Margin="0,0,24,0"/>
@@ -35,22 +23,14 @@
             <Button Content="Cancel" IsCancel="True" Click="BtnCancel_Click" Width="80" Padding="4"/>
         </StackPanel>
 
-        <!-- Every change applies live (Requirements.md §6) — there's no separate Apply step;
-             Cancel reverts a snapshot taken when this window opened. -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel>
-                <TextBlock Text="Colors" FontWeight="Bold" Margin="0,0,0,6"/>
-                <!-- Rows are built in code-behind, one per customizable construct — see
-                     PreferencesWindow.xaml.cs's ColorRows. -->
-                <Grid x:Name="ColorGrid">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="150"/>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-                </Grid>
-            </StackPanel>
-        </ScrollViewer>
+        <TabControl>
+            <TabItem Header="WYSIWYG">
+                <ContentControl x:Name="WysiwygTabHost" Margin="12"/>
+            </TabItem>
+            <TabItem Header="Source">
+                <ContentControl x:Name="SourceTabHost" Margin="12"/>
+            </TabItem>
+        </TabControl>
 
     </DockPanel>
 </Window>

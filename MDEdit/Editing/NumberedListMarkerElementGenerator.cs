@@ -41,19 +41,15 @@ internal sealed class NumberedListMarkerElementGenerator : VisualLineElementGene
         var line = doc.GetLineByOffset(offset);
         MarkdownSyntax.TryGetNumberedListMarker(doc, line, out int markerOffset, out int markerLength);
 
-        var props    = CurrentContext.GlobalTextRunProperties;
-        var typeface = props.Typeface;
-        var marker = new TextBlock
-        {
-            Text        = doc.GetText(markerOffset, markerLength),
-            FontFamily  = typeface.FontFamily,
-            FontStyle   = typeface.Style,
-            FontWeight  = typeface.Weight,
-            FontStretch = typeface.Stretch,
-            FontSize    = props.FontRenderingEmSize,
-            Foreground  = props.ForegroundBrush,
-            Margin      = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel, 0, 0, 0),
-        };
+        var marker = ListMarkerStyling.CreateMarkerBlock(
+            doc.GetText(markerOffset, markerLength), CurrentContext, MarkerStyle);
         return new InlineObjectElement(markerLength, marker);
     }
+
+    /// <summary>
+    /// The <c>listMarker</c> element's resolved style (Requirements.md §6), pushed by
+    /// <c>MainWindow.ApplyActiveModeStyles</c> — shared with
+    /// <see cref="BulletListMarkerElementGenerator"/>, since bullets and numbers are one element.
+    /// </summary>
+    public ResolvedStyle MarkerStyle { get; set; }
 }

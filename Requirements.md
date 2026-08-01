@@ -142,16 +142,30 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - The user can choose how the status bar's character count charges a line break: as 0, 1, or 2
   characters (§9).
 - The user can customize the editor's appearance from a Preferences window, opened via View →
-  Preferences:
-  - A separate font choice for WYSIWYG document text and for code (inline code and fenced code
-    blocks), rather than today's fixed WYSIWYG font (Arial) and fixed monospace stack.
-  - Text and background colors for the various formatted spans (headings, links, highlights,
-    blockquotes, and the like), rather than today's fixed per-theme palette.
-  - A separate font choice per customizable construct — for example, a different font for headings
-    than for bold text — rather than today's single WYSIWYG font applied uniformly to every construct.
-    This extends the same per-construct customization already offered for colors to fonts *(planned)*
-  - A Reset to Default action, restoring every font and color choice on the form to its original
-    fixed value in one step.
+  Preferences. Changes apply immediately, with no separate Apply step.
+  - **WYSIWYG mode and source mode are styled independently**, on one tab each. The same document is
+    read for different purposes in the two modes, so a heading can be large and proportional in one
+    and plain monospaced in the other.
+  - The first element on each tab is **Normal** — default body text, which everything else inherits
+    from. Its font family and size are that tab's base, set in points rather than as a multiplier,
+    and it also carries weight, italic and text color. Text decoration and background are not
+    offered for it: a decoration would apply to every line of the document, and the background of
+    body text is the editor surface, which the theme already sets.
+  - Each of the other eighteen **elements** — headings 1 through 6, blockquote, horizontal rule,
+    code block, inline code, list marker, bold, italic, bold+italic, strikethrough, highlight,
+    underline, hyperlink and HTML comment — can override Normal with its own font family, size,
+    weight, italic, text decoration, and text and background colors for both the light and dark
+    themes.
+  - Any override can be left unset, in which case the element inherits it. Size is set as a
+    multiplier of the base size, so changing the base rescales everything proportionally; the
+    resulting point size is shown alongside.
+  - Monospaced font families are listed first in every font drop-down, above the full list.
+  - A Reset to Default action restores every element on both tabs in one step, and each element can
+    be reset on its own.
+  - Two limits follow from the editor component and are surfaced rather than worked around:
+    underline and strikethrough cannot be combined on one element, so they are offered as a single
+    choice; and for the inline elements (everything except headings, blockquote and horizontal rule)
+    the resolved size is rounded to a whole point.
 
 ## 7. Keyboard Shortcuts
 

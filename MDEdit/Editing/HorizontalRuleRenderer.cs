@@ -58,10 +58,10 @@ internal sealed class HorizontalRuleRenderer : IBackgroundRenderer
         var visualLines = textView.VisualLines;
         if (visualLines.Count == 0) return;
 
-        // Colors, not brush choice, are shared with MarkdownLineColorizer's source-mode hrule
-        // styling — the drawn rule and the raw "---" revealed under the caret must read as the
-        // same construct.
-        var brush = IsDark ? _colorizer.HRuleBrushDark : _colorizer.HRuleBrushLight;
+        // The exact brush the colorizer would paint the raw "---" with, resolved against the active
+        // editor mode and theme — the drawn rule and the text revealed under the caret must read as
+        // the same construct. Nothing to draw if the element has no colour of its own.
+        if (_colorizer.Resolve(StyledElements.HorizontalRule).Foreground is not SolidColorBrush brush) return;
         double right = textView.ActualWidth - RightInset;
         if (right <= LeftInset) return;
 

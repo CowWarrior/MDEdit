@@ -3,32 +3,60 @@ using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
 using MDEdit.Editing;
+using MDEdit.Services;
 
 namespace MDEdit;
 
 internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 {
-    // Settable rather than compile-time constants, so MainWindow.ApplyEditorPreferences can drive
-    // them from AppSettings.EditorPreferences (Requirements.md §6) — defaulted here to exactly the
-    // values that used to be hardcoded, so an unmodified install renders identically. Public (not
-    // internal static like before): HorizontalRuleRenderer reads HRuleBrushLight/Dark through a
-    // reference to this instance now, the same reason it already holds one to
-    // HorizontalRuleElementGenerator, so the rendered rule and the raw "---" text revealed under
-    // the caret can never disagree about color.
-    public SolidColorBrush HeadingBrushLight    { get; set; } = Freeze(Color.FromRgb(0x00, 0x57, 0xAE));
-    public SolidColorBrush BlockquoteBrushLight { get; set; } = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    public SolidColorBrush HRuleBrushLight      { get; set; } = Freeze(Color.FromRgb(0xBB, 0xBB, 0xBB));
+    // The active editor mode's per-element styling (Requirements.md §6), pushed by
+    // MainWindow.ApplyActiveModeStyles — which mode is active is MainWindow's business, not this
+    // class's. Everything this colorizer draws (headings, blockquote, horizontal rule, and the
+    // table's structural dimming) is resolved from here, so the same settings drive both this and
+    // the XSHD-driven half through MarkdownHighlighting.
+    private ModeStyles _styles = ModeStyles.SourceDefaults();
+    private bool _isDark;
 
-    public SolidColorBrush HeadingBrushDark    { get; set; } = Freeze(Color.FromRgb(0x58, 0xA6, 0xFF));
-    public SolidColorBrush BlockquoteBrushDark { get; set; } = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
-    public SolidColorBrush HRuleBrushDark      { get; set; } = Freeze(Color.FromRgb(0x48, 0x4F, 0x58));
+    // Resolution allocates brushes and typefaces, and ColorizeLine runs per visible line on every
+    // redraw — so results are cached per element key and dropped whenever either input changes.
+    private readonly Dictionary<string, ResolvedStyle> _resolved = new(StringComparer.Ordinal);
+
+    public ModeStyles Styles
+    {
+        get => _styles;
+        set { _styles = value; _resolved.Clear(); }
+    }
 
     // Set by MainWindow.ApplyTheme; a TextView.Redraw() afterwards re-runs ColorizeLine.
-    public bool IsDark { get; set; }
+    public bool IsDark
+    {
+        get => _isDark;
+        set
+        {
+            if (_isDark == value) return;
+            _isDark = value;
+            _resolved.Clear();
+        }
+    }
 
-    // Set by MainWindow's live-preview toggle. Only affects heading font size (Typora-style
-    // scaling) and the revealed-source font swap below — colors/weight apply regardless,
-    // matching the pre-live-preview behavior.
+    /// <summary>
+    /// The resolved style for one element in the active mode and theme. Public so the background
+    /// renderers can draw in exactly the colour their construct's text uses — see
+    /// <c>HorizontalRuleRenderer</c> and <c>BlockquoteAccentBarRenderer</c>, which hold a reference
+    /// to this instance rather than carrying their own copy of a colour that must agree with it.
+    /// </summary>
+    public ResolvedStyle Resolve(string elementKey)
+    {
+        if (_resolved.TryGetValue(elementKey, out var cached)) return cached;
+
+        var resolved = StyleResolver.Resolve(elementKey, _styles, _isDark);
+        _resolved[elementKey] = resolved;
+        return resolved;
+    }
+
+    // Set by MainWindow's live-preview toggle. Now only affects the revealed-source font swap
+    // below: heading scaling used to be gated here too, and is instead expressed as a per-mode
+    // default (source mode simply doesn't scale headings), which is what retired HeadingScale.
     public bool LivePreviewEnabled { get; set; }
 
     // Set by MainWindow alongside the generators' caret state (live preview only): the
@@ -45,26 +73,27 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         var doc = CurrentContext.Document;
         if (line.Length == 0) return;
 
-        ApplyRevealedSourceFont(doc, line);
+        // Returns whether it swapped the WHOLE line to the source font — the per-element family
+        // override below must not undo that, or a revealed heading would snap back to the document
+        // font the instant the caret reached it.
+        bool revealed = ApplyRevealedSourceFont(doc, line);
 
         if (MarkdownSyntax.TryGetHeadingLevel(doc, line, out int level, out _))
         {
-            var scale = LivePreviewEnabled ? HeadingScale(level) : 1.0;
-            ColorLine(line, IsDark ? HeadingBrushDark : HeadingBrushLight,
-                level <= 3 ? FontWeights.Bold : FontWeights.SemiBold, emSizeScale: scale);
+            ApplyLineStyle(line, StyledElements.Heading(level), revealed);
             return;
         }
 
         if (MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _))
         {
-            ColorLine(line, IsDark ? BlockquoteBrushDark : BlockquoteBrushLight, FontWeights.Normal, italic: true);
+            ApplyLineStyle(line, StyledElements.Blockquote, revealed);
             return;
         }
 
         var text = doc.GetText(line);
         if (MarkdownSyntax.IsHorizontalRule(text))
         {
-            ColorLine(line, IsDark ? HRuleBrushDark : HRuleBrushLight, FontWeights.Normal);
+            ApplyLineStyle(line, StyledElements.HorizontalRule, revealed);
             return;
         }
 
@@ -77,16 +106,18 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         // same cost discipline as IsFenceDelimiterLine before TryGetEnclosingFenceBlock.
         if (text[0] == '|' && MarkdownSyntax.TryGetTableBlock(doc, line.LineNumber, out int tableStart, out _))
         {
-            var brush = IsDark ? HRuleBrushDark : HRuleBrushLight;
             if (line.LineNumber == tableStart + 1)
             {
-                ColorLine(line, brush, FontWeights.Normal);
+                ApplyLineStyle(line, StyledElements.HorizontalRule, revealed);
                 return;
             }
-            foreach (int pipe in MarkdownSyntax.GetTablePipeOffsets(text))
+            if (Resolve(StyledElements.HorizontalRule).Foreground is SolidColorBrush brush)
             {
-                ChangeLinePart(line.Offset + pipe, line.Offset + pipe + 1,
-                    el => el.TextRunProperties.SetForegroundBrush(brush));
+                foreach (int pipe in MarkdownSyntax.GetTablePipeOffsets(text))
+                {
+                    ChangeLinePart(line.Offset + pipe, line.Offset + pipe + 1,
+                        el => el.TextRunProperties.SetForegroundBrush(brush));
+                }
             }
         }
 
@@ -110,9 +141,14 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     // Runs BEFORE the color/weight styling, which rebuilds each run's Typeface from its
     // current family and so preserves the swap. Code fences need nothing here:
     // Markdown.xshd's CodeBlock/InlineCode colors pin the mono family in every mode.
-    private void ApplyRevealedSourceFont(TextDocument doc, DocumentLine line)
+    /// <returns>
+    /// True when the <b>whole line</b> was swapped to the source font, so the caller knows not to
+    /// re-apply a per-element font family over the top of it. Span-scoped swaps return false: they
+    /// only ever happen on lines with no line-scoped construct, where no family override follows.
+    /// </returns>
+    private bool ApplyRevealedSourceFont(TextDocument doc, DocumentLine line)
     {
-        if (!LivePreviewEnabled || SourceFontFamily is null) return;
+        if (!LivePreviewEnabled || SourceFontFamily is null) return false;
 
         bool wholeLine = line.LineNumber == CaretLine && HasLineScopedConstruct(doc, line);
         if (!wholeLine && doc.GetCharAt(line.Offset) == '|'
@@ -123,11 +159,11 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         if (wholeLine)
         {
             SwapToSourceFont(line.Offset, line.EndOffset);
-            return;
+            return true;
         }
 
         // Span-scoped reveals are only possible on the caret's own line.
-        if (line.LineNumber != CaretLine) return;
+        if (line.LineNumber != CaretLine) return false;
 
         foreach (var span in MarkdownSyntax.FindEmphasisSpans(doc, line))
             if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
@@ -137,6 +173,8 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
             if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
         foreach (var span in MarkdownSyntax.FindEmojiSpans(doc, line))
             if (CaretOffset >= span.Start && CaretOffset <= span.End) SwapToSourceFont(span.Start, span.End);
+
+        return false;
     }
 
     private void SwapToSourceFont(int startOffset, int endOffset)
@@ -186,38 +224,34 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     // than as ordinary text that happens to sit oddly.
     private const double ScriptScale = 0.75;
 
-    // Typora-ish size ratios relative to the editor's base font size; only applied in live preview.
-    private static double HeadingScale(int level) => level switch
+    // Styles a whole line as one unit from its element's resolved style. Every null member of the
+    // resolved style is left untouched rather than overwritten with a default, so "inherit" in
+    // Preferences means the run keeps whatever it already had.
+    //
+    // The old fixed signature (a brush, a weight, an optional italic flag and a size multiplier)
+    // encoded each construct's styling at the call site; all of it now comes from EditorPreferences,
+    // including the heading weight split at level 3 and the Typora-ish heading scaling that used to
+    // live in HeadingScale.
+    private void ApplyLineStyle(DocumentLine line, string elementKey, bool revealed)
     {
-        1 => 1.6,
-        2 => 1.4,
-        3 => 1.25,
-        4 => 1.15,
-        5 => 1.05,
-        _ => 1.0,
-    };
+        var style = Resolve(elementKey);
 
-    private void ColorLine(DocumentLine line, SolidColorBrush brush,
-        FontWeight weight, bool italic = false, double emSizeScale = 1.0)
-    {
         ChangeLinePart(line.Offset, line.EndOffset, el =>
         {
-            el.TextRunProperties.SetForegroundBrush(brush);
-            var old = el.TextRunProperties.Typeface;
-            el.TextRunProperties.SetTypeface(new Typeface(
-                old.FontFamily,
-                italic ? FontStyles.Italic : old.Style,
-                weight,
-                old.Stretch));
-            if (emSizeScale != 1.0)
-                el.TextRunProperties.SetFontRenderingEmSize(el.TextRunProperties.FontRenderingEmSize * emSizeScale);
-        });
-    }
+            var props = el.TextRunProperties;
 
-    private static SolidColorBrush Freeze(Color color)
-    {
-        var b = new SolidColorBrush(color);
-        b.Freeze();
-        return b;
+            if (style.Foreground is not null) props.SetForegroundBrush(style.Foreground);
+            if (style.Background is not null) props.SetBackgroundBrush(style.Background);
+
+            var old = props.Typeface;
+            // A revealed line is already in the source font because the caret is on it — the point
+            // being that you're editing raw markdown there — so the element's own family must not
+            // win it back. Size, weight and style still apply: only the family says "source".
+            var family = revealed ? old.FontFamily : style.Family ?? old.FontFamily;
+            props.SetTypeface(new Typeface(family, style.Style ?? old.Style, style.Weight ?? old.Weight, old.Stretch));
+
+            if (style.EmSize is double em) props.SetFontRenderingEmSize(em);
+            if (style.Decorations is not null) props.SetTextDecorations(style.Decorations);
+        });
     }
 }

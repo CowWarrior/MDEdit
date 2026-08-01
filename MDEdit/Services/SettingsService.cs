@@ -1,5 +1,7 @@
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using MDEdit.Editing;
 
 namespace MDEdit.Services;
 
@@ -50,42 +52,473 @@ internal sealed class AppSettings
 /// </summary>
 internal sealed class EditorPreferences
 {
-    public string WysiwygFontFamily { get; set; } = "Arial";
-    public string CodeFontFamily { get; set; } = "Cascadia Code, Consolas, Courier New";
+    /// <summary>
+    /// Schema version of the <c>settings.json</c> this came from. Absent in a pre-per-element file,
+    /// so it deserializes as 0 and drives the one-time fold into
+    /// <see cref="Wysiwyg"/>/<see cref="Source"/>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Deliberately has no initializer, and is stamped by <see cref="SettingsService.Save"/>
+    /// rather than by the constructor.</b> System.Text.Json leaves a property initializer in place
+    /// when the property is absent from the JSON, so initializing this to
+    /// <see cref="CurrentVersion"/> would make every legacy file claim to be already migrated and
+    /// silently skip the fold. Stamping on write is also what the value honestly means — the schema
+    /// the file was written with, not the schema some in-memory object believes in.
+    /// </remarks>
+    public int Version { get; set; }
 
-    public string HeadingColorLight { get; set; } = "#0057AE";
-    public string HeadingColorDark { get; set; } = "#58A6FF";
+    public const int CurrentVersion = 2;
 
-    // Also drives BlockquoteAccentBarRenderer's bar — one color for both, as today.
-    public string BlockquoteColorLight { get; set; } = "#6A737D";
-    public string BlockquoteColorDark { get; set; } = "#8B949E";
+    /// <summary>
+    /// Per-element styling for WYSIWYG mode and for source mode, kept fully independent
+    /// (Requirements.md §6): the two modes render the same document for different purposes, so a
+    /// heading may be large and proportional in one and plain mono in the other.
+    /// </summary>
+    /// <remarks>
+    /// The defaults reproduce today's rendering exactly — see
+    /// <see cref="ModeStyles.WysiwygDefaults"/> for how each of the old special cases (heading
+    /// scaling being WYSIWYG-only, code staying mono when the base font flips) becomes an ordinary
+    /// default rather than a branch in rendering code.
+    /// </remarks>
+    public ModeStyles Wysiwyg { get; set; } = ModeStyles.WysiwygDefaults();
+    public ModeStyles Source { get; set; } = ModeStyles.SourceDefaults();
 
-    // Also drives the table's structural pipe/delimiter-row dimming — shared, as today.
-    public string HorizontalRuleColorLight { get; set; } = "#BBBBBB";
-    public string HorizontalRuleColorDark { get; set; } = "#484F58";
+    // ── Legacy, pre-Version-2 flat properties ────────────────────────────────────────────────
+    // MIGRATION INPUT ONLY — nothing renders from these any more. They exist so a settings.json
+    // written before per-element styling can still be read; Migrate folds each non-null value into
+    // both mode sets and then nulls it, and the JsonIgnore below drops it from the file on the next
+    // save. All null on a fresh object, so a new install folds nothing.
+    //
+    // Do not add to this section, and do not read from it — new settings belong in ElementStyle.
 
-    // Background only — highlighted text keeps the editor's standard foreground, as today.
-    public string HighlightBackgroundLight { get; set; } = "#F5E7A3";
-    public string HighlightBackgroundDark { get; set; } = "#6A5E2E";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? WysiwygFontFamily { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeFontFamily { get; set; }
 
-    public string StrikethroughColorLight { get; set; } = "#888888";
-    public string StrikethroughColorDark { get; set; } = "#8B949E";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HeadingColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HeadingColorDark { get; set; }
 
-    // Shared by inline code and fenced code blocks, as today.
-    public string CodeForegroundLight { get; set; } = "#C7254E";
-    public string CodeForegroundDark { get; set; } = "#FF7B72";
-    public string CodeBackgroundLight { get; set; } = "#FEF2F2";
-    public string CodeBackgroundDark { get; set; } = "#30363D";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? BlockquoteColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? BlockquoteColorDark { get; set; }
 
-    public string LinkColorLight { get; set; } = "#0065BD";
-    public string LinkColorDark { get; set; } = "#58A6FF";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HorizontalRuleColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HorizontalRuleColorDark { get; set; }
 
-    public string ListMarkerColorLight { get; set; } = "#005CC5";
-    public string ListMarkerColorDark { get; set; } = "#79C0FF";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HighlightBackgroundLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HighlightBackgroundDark { get; set; }
 
-    // HTML comments.
-    public string CommentColorLight { get; set; } = "#888888";
-    public string CommentColorDark { get; set; } = "#8B949E";
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? StrikethroughColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? StrikethroughColorDark { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeForegroundLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeForegroundDark { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeBackgroundLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeBackgroundDark { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LinkColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LinkColorDark { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ListMarkerColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ListMarkerColorDark { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CommentColorLight { get; set; }
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CommentColorDark { get; set; }
+
+    // ── Migration ────────────────────────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Folds a pre-Version-2 <c>settings.json</c>'s flat, mode-independent properties into
+    /// <see cref="Wysiwyg"/> and <see cref="Source"/>. No-op once <see cref="Version"/> has caught
+    /// up, so it is safe (and idempotent) to call on every load.
+    /// </summary>
+    /// <remarks>
+    /// Colours were mode-independent before this version, so each one is written into <b>both</b>
+    /// mode sets — anything else would silently discard the user's choice in one editor mode.
+    /// <para>
+    /// Fonts are not symmetric, because the two legacy font settings never were:
+    /// <c>WysiwygFontFamily</c> was the WYSIWYG base, while <c>CodeFontFamily</c> did double duty as
+    /// the source-mode base font <i>and</i> as the family pinned on code spans so they stayed
+    /// fixed-width once WYSIWYG flipped the base. Both roles are reproduced below. Notably the
+    /// source set's code elements get <b>no</b> family: they inherit the mono base, which is what
+    /// keeps source mode all-mono.
+    /// </para>
+    /// <para>
+    /// A file already at the current version is left completely alone, so per-element
+    /// customizations are never stomped by the legacy defaults sitting beside them.
+    /// </para>
+    /// </remarks>
+    public void Migrate()
+    {
+        if (Version >= CurrentVersion) return;
+
+        ApplyLegacyColorsTo(Wysiwyg);
+        ApplyLegacyColorsTo(Source);
+
+        if (WysiwygFontFamily is string proseFont)
+            Wysiwyg.BaseFontFamily = proseFont;
+
+        if (CodeFontFamily is string codeFont)
+        {
+            Source.BaseFontFamily = codeFont;
+            Style(Wysiwyg, StyledElements.InlineCode).FontFamily = codeFont;
+            Style(Wysiwyg, StyledElements.CodeBlock).FontFamily = codeFont;
+        }
+
+        ClearLegacy();
+        Version = CurrentVersion;
+    }
+
+    // Nulled once folded so the next Save drops them from the file (see the JsonIgnore above).
+    // Leaving them populated would be worse than untidy: a future bug that re-ran the fold would
+    // silently overwrite genuine per-element choices with these stale values.
+    private void ClearLegacy()
+    {
+        WysiwygFontFamily = CodeFontFamily = null;
+        HeadingColorLight = HeadingColorDark = null;
+        BlockquoteColorLight = BlockquoteColorDark = null;
+        HorizontalRuleColorLight = HorizontalRuleColorDark = null;
+        HighlightBackgroundLight = HighlightBackgroundDark = null;
+        StrikethroughColorLight = StrikethroughColorDark = null;
+        CodeForegroundLight = CodeForegroundDark = null;
+        CodeBackgroundLight = CodeBackgroundDark = null;
+        LinkColorLight = LinkColorDark = null;
+        ListMarkerColorLight = ListMarkerColorDark = null;
+        CommentColorLight = CommentColorDark = null;
+    }
+
+    private void ApplyLegacyColorsTo(ModeStyles mode)
+    {
+        for (int level = 1; level <= 6; level++)
+            SetForeground(mode, StyledElements.Heading(level), HeadingColorLight, HeadingColorDark);
+
+        SetForeground(mode, StyledElements.Blockquote, BlockquoteColorLight, BlockquoteColorDark);
+        SetForeground(mode, StyledElements.HorizontalRule, HorizontalRuleColorLight, HorizontalRuleColorDark);
+        SetForeground(mode, StyledElements.Strikethrough, StrikethroughColorLight, StrikethroughColorDark);
+        SetForeground(mode, StyledElements.Link, LinkColorLight, LinkColorDark);
+        SetForeground(mode, StyledElements.ListMarker, ListMarkerColorLight, ListMarkerColorDark);
+        SetForeground(mode, StyledElements.Comment, CommentColorLight, CommentColorDark);
+
+        SetBackground(mode, StyledElements.Highlight, HighlightBackgroundLight, HighlightBackgroundDark);
+
+        // Inline code and fenced blocks shared one palette; they become independently editable, but
+        // migrate identically so nothing changes for an upgrading user.
+        foreach (var key in new[] { StyledElements.InlineCode, StyledElements.CodeBlock })
+        {
+            SetForeground(mode, key, CodeForegroundLight, CodeForegroundDark);
+            SetBackground(mode, key, CodeBackgroundLight, CodeBackgroundDark);
+        }
+    }
+
+    // Null halves are left alone rather than written through: a hand-edited file may carry only one
+    // of a pair, and overwriting the other with null would turn a colour the user never touched into
+    // an inherit.
+    private static void SetForeground(ModeStyles mode, string key, string? light, string? dark)
+    {
+        if (light is null && dark is null) return;
+        var style = Style(mode, key);
+        if (light is not null) style.ForegroundLight = light;
+        if (dark is not null) style.ForegroundDark = dark;
+    }
+
+    private static void SetBackground(ModeStyles mode, string key, string? light, string? dark)
+    {
+        if (light is null && dark is null) return;
+        var style = Style(mode, key);
+        if (light is not null) style.BackgroundLight = light;
+        if (dark is not null) style.BackgroundDark = dark;
+    }
+
+    // Creates the entry when absent rather than assuming the defaults are intact: settings.json is
+    // hand-editable, and a missing key here would otherwise drop a migrated colour on the floor.
+    private static ElementStyle Style(ModeStyles mode, string key)
+    {
+        if (!mode.Elements.TryGetValue(key, out var style))
+            mode.Elements[key] = style = new ElementStyle();
+        return style;
+    }
+}
+
+/// <summary>
+/// One editor mode's complete text styling (Requirements.md §6): a base font every element inherits
+/// from, plus per-element overrides keyed by <see cref="StyledElements"/>'s stable keys.
+/// </summary>
+/// <remarks>
+/// WYSIWYG and source mode each own one of these, fully independent. That independence is what lets
+/// every special case in the old rendering code become an ordinary default here — see
+/// <see cref="WysiwygDefaults"/>.
+/// </remarks>
+internal sealed class ModeStyles
+{
+    /// <summary>The family every element inherits unless it sets <see cref="ElementStyle.FontFamily"/>.</summary>
+    public string BaseFontFamily { get; set; } = "";
+
+    /// <summary>The size, in WPF device-independent units, that <see cref="ElementStyle.FontScale"/> multiplies.</summary>
+    public double BaseFontSize { get; set; } = DefaultBaseFontSize;
+
+    /// <summary>
+    /// Per-element overrides. An absent key inherits everything — equivalent to an
+    /// <see cref="ElementStyle"/> with every property null, so nothing needs to enumerate
+    /// <see cref="StyledElements.All"/> to stay valid.
+    /// </summary>
+    public Dictionary<string, ElementStyle> Elements { get; set; } = new();
+
+    /// <summary>
+    /// The style for one element, created on demand. For <b>editing</b> only — rendering reads
+    /// <see cref="Elements"/> directly, since creating entries during a redraw would mutate the
+    /// settings from the render loop.
+    /// </summary>
+    public ElementStyle Style(string key)
+    {
+        if (!Elements.TryGetValue(key, out var style))
+            Elements[key] = style = new ElementStyle();
+        return style;
+    }
+
+    // The editor's pre-Requirements-§6 hardcoded values, kept as the defaults so an unmodified or
+    // upgrading install renders identically. MainWindow.xaml's editor carries the same two.
+    internal const string CodeFontStack = "Cascadia Code, Consolas, Courier New";
+    internal const string ProseFont = "Arial";
+    internal const double DefaultBaseFontSize = 14.0;
+
+    /// <summary>
+    /// Source mode: all-mono, no heading scaling — code and prose share one fixed-width base, which
+    /// is why nothing here overrides <see cref="ElementStyle.FontFamily"/> or
+    /// <see cref="ElementStyle.FontScale"/>.
+    /// </summary>
+    public static ModeStyles SourceDefaults() => new()
+    {
+        BaseFontFamily = CodeFontStack,
+        BaseFontSize = DefaultBaseFontSize,
+        Elements = SharedElementDefaults(),
+    };
+
+    /// <summary>
+    /// WYSIWYG mode: identical to <see cref="SourceDefaults"/> apart from the base family and the
+    /// two deltas applied below. Written as "source defaults plus deltas" rather than as a second
+    /// full table on purpose — the differences between the modes are the interesting part, and this
+    /// way they can't drift apart silently when a color changes.
+    /// </summary>
+    public static ModeStyles WysiwygDefaults()
+    {
+        var elements = SharedElementDefaults();
+
+        // Typora-ish heading scaling, previously MarkdownLineColorizer.HeadingScale gated on
+        // LivePreviewEnabled. Expressing it as a WYSIWYG-only default is what retires that gate:
+        // source mode simply leaves FontScale null, which resolves to 1.0.
+        elements[StyledElements.Heading1].FontScale = 1.6;
+        elements[StyledElements.Heading2].FontScale = 1.4;
+        elements[StyledElements.Heading3].FontScale = 1.25;
+        elements[StyledElements.Heading4].FontScale = 1.15;
+        elements[StyledElements.Heading5].FontScale = 1.05;
+        // Heading 6 stays at 1.0 — left null rather than set explicitly, matching HeadingScale's
+        // own default arm.
+
+        // Code keeps the fixed-width family when the base flips to a proportional one. This was
+        // Markdown.xshd pinning fontFamily on InlineCode/CodeBlock in *both* modes; as a per-mode
+        // default it needs no pinning in source mode, where the base is already mono.
+        elements[StyledElements.InlineCode].FontFamily = CodeFontStack;
+        elements[StyledElements.CodeBlock].FontFamily = CodeFontStack;
+
+        return new ModeStyles
+        {
+            BaseFontFamily = ProseFont,
+            BaseFontSize = DefaultBaseFontSize,
+            Elements = elements,
+        };
+    }
+
+    // Every color, weight, style and decoration that applied in both editor modes before this
+    // setting existed — copied from MarkdownLineColorizer, Resources/Markdown.xshd and the old
+    // MainWindow.DarkHighlightColors. EditorPreferencesTests pins each one.
+    private static Dictionary<string, ElementStyle> SharedElementDefaults() => new()
+    {
+        // Body text: everything inherits. Its family and size are the mode's base rather than
+        // fields here, so this entry carries only weight/italic/colour — all unset, which leaves
+        // the editor at normal weight in the theme's own foreground, exactly as before §6.
+        [StyledElements.Normal] = new(),
+
+        // All six heading levels share one color; only the weight differs, and it splits at 3 —
+        // exactly MarkdownLineColorizer's old "level <= 3 ? Bold : SemiBold". SemiBold is why
+        // weight is a named value rather than a bold checkbox.
+        [StyledElements.Heading1] = Heading(ElementStyle.WeightBold),
+        [StyledElements.Heading2] = Heading(ElementStyle.WeightBold),
+        [StyledElements.Heading3] = Heading(ElementStyle.WeightBold),
+        [StyledElements.Heading4] = Heading(ElementStyle.WeightSemiBold),
+        [StyledElements.Heading5] = Heading(ElementStyle.WeightSemiBold),
+        [StyledElements.Heading6] = Heading(ElementStyle.WeightSemiBold),
+
+        // Weight is pinned Normal, not left to inherit, because the old ColorLine call forced it:
+        // a "> **bold**" line rendered entirely at normal weight, the line-wide styling flattening
+        // the emphasis inside it. Set explicitly so an unmodified install still does — but now
+        // reachable, so anyone who wants bold to survive inside a quote can set it to inherit.
+        [StyledElements.Blockquote] = new()
+        {
+            FontWeight = ElementStyle.WeightNormal,
+            Italic = true,
+            ForegroundLight = "#6A737D",
+            ForegroundDark = "#8B949E",
+        },
+
+        // Also drives the table's delimiter row and pipe dimming — one color for several structural
+        // marks, as before this setting existed. Weight pinned Normal for the same reason as
+        // blockquote above.
+        [StyledElements.HorizontalRule] = new()
+        {
+            FontWeight = ElementStyle.WeightNormal,
+            ForegroundLight = "#BBBBBB",
+            ForegroundDark = "#484F58",
+        },
+
+        [StyledElements.Bold] = new() { FontWeight = ElementStyle.WeightBold },
+        [StyledElements.Italic] = new() { Italic = true },
+        [StyledElements.BoldItalic] = new() { FontWeight = ElementStyle.WeightBold, Italic = true },
+
+        // Grey, deliberately *not* struck: that is how strikethrough has always rendered here.
+        // Decoration stays null so nothing changes, but "Strikethrough" is now reachable for anyone
+        // who wants a real strike.
+        [StyledElements.Strikethrough] = new()
+        {
+            ForegroundLight = "#888888",
+            ForegroundDark = "#8B949E",
+        },
+
+        // Background only — highlighted text keeps the editor's standard foreground.
+        [StyledElements.Highlight] = new()
+        {
+            BackgroundLight = "#F5E7A3",
+            BackgroundDark = "#6A5E2E",
+        },
+
+        [StyledElements.Underline] = new() { Decoration = ElementStyle.DecorationUnderline },
+
+        [StyledElements.InlineCode] = CodeColors(),
+        [StyledElements.CodeBlock] = CodeColors(),
+
+        [StyledElements.Link] = new()
+        {
+            ForegroundLight = "#0065BD",
+            ForegroundDark = "#58A6FF",
+        },
+
+        [StyledElements.ListMarker] = new()
+        {
+            ForegroundLight = "#005CC5",
+            ForegroundDark = "#79C0FF",
+        },
+
+        [StyledElements.Comment] = new()
+        {
+            Italic = true,
+            ForegroundLight = "#888888",
+            ForegroundDark = "#8B949E",
+        },
+    };
+
+    private static ElementStyle Heading(string weight) => new()
+    {
+        FontWeight = weight,
+        ForegroundLight = "#0057AE",
+        ForegroundDark = "#58A6FF",
+    };
+
+    // Inline code and fenced code blocks share one palette, as they always have. A fresh instance
+    // per element rather than a shared one: they are independently editable in Preferences.
+    private static ElementStyle CodeColors() => new()
+    {
+        ForegroundLight = "#C7254E",
+        ForegroundDark = "#FF7B72",
+        BackgroundLight = "#FEF2F2",
+        BackgroundDark = "#30363D",
+    };
+}
+
+/// <summary>
+/// One element's style overrides within a single editor mode. <b>Every property is nullable and
+/// null means inherit</b> — that distinction is load-bearing: a value equal to the base today must
+/// not silently become pinned, or changing the base font would stop propagating to it.
+/// </summary>
+/// <remarks>
+/// The nullable shape maps 1:1 onto AvalonEdit's own semantics, verified against
+/// <c>HighlightingColorizer.ApplyColorToElement</c> (tag v6.3.1, the release this project's
+/// 6.3.1.120 package ships): it rebuilds the typeface from the element's *current* one for whichever
+/// of family/style/weight are null, so an unset field costs nothing and inherits correctly with no
+/// code here.
+/// </remarks>
+internal sealed class ElementStyle
+{
+    public const string WeightNormal = "Normal";
+    public const string WeightSemiBold = "SemiBold";
+    public const string WeightBold = "Bold";
+
+    public const string DecorationNone = "None";
+    public const string DecorationUnderline = "Underline";
+    public const string DecorationStrikethrough = "Strikethrough";
+
+    /// <summary>Null inherits the mode's <see cref="ModeStyles.BaseFontFamily"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FontFamily { get; set; }
+
+    /// <summary>
+    /// Multiplier on the mode's base size; null means 1.0. A multiplier rather than an absolute
+    /// point size so it survives a change to the base — the same shape heading scaling already had.
+    /// </summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public double? FontScale { get; set; }
+
+    /// <summary>Null inherits; otherwise one of the <c>Weight*</c> constants.</summary>
+    /// <remarks>
+    /// Named rather than a bool specifically to keep <see cref="WeightSemiBold"/> expressible —
+    /// headings 4–6 are SemiBold today, and a Bold checkbox would default them to Normal and render
+    /// them lighter than they are now.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? FontWeight { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public bool? Italic { get; set; }
+
+    /// <summary>Null inherits; otherwise one of the <c>Decoration*</c> constants.</summary>
+    /// <remarks>
+    /// One field rather than separate Underline and Strikethrough flags because AvalonEdit cannot
+    /// render both: <c>ApplyColorToElement</c>'s second <c>SetTextDecorations</c> call *replaces*
+    /// the first rather than merging, so setting both would silently yield strikethrough alone.
+    /// Making them mutually exclusive here means the UI can never express something that won't
+    /// render.
+    /// </remarks>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Decoration { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ForegroundLight { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? ForegroundDark { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BackgroundLight { get; set; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? BackgroundDark { get; set; }
+
+    /// <summary>
+    /// Overwrites every property from <paramref name="other"/>, in place.
+    /// </summary>
+    /// <remarks>
+    /// In place rather than returning a copy because callers hand out references to these — the
+    /// Preferences editor holds one for the selected element — so replacing the instance would
+    /// leave the editor writing into an object nothing reads any more.
+    /// </remarks>
+    public void CopyFrom(ElementStyle other)
+    {
+        FontFamily = other.FontFamily;
+        FontScale = other.FontScale;
+        FontWeight = other.FontWeight;
+        Italic = other.Italic;
+        Decoration = other.Decoration;
+        ForegroundLight = other.ForegroundLight;
+        ForegroundDark = other.ForegroundDark;
+        BackgroundLight = other.BackgroundLight;
+        BackgroundDark = other.BackgroundDark;
+    }
 }
 
 internal static class SettingsService
@@ -99,7 +532,7 @@ internal static class SettingsService
         try
         {
             if (File.Exists(SettingsPath))
-                return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath)) ?? new AppSettings();
+                return Deserialize(File.ReadAllText(SettingsPath));
         }
         catch (Exception ex) when (ex is IOException or JsonException or UnauthorizedAccessException)
         {
@@ -108,8 +541,32 @@ internal static class SettingsService
         return new AppSettings();
     }
 
+    /// <summary>
+    /// Parses settings JSON and brings it up to the current schema. Split out from
+    /// <see cref="Load"/>, which owns the fixed file path, so the migration is reachable from tests
+    /// without touching <c>%AppData%</c>.
+    /// </summary>
+    internal static AppSettings Deserialize(string json)
+    {
+        var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+
+        // An explicit "editorPreferences": null in a hand-edited file deserializes as null despite
+        // the non-nullable declaration, and would take the migration below down with an NRE — which
+        // Load's catch filter doesn't cover, so it would fail startup rather than fall back.
+        if (settings.EditorPreferences is null)
+            settings.EditorPreferences = new EditorPreferences();
+
+        settings.EditorPreferences.Migrate();
+        return settings;
+    }
+
     public static void Save(AppSettings settings)
     {
+        // Stamp the schema the file is being written with, so the next Load can tell a
+        // per-element file from a pre-per-element one. See EditorPreferences.Version for why this
+        // can't be a property initializer instead.
+        settings.EditorPreferences.Version = EditorPreferences.CurrentVersion;
+
         Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings));
     }

@@ -50,19 +50,19 @@ internal sealed class BulletListMarkerElementGenerator : VisualLineElementGenera
 
     public override VisualLineElement ConstructElement(int offset)
     {
-        var props    = CurrentContext.GlobalTextRunProperties;
-        var typeface = props.Typeface;
-        var glyph = new TextBlock
-        {
-            Text        = "•",
-            FontFamily  = typeface.FontFamily,
-            FontStyle   = typeface.Style,
-            FontWeight  = typeface.Weight,
-            FontStretch = typeface.Stretch,
-            FontSize    = props.FontRenderingEmSize,
-            Foreground  = props.ForegroundBrush,
-            Margin      = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel, 0, 0, 0),
-        };
+        var glyph = ListMarkerStyling.CreateMarkerBlock("•", CurrentContext, MarkerStyle);
         return new InlineObjectElement(1, glyph);
     }
+
+    /// <summary>
+    /// The <c>listMarker</c> element's resolved style (Requirements.md §6), pushed by
+    /// <c>MainWindow.ApplyActiveModeStyles</c>. Default (all-null) inherits the editor's own text
+    /// properties, which is exactly how this rendered before the setting existed.
+    /// </summary>
+    /// <remarks>
+    /// Needed because the marker is <i>replaced</i> here rather than coloured in place: the XSHD
+    /// <c>ListMarker</c> colour styles the raw "-" in source mode, but never reaches this drawn "•".
+    /// Without this the element's settings would appear to do nothing in WYSIWYG.
+    /// </remarks>
+    public ResolvedStyle MarkerStyle { get; set; }
 }

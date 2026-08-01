@@ -22,15 +22,16 @@ namespace MDEdit.Editing;
 /// </summary>
 internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
 {
-    // Settable rather than compile-time constants, so MainWindow.ApplyEditorPreferences can drive
-    // them from AppSettings.EditorPreferences (Requirements.md §6) — same color as
-    // MarkdownLineColorizer's blockquote text by default (and set to the same value from there),
-    // so the bar and the quoted text read as one visual language.
-    public SolidColorBrush LightBarBrush { get; set; } = Freeze(Color.FromRgb(0x6A, 0x73, 0x7D));
-    public SolidColorBrush DarkBarBrush  { get; set; } = Freeze(Color.FromRgb(0x8B, 0x94, 0x9E));
+    // The bar is the blockquote's colour, so it is read from the colorizer rather than kept here and
+    // pushed in — the same reference-to-the-colorizer arrangement HorizontalRuleRenderer uses, for
+    // the same reason. Two copies of a colour that must agree is one copy too many, and per-element
+    // styling (Requirements.md §6) made them easier to desynchronise: the colour now varies by
+    // editor mode as well as by theme, and only the colorizer knows which mode is live.
+    private readonly MarkdownLineColorizer _colorizer;
+
+    public BlockquoteAccentBarRenderer(MarkdownLineColorizer colorizer) => _colorizer = colorizer;
 
     public bool Enabled { get; set; }
-    public bool IsDark { get; set; }
 
     public KnownLayer Layer => KnownLayer.Background;
 
@@ -49,7 +50,7 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
             maxDepth = Math.Max(maxDepth, GetDepth(doc, vl.FirstDocumentLine.LineNumber));
         if (maxDepth == 0) return;
 
-        var brush = IsDark ? DarkBarBrush : LightBarBrush;
+        if (_colorizer.Resolve(StyledElements.Blockquote).Foreground is not SolidColorBrush brush) return;
 
         // Each nesting level is its own pass so bars merge/split correctly across lines of
         // differing depth: level 1 stays continuous across a "> a" / ">> b" transition (both

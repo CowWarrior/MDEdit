@@ -48,7 +48,7 @@ public partial class MainWindow : Window
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
     private readonly TableRowElementGenerator _tableRowGenerator = new();
     private readonly HorizontalRuleElementGenerator _horizontalRuleGenerator = new();
-    private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer = new();
+    private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer; // needs _colorizer, so built in the ctor
     private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
     private readonly HorizontalRuleRenderer _horizontalRuleRenderer; // needs _horizontalRuleGenerator, so built in the ctor
     // WYSIWYG renders prose in a document font; source mode (and the XSHD code colors) use the
@@ -60,8 +60,11 @@ public partial class MainWindow : Window
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
-    private IHighlightingDefinition? _markdownLight;
-    private IHighlightingDefinition? _markdownDark;
+    // Indexed [dark ? 1 : 0, wysiwyg ? 1 : 0]. Four rather than the previous two, because
+    // per-element styling (Requirements.md §6) differs by editor mode as well as by theme — a
+    // heading may be large and proportional in WYSIWYG and plain mono in source. Rebuilt whole by
+    // ApplyEditorPreferences; see MarkdownHighlighting.
+    private readonly IHighlightingDefinition?[,] _markdown = new IHighlightingDefinition?[2, 2];
     private SearchPanel? _searchPanel;
 
     // ── Constructor ───────────────────────────────────────────────────────
@@ -69,6 +72,7 @@ public partial class MainWindow : Window
     {
         _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
         _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator, _colorizer);
+        _blockquoteAccentBarRenderer = new BlockquoteAccentBarRenderer(_colorizer);
         InitializeComponent();
         ApplyEditorPreferences(); // fonts, span colors, and the compiled highlighting definitions
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
@@ -148,61 +152,21 @@ public partial class MainWindow : Window
 
     private void LoadSyntaxHighlighting()
     {
-        _markdownLight = LoadDefinition(dark: false);
-        _markdownDark  = LoadDefinition(dark: true);
-        Editor.SyntaxHighlighting = _markdownLight; // ApplySettings/ApplyTheme picks the real one
-    }
-
-    // Both the light and dark variants are built by recoloring the parsed XSHD model before
-    // compiling it, rather than mutating the loaded definition (whose colors may be frozen) —
-    // every color and the code font family comes from AppSettings.EditorPreferences
-    // (Requirements.md §6), so a user customization and the compiled-in Markdown.xshd defaults
-    // go through the exact same path. Called again, recompiling both definitions from scratch,
-    // whenever ApplyEditorPreferences runs — a deliberate, infrequent user action, not something
-    // happening per keystroke, so redoing this (already done twice at every startup) costs nothing
-    // measurable. Colors absent from the table below (Bold/Italic/BoldItalic/Underline) are
-    // style-only or decoration-only — nothing to recolor.
-    private IHighlightingDefinition LoadDefinition(bool dark)
-    {
-        using var stream = Assembly.GetExecutingAssembly()
-            .GetManifestResourceStream("MDEdit.Resources.Markdown.xshd")!;
-        using var reader = new XmlTextReader(stream);
-        var xshd = HighlightingLoader.LoadXshd(reader);
-
         var p = _settings.EditorPreferences;
-        var overrides = new Dictionary<string, (Color? Foreground, Color? Background, string? FontFamily)>
+        foreach (bool wysiwyg in new[] { false, true })
         {
-            ["Strike"]     = (ParseColor(dark ? p.StrikethroughColorDark : p.StrikethroughColorLight), null, null),
-            // Foreground stays null so highlighted text keeps the editor's standard text color.
-            ["Highlight"]  = (null, ParseColor(dark ? p.HighlightBackgroundDark : p.HighlightBackgroundLight), null),
-            ["InlineCode"] = (ParseColor(dark ? p.CodeForegroundDark : p.CodeForegroundLight),
-                               ParseColor(dark ? p.CodeBackgroundDark : p.CodeBackgroundLight), p.CodeFontFamily),
-            ["CodeBlock"]  = (ParseColor(dark ? p.CodeForegroundDark : p.CodeForegroundLight),
-                               ParseColor(dark ? p.CodeBackgroundDark : p.CodeBackgroundLight), p.CodeFontFamily),
-            ["Link"]       = (ParseColor(dark ? p.LinkColorDark : p.LinkColorLight), null, null),
-            ["ListMarker"] = (ParseColor(dark ? p.ListMarkerColorDark : p.ListMarkerColorLight), null, null),
-            ["Comment"]    = (ParseColor(dark ? p.CommentColorDark : p.CommentColorLight), null, null),
-        };
-
-        foreach (var color in xshd.Elements.OfType<XshdColor>())
-        {
-            if (color.Name is null || !overrides.TryGetValue(color.Name, out var o)) continue;
-            if (o.Foreground is Color fg) color.Foreground = new SimpleHighlightingBrush(fg);
-            if (o.Background is Color bg) color.Background = new SimpleHighlightingBrush(bg);
-            if (o.FontFamily is string ff) color.FontFamily = new FontFamily(ff);
+            var mode = wysiwyg ? p.Wysiwyg : p.Source;
+            foreach (bool dark in new[] { false, true })
+                _markdown[dark ? 1 : 0, wysiwyg ? 1 : 0] = MarkdownHighlighting.Build(mode, dark);
         }
 
-        return HighlightingLoader.Load(xshd, HighlightingManager.Instance);
+        // UpdateLivePreviewState/ApplyTheme pick the real one; this is only so the editor is never
+        // left holding a definition from a previous, now-discarded build.
+        Editor.SyntaxHighlighting = Definition(dark: false, wysiwyg: false);
     }
 
-    private static Color ParseColor(string hex) => (Color)ColorConverter.ConvertFromString(hex);
-
-    private static SolidColorBrush FreezeBrush(string hex)
-    {
-        var brush = new SolidColorBrush(ParseColor(hex));
-        brush.Freeze();
-        return brush;
-    }
+    private IHighlightingDefinition Definition(bool dark, bool wysiwyg)
+        => _markdown[dark ? 1 : 0, wysiwyg ? 1 : 0]!;
 
     // The single entry point for AppSettings.EditorPreferences (Requirements.md §6): rebuilds the
     // WYSIWYG/code FontFamily objects, pushes every span color into the colorizer/renderer
@@ -215,24 +179,75 @@ public partial class MainWindow : Window
     {
         var p = _settings.EditorPreferences;
 
-        _wysiwygFontFamily = new FontFamily(p.WysiwygFontFamily);
-        _sourceFontFamily  = new FontFamily(p.CodeFontFamily);
+        _wysiwygFontFamily = new FontFamily(p.Wysiwyg.BaseFontFamily);
+        _sourceFontFamily  = new FontFamily(p.Source.BaseFontFamily);
         _colorizer.SourceFontFamily = _sourceFontFamily;
-
-        _colorizer.HeadingBrushLight    = FreezeBrush(p.HeadingColorLight);
-        _colorizer.HeadingBrushDark     = FreezeBrush(p.HeadingColorDark);
-        _colorizer.BlockquoteBrushLight = FreezeBrush(p.BlockquoteColorLight);
-        _colorizer.BlockquoteBrushDark  = FreezeBrush(p.BlockquoteColorDark);
-        _colorizer.HRuleBrushLight      = FreezeBrush(p.HorizontalRuleColorLight);
-        _colorizer.HRuleBrushDark       = FreezeBrush(p.HorizontalRuleColorDark);
-
-        // Same color as the blockquote text, as today — not a separate customizable setting.
-        _blockquoteAccentBarRenderer.LightBarBrush = _colorizer.BlockquoteBrushLight;
-        _blockquoteAccentBarRenderer.DarkBarBrush  = _colorizer.BlockquoteBrushDark;
 
         LoadSyntaxHighlighting();
         UpdateLivePreviewState();
         ApplyTheme();
+    }
+
+    private ModeStyles ActiveModeStyles()
+        => _settings.LivePreview ? _settings.EditorPreferences.Wysiwyg : _settings.EditorPreferences.Source;
+
+    /// <summary>
+    /// Points everything that styles text from code at the editor mode currently in effect
+    /// (Requirements.md §6). Called whenever either input can have changed — the preferences
+    /// themselves, the editor mode, or the theme.
+    /// </summary>
+    /// <remarks>
+    /// The list generators need this pushed in because they <i>replace</i> the marker with a drawn
+    /// element, so the XSHD colour that styles the raw "-" never reaches them — the same
+    /// imperative-property-push convention every other generator follows. Theme is read here rather
+    /// than taken from <c>_colorizer.IsDark</c> so this doesn't depend on running after ApplyTheme.
+    /// </remarks>
+    private void ApplyActiveModeStyles()
+    {
+        var mode = ActiveModeStyles();
+        var dark = ThemeService.IsDarkEffective(ThemeService.Parse(_settings.Theme));
+
+        _colorizer.Styles = mode;
+
+        var marker = StyleResolver.Resolve(StyledElements.ListMarker, mode, dark);
+        _bulletListMarkerGenerator.MarkerStyle = marker;
+        _numberedListMarkerGenerator.MarkerStyle = marker;
+
+        ApplyNormalTextStyle(mode, dark);
+    }
+
+    /// <summary>
+    /// Applies the <c>normal</c> element — default body text — to the editor control itself.
+    /// </summary>
+    /// <remarks>
+    /// The one element that isn't a Markdown construct, so it goes through neither construct-styling
+    /// path: it is simply the editor's own font properties. Family and size are set by
+    /// <see cref="UpdateLivePreviewState"/> from the mode's base, since a size expressed as a
+    /// multiplier of itself would be circular; only weight, italic and foreground come from the
+    /// element's style.
+    /// <para>
+    /// Decoration and background are deliberately not offered for it. Underlining or striking every
+    /// line of body text would need a whole-document colorizer pass, which would fight the per-line
+    /// construct styling that returns early; and the background here is the editor's own surface,
+    /// already owned by View → Theme.
+    /// </para>
+    /// <para>
+    /// An unset foreground restores the theme's <c>DynamicResource</c> rather than clearing the
+    /// property: <c>MainWindow.xaml</c> sets it as a local dynamic reference, so assigning a plain
+    /// brush would otherwise pin the colour and silently stop it tracking the theme for good.
+    /// </para>
+    /// </remarks>
+    private void ApplyNormalTextStyle(ModeStyles mode, bool dark)
+    {
+        var normal = StyleResolver.Resolve(StyledElements.Normal, mode, dark);
+
+        Editor.FontWeight = normal.Weight ?? FontWeights.Normal;
+        Editor.FontStyle = normal.Style ?? FontStyles.Normal;
+
+        if (normal.Foreground is SolidColorBrush foreground)
+            Editor.Foreground = foreground;
+        else
+            Editor.SetResourceReference(ForegroundProperty, "EditorForegroundBrush");
     }
 
     private void UpdateHighlighting(string? path)
@@ -240,7 +255,7 @@ public partial class MainWindow : Window
         var ext = path is null ? ".md" : Path.GetExtension(path).ToLowerInvariant();
         var dark = ThemeService.IsDarkEffective(ThemeService.Parse(_settings.Theme));
         Editor.SyntaxHighlighting = ext is ".md" or ".markdown"
-            ? (dark ? _markdownDark : _markdownLight)
+            ? Definition(dark, _settings.LivePreview)
             : null;
 
         // Images resolve relative to the document's own directory — the one generator fed
@@ -779,10 +794,12 @@ public partial class MainWindow : Window
 
     private void UpdateLivePreviewState()
     {
-        // WYSIWYG reads as a document: prose in a proportional font, source mode all-mono.
-        // Code spans/blocks stay mono in both modes via Markdown.xshd's fontFamily colors,
-        // and revealed construct lines swap back via MarkdownLineColorizer.
+        // WYSIWYG reads as a document: prose in a proportional font, source mode all-mono. Code
+        // spans/blocks stay mono in WYSIWYG because that mode's code elements pin the family
+        // (Requirements.md §6), and revealed construct lines swap back via MarkdownLineColorizer.
+        var baseStyles = ActiveModeStyles();
         Editor.FontFamily = _settings.LivePreview ? _wysiwygFontFamily : _sourceFontFamily;
+        Editor.FontSize = baseStyles.BaseFontSize;
 
         _colorizer.LivePreviewEnabled = _settings.LivePreview;
         _headingMarkerGenerator.Enabled    = _settings.LivePreview;
@@ -817,6 +834,13 @@ public partial class MainWindow : Window
             BtnEditorModeToggleIcon.Data = (Geometry)FindResource("IconEye");
             BtnEditorModeToggle.ToolTip = "Toggle to WYSIWYG view";
         }
+
+        // Per-element styling is per-mode (Requirements.md §6), so the editor mode selects which of
+        // the four compiled definitions is live — not just the theme, as it did before. Setting
+        // SyntaxHighlighting re-inserts AvalonEdit's colorizer at index 0, keeping _colorizer after
+        // it, which is what lets MarkdownLineColorizer still override the XSHD styling.
+        ApplyActiveModeStyles();
+        UpdateHighlighting(_files.CurrentPath);
     }
 
     private void SetLivePreview(bool enabled)
@@ -887,18 +911,22 @@ public partial class MainWindow : Window
 
         var dark = ThemeService.IsDarkEffective(theme);
         _colorizer.IsDark = dark;
-        _blockquoteAccentBarRenderer.IsDark = dark;
+        // Re-resolves the list markers against the new theme; the colorizer drops its own cache
+        // from the IsDark setter above, and the two renderers read through it.
+        ApplyActiveModeStyles();
         _tableGridRenderer.IsDark = dark;
         _horizontalRuleRenderer.IsDark = dark;
         Editor.TextArea.Caret.CaretBrush = dark ? Brushes.Gainsboro : null;
         UpdateHighlighting(_files.CurrentPath);
         Editor.TextArea.TextView.Redraw();
 
-        // Toolbar Highlight swatch (Requirements.md §6/§8): reads live from EditorPreferences here
-        // rather than a fixed color, so both a theme switch and a Preferences change (which routes
-        // through ApplyEditorPreferences -> ApplyTheme) keep it in sync automatically.
-        var p = _settings.EditorPreferences;
-        BtnHighlightSwatch.Background = FreezeBrush(dark ? p.HighlightBackgroundDark : p.HighlightBackgroundLight);
+        // Toolbar Highlight swatch (Requirements.md §6/§8): resolved live from the active mode's
+        // highlight element rather than a fixed color, so a theme switch, an editor-mode switch and
+        // a Preferences change (which routes through ApplyEditorPreferences -> ApplyTheme) all keep
+        // it in sync automatically. Null when the element inherits its background, which leaves the
+        // button's own chrome showing — the honest rendering of "no highlight colour of its own".
+        BtnHighlightSwatch.Background =
+            StyleResolver.Resolve(StyledElements.Highlight, ActiveModeStyles(), dark).Background;
 
         ApplySearchPanelColors();
 

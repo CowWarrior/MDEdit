@@ -28,23 +28,33 @@ public class MarkdownXshdTests
         Assert.True(definition.MainRuleSet.Rules.Count + definition.MainRuleSet.Spans.Count > 0);
     }
 
-    // The fontFamily on these colors is what keeps code fixed-width when WYSIWYG swaps the
-    // editor's base font to the document font — nothing else would catch the attribute being
-    // stripped, since the loss is only visible by eye and only in WYSIWYG mode.
-    [Theory]
-    [InlineData("InlineCode")]
-    [InlineData("CodeBlock")]
-    public void MarkdownXshd_CodeColors_PinAFontFamily(string colorName)
+    // The grammar declares colour NAMES for its rules to reference and nothing else: every visual
+    // property is written on at load time by MarkdownHighlighting.Build, from EditorPreferences.
+    // A value re-added here would be silently dead — Build clears each property before applying the
+    // user's style — so it would read as configuration while changing nothing, which is exactly the
+    // kind of thing that costs an afternoon later. (What each colour actually renders as is covered
+    // by MarkdownHighlightingTests, against the compiled definition rather than the file.)
+    [Fact]
+    public void MarkdownXshd_DeclaresNoVisualAttributes()
     {
         using var stream = typeof(MarkdownSyntax).Assembly
             .GetManifestResourceStream("MDEdit.Resources.Markdown.xshd");
         Assert.NotNull(stream);
 
         using var reader = new XmlTextReader(stream);
-        var definition = HighlightingLoader.Load(HighlightingLoader.LoadXshd(reader), HighlightingManager.Instance);
+        var xshd = HighlightingLoader.LoadXshd(reader);
 
-        var color = definition.GetNamedColor(colorName);
-        Assert.NotNull(color);
-        Assert.NotNull(color.FontFamily);
+        foreach (var color in xshd.Elements.OfType<XshdColor>())
+        {
+            Assert.NotNull(color.Name);
+            Assert.Null(color.Foreground);
+            Assert.Null(color.Background);
+            Assert.Null(color.FontFamily);
+            Assert.Null(color.FontSize);
+            Assert.Null(color.FontWeight);
+            Assert.Null(color.FontStyle);
+            Assert.Null(color.Underline);
+            Assert.Null(color.Strikethrough);
+        }
     }
 }

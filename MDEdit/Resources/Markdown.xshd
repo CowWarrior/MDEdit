@@ -1,25 +1,30 @@
 <?xml version="1.0"?>
 <SyntaxDefinition name="Markdown" xmlns="http://icsharpcode.net/sharpdevelop/syntaxdefinition/2008">
 
-  <Color name="Bold"       fontWeight="bold" />
-  <Color name="Italic"     fontStyle="italic" />
-  <Color name="BoldItalic" fontWeight="bold" fontStyle="italic" />
-  <Color name="Strike"     foreground="#888888" />
-  <!-- Deliberately a muted, desaturated yellow: a saturated highlighter yellow glares against a
-       white page and fights the text for attention. See DarkHighlightColors for the dark variant. -->
-  <Color name="Highlight"  background="#F5E7A3" />
-  <!-- Underline is inline HTML rather than Markdown (Requirements.md §3) — styled here so the
-       effect shows in source mode too, the same way Bold/Italic do. -->
-  <Color name="Underline"  underline="true" />
-  <!-- fontFamily pins code to the editor's own mono stack (same as MainWindow.xaml's editor
-       font) in BOTH editor modes — this is what keeps code fixed-width when WYSIWYG swaps
-       the editor's base font to the document font. Applied at render time by AvalonEdit's
-       HighlightingColorizer; MarkdownXshdTests pins the attribute's presence. -->
-  <Color name="InlineCode" foreground="#C7254E" background="#FEF2F2" fontFamily="Cascadia Code, Consolas, Courier New" />
-  <Color name="CodeBlock"  foreground="#C7254E" background="#FEF2F2" fontFamily="Cascadia Code, Consolas, Courier New" />
-  <Color name="Link"       foreground="#0065BD" />
-  <Color name="ListMarker" foreground="#005CC5" />
-  <Color name="Comment"    foreground="#888888" fontStyle="italic" />
+  <!-- These carry NO visual attributes on purpose. Every colour, weight, style, decoration, family
+       and size is written onto them at load time by Editing/MarkdownHighlighting.Build, from
+       AppSettings.EditorPreferences (Requirements.md §6) — once per editor mode and theme, giving
+       four compiled definitions.
+
+       Baking values here as a fallback would break "inherit": Build clears each property before
+       applying the user's style, so anything left in this file would either be dead weight or, if
+       the clearing were removed, would silently resurface for an element the user had explicitly
+       cleared. The defaults of record therefore live in EditorPreferences, in exactly one place —
+       see ModeStyles.SourceDefaults/WysiwygDefaults, pinned by EditorPreferencesTests.
+
+       The names below are still load-bearing: the rules further down reference them, and
+       StyledElements maps each to the element key whose style fills it in. -->
+  <Color name="Bold" />
+  <Color name="Italic" />
+  <Color name="BoldItalic" />
+  <Color name="Strike" />
+  <Color name="Highlight" />
+  <Color name="Underline" />
+  <Color name="InlineCode" />
+  <Color name="CodeBlock" />
+  <Color name="Link" />
+  <Color name="ListMarker" />
+  <Color name="Comment" />
 
   <RuleSet>
 
