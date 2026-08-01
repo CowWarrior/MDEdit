@@ -19,6 +19,15 @@
         <TextBlock x:Name="VersionText" HorizontalAlignment="Center" Margin="0,16,0,0"/>
         <TextBlock x:Name="BuildDateText" HorizontalAlignment="Center" Margin="0,2,0,0" Opacity="0.7"/>
 
+        <!-- The only place the bundled licence documents are reachable from the UI. ClickOnce
+             installs into %LocalAppData%\Apps\2.0\<hash>, so shipping the files alone would satisfy
+             MIT's "include the notice" while leaving them effectively undiscoverable. -->
+        <TextBlock HorizontalAlignment="Center" Margin="0,14,0,0" FontSize="11">
+            <Hyperlink Click="LicenceLink_Click">Licence</Hyperlink>
+            <Run Text="  ·  "/>
+            <Hyperlink Click="ThirdPartyLink_Click">Third-party licences</Hyperlink>
+        </TextBlock>
+
         <Button Content="OK" IsDefault="True" IsCancel="True" Click="BtnOk_Click"
                 Width="80" HorizontalAlignment="Center" Margin="0,20,0,0" Padding="4"/>
     </StackPanel>

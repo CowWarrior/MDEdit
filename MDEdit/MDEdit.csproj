@@ -51,6 +51,18 @@
        ReleaseNotes.md's "Recent changes" section is the user-facing changelog — update it before every publish. -->
   <ItemGroup>
     <Content Include="samples\**\*.md" CopyToOutputDirectory="PreserveNewest" />
+    <!-- AvalonEdit and Tabler Icons are both MIT, which requires their notices to travel with any
+         copy of the software. The DLL ships in every ClickOnce payload and the icon geometry is
+         vendored into Resources/ToolbarIcons.xaml, so the obligation attaches to the *installed
+         app*, not just the repo — a notice sitting only at the repo root would not discharge it.
+         Link= places it beside the exe rather than in a MDEdit\ subfolder mirroring its source path. -->
+    <Content Include="..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md"
+             CopyToOutputDirectory="PreserveNewest" />
+    <!-- MDEdit's own 0BSD licence carries no obligation to ship it — it is included so someone who
+         has only the installed app can still see what they're allowed to do with it. Renamed to
+         .txt on the way out: the repo root keeps the extensionless name GitHub's licence detection
+         expects, while the shipped copy gets an extension Windows can open if anyone finds it. -->
+    <Content Include="..\LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <!-- Running the app from a local build folder marks its own copy of ReleaseNotes.md read-only

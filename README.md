@@ -118,7 +118,15 @@ Note that **Release** builds are Authenticode-signed by an MSBuild target and wi
 signing certificate and network access. Debug builds are unaffected, so build and test normally
 while developing.
 
-## Credits
+## Licence
 
-- [AvalonEdit](https://github.com/icsharpcode/AvalonEdit) by the SharpDevelop team — MIT licence
-- [Tabler Icons](https://tabler.io/icons) — MIT licence, used for the toolbar iconography
+MDEdit is released under the [0BSD licence](LICENSE) — use, copy, modify and distribute it for any
+purpose, with or without fee. No attribution required, no conditions attached.
+
+That applies to MDEdit's own code only. Two third-party components are redistributed with it and
+keep their own (MIT) terms, reproduced in full in [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md),
+which also ships with the installed application:
+
+- [AvalonEdit](https://github.com/icsharpcode/AvalonEdit) by the SharpDevelop team — the text editor
+  control, redistributed as a DLL
+- [Tabler Icons](https://tabler.io/icons) — the toolbar iconography, vendored as path geometry

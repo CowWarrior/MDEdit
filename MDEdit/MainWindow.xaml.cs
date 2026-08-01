@@ -1091,7 +1091,25 @@ public partial class MainWindow : Window
     }
 
     private void MenuAbout_Click(object sender, RoutedEventArgs e)
-        => new AboutWindow { Owner = this }.ShowDialog();
+    {
+        var about = new AboutWindow { Owner = this };
+        about.ShowDialog();
+
+        // The dialog hands back a path instead of opening it — see AboutWindow.RequestedDocumentPath.
+        // From here on this is an ordinary user-initiated Open, matching MenuOpenReleaseNotes_Click:
+        // the unsaved-changes guard applies, it joins Recent Files, and errors surface normally.
+        if (about.RequestedDocumentPath is not string path) return;
+        if (!CheckUnsavedChanges()) return;
+
+        if (!File.Exists(path))
+        {
+            MessageBox.Show("That document could not be found.", "MDEdit",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        OpenFile(path);
+    }
 
     private void MenuRegisterFileAssociations_Click(object sender, RoutedEventArgs e)
     {
