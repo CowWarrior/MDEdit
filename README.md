@@ -73,7 +73,7 @@ Specified and intended for a future release, with no date attached:
   `:shortcode:` equivalents, across the selection or the whole document.
 - **Formatting inside table cells** — bold, links and emoji inside a table will render in WYSIWYG
   mode instead of showing their raw markers.
-- **Improved Markdown conformance** generally improved support for markdown niche features and edge cases.
+- **Improved Markdown conformance** — better support for niche Markdown features and edge cases.
 
 ## Built with
 
