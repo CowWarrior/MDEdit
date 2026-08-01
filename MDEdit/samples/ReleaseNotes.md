@@ -49,6 +49,22 @@ update, so you always know what's new.
 
 Not tracked.
 
+## Known issues
+
+Things that do not work correctly today, listed so they do not come as a surprise:
+
+- Switching the theme while the Find panel is open closes the panel, and it cannot be reopened. Restarting MDEdit restores it.
+- A backslash does not escape formatting: `\*text\*` still renders as italic instead of showing the asterisks.
+- An underscore inside a word starts italics, so a name like `snake_case_name` renders partly italicised. Use `*` for emphasis to avoid this.
+- Emoji display in black and white rather than colour. This is a limitation of the Windows text engine MDEdit draws with, not a setting.
+
+## Planned
+
+Specified and intended for a future release, with no date attached:
+
+- Convert emoji to shortcodes — a command to replace literal emoji characters with their `:shortcode:` equivalents, across your selection or the whole document.
+- Formatting inside table cells — bold, links and emoji inside a table will render in WYSIWYG mode instead of showing their raw markers.
+
 ---
 
 *Feel free to edit this document — it is only an example, and the installed copy is read-only, so
