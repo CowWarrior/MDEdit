@@ -53,17 +53,25 @@ internal sealed class AppSettings
 internal sealed class EditorPreferences
 {
     /// <summary>
-    /// Schema version of the <c>settings.json</c> this came from. Absent in a pre-per-element file,
-    /// so it deserializes as 0 and drives the one-time fold into
-    /// <see cref="Wysiwyg"/>/<see cref="Source"/>.
+    /// Schema version of the <c>settings.json</c> this came from — 0 for a file written before the
+    /// stamp existed, <see cref="CurrentVersion"/> for anything this build has saved.
     /// </summary>
     /// <remarks>
+    /// <b>Nothing reads this today, and it is kept deliberately.</b> The one-time fold of a
+    /// pre-per-element file was removed once the affected installs stopped being worth ~500 lines
+    /// (an unrecognized property is ignored by System.Text.Json, so such a file loads and lands on
+    /// current defaults). What the stamp still buys is the ability to tell, later, what schema a
+    /// file was written with — which any future migration or defaults-revision mechanism needs and
+    /// cannot reconstruct after the fact. Dropping it would leave every file written from now on
+    /// unidentifiable.
+    /// <para>
     /// <b>Deliberately has no initializer, and is stamped by <see cref="SettingsService.Save"/>
     /// rather than by the constructor.</b> System.Text.Json leaves a property initializer in place
     /// when the property is absent from the JSON, so initializing this to
-    /// <see cref="CurrentVersion"/> would make every legacy file claim to be already migrated and
-    /// silently skip the fold. Stamping on write is also what the value honestly means — the schema
-    /// the file was written with, not the schema some in-memory object believes in.
+    /// <see cref="CurrentVersion"/> would make an unstamped file claim to be current — exactly the
+    /// distinction the field exists to preserve. Stamping on write is also what the value honestly
+    /// means: the schema the file was written with, not the schema some in-memory object believes in.
+    /// </para>
     /// </remarks>
     public int Version { get; set; }
 
@@ -82,216 +90,6 @@ internal sealed class EditorPreferences
     /// </remarks>
     public ModeStyles Wysiwyg { get; set; } = ModeStyles.WysiwygDefaults();
     public ModeStyles Source { get; set; } = ModeStyles.SourceDefaults();
-
-    // ── Legacy, pre-Version-2 flat properties ────────────────────────────────────────────────
-    // MIGRATION INPUT ONLY — nothing renders from these any more. They exist so a settings.json
-    // written before per-element styling can still be read; Migrate folds each non-null value into
-    // both mode sets and then nulls it, and the JsonIgnore below drops it from the file on the next
-    // save. All null on a fresh object, so a new install folds nothing.
-    //
-    // Do not add to this section, and do not read from it — new settings belong in ElementStyle.
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? WysiwygFontFamily { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeFontFamily { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HeadingColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HeadingColorDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? BlockquoteColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? BlockquoteColorDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HorizontalRuleColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HorizontalRuleColorDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HighlightBackgroundLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? HighlightBackgroundDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? StrikethroughColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? StrikethroughColorDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeForegroundLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeForegroundDark { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeBackgroundLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CodeBackgroundDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LinkColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? LinkColorDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ListMarkerColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? ListMarkerColorDark { get; set; }
-
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CommentColorLight { get; set; }
-    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] public string? CommentColorDark { get; set; }
-
-    // ── Migration ────────────────────────────────────────────────────────────────────────────
-
-    /// <summary>
-    /// Folds a pre-Version-2 <c>settings.json</c>'s flat, mode-independent properties into
-    /// <see cref="Wysiwyg"/> and <see cref="Source"/>. No-op once <see cref="Version"/> has caught
-    /// up, so it is safe (and idempotent) to call on every load.
-    /// </summary>
-    /// <remarks>
-    /// Colours were mode-independent before this version, so each one is written into <b>both</b>
-    /// mode sets — anything else would silently discard the user's choice in one editor mode.
-    /// <para>
-    /// Fonts are not symmetric, because the two legacy font settings never were:
-    /// <c>WysiwygFontFamily</c> was the WYSIWYG base, while <c>CodeFontFamily</c> did double duty as
-    /// the source-mode base font <i>and</i> as the family pinned on code spans so they stayed
-    /// fixed-width once WYSIWYG flipped the base. Both roles are reproduced below. Notably the
-    /// source set's code elements get <b>no</b> family: they inherit the mono base, which is what
-    /// keeps source mode all-mono.
-    /// </para>
-    /// <para>
-    /// A file already at the current version is left completely alone, so per-element
-    /// customizations are never stomped by the legacy defaults sitting beside them.
-    /// </para>
-    /// </remarks>
-    public void Migrate()
-    {
-        if (Version >= CurrentVersion) return;
-
-        ApplyLegacyColorsTo(Wysiwyg);
-        ApplyLegacyColorsTo(Source);
-
-        if (Customized(WysiwygFontFamily, V1.ProseFont) is string proseFont)
-            Wysiwyg.BaseFontFamily = proseFont;
-
-        if (Customized(CodeFontFamily, V1.CodeFont) is string codeFont)
-        {
-            Source.BaseFontFamily = codeFont;
-            Style(Wysiwyg, StyledElements.InlineCode).FontFamily = codeFont;
-            Style(Wysiwyg, StyledElements.CodeBlock).FontFamily = codeFont;
-        }
-
-        ClearLegacy();
-        Version = CurrentVersion;
-    }
-
-    /// <summary>
-    /// The legacy value if the user actually changed it, otherwise null — meaning "leave the
-    /// current default alone".
-    /// </summary>
-    /// <remarks>
-    /// Without this, migration carries every value forward indiscriminately, which sounds
-    /// conservative and is not: a default changed in a later release would then reach fresh installs
-    /// only, leaving upgrading users pinned to the old look with nothing in the UI to explain why.
-    /// The code palette is exactly that case. The cost is that someone who deliberately set a colour
-    /// to what happened to be the old default loses that choice — a far smaller harm, and
-    /// indistinguishable from never having touched it.
-    /// </remarks>
-    private static string? Customized(string? value, string v1Default)
-        => value is null || string.Equals(value, v1Default, StringComparison.OrdinalIgnoreCase) ? null : value;
-
-    // The pre-per-element defaults, kept solely as the comparison baseline above. Frozen by
-    // definition — these are what shipped, not what ships now, so they must never be "corrected" to
-    // match current defaults.
-    private static class V1
-    {
-        public const string ProseFont = "Arial";
-        public const string CodeFont = "Cascadia Code, Consolas, Courier New";
-        public const string HeadingLight = "#0057AE";
-        public const string HeadingDark = "#58A6FF";
-        public const string BlockquoteLight = "#6A737D";
-        public const string BlockquoteDark = "#8B949E";
-        public const string HorizontalRuleLight = "#BBBBBB";
-        public const string HorizontalRuleDark = "#484F58";
-        public const string HighlightLight = "#F5E7A3";
-        public const string HighlightDark = "#6A5E2E";
-        public const string StrikethroughLight = "#888888";
-        public const string StrikethroughDark = "#8B949E";
-        public const string CodeForegroundLight = "#C7254E";
-        public const string CodeForegroundDark = "#FF7B72";
-        public const string CodeBackgroundLight = "#FEF2F2";
-        public const string CodeBackgroundDark = "#30363D";
-        public const string LinkLight = "#0065BD";
-        public const string LinkDark = "#58A6FF";
-        public const string ListMarkerLight = "#005CC5";
-        public const string ListMarkerDark = "#79C0FF";
-        public const string CommentLight = "#888888";
-        public const string CommentDark = "#8B949E";
-    }
-
-    // Nulled once folded so the next Save drops them from the file (see the JsonIgnore above).
-    // Leaving them populated would be worse than untidy: a future bug that re-ran the fold would
-    // silently overwrite genuine per-element choices with these stale values.
-    private void ClearLegacy()
-    {
-        WysiwygFontFamily = CodeFontFamily = null;
-        HeadingColorLight = HeadingColorDark = null;
-        BlockquoteColorLight = BlockquoteColorDark = null;
-        HorizontalRuleColorLight = HorizontalRuleColorDark = null;
-        HighlightBackgroundLight = HighlightBackgroundDark = null;
-        StrikethroughColorLight = StrikethroughColorDark = null;
-        CodeForegroundLight = CodeForegroundDark = null;
-        CodeBackgroundLight = CodeBackgroundDark = null;
-        LinkColorLight = LinkColorDark = null;
-        ListMarkerColorLight = ListMarkerColorDark = null;
-        CommentColorLight = CommentColorDark = null;
-    }
-
-    private void ApplyLegacyColorsTo(ModeStyles mode)
-    {
-        // Every value goes through Customized, so an untouched legacy file changes nothing here and
-        // lands on the current defaults — see that method for why carrying everything over would be
-        // the worse default.
-        for (int level = 1; level <= 6; level++)
-            SetForeground(mode, StyledElements.Heading(level),
-                Customized(HeadingColorLight, V1.HeadingLight), Customized(HeadingColorDark, V1.HeadingDark));
-
-        SetForeground(mode, StyledElements.Blockquote,
-            Customized(BlockquoteColorLight, V1.BlockquoteLight), Customized(BlockquoteColorDark, V1.BlockquoteDark));
-        SetForeground(mode, StyledElements.HorizontalRule,
-            Customized(HorizontalRuleColorLight, V1.HorizontalRuleLight), Customized(HorizontalRuleColorDark, V1.HorizontalRuleDark));
-        SetForeground(mode, StyledElements.Strikethrough,
-            Customized(StrikethroughColorLight, V1.StrikethroughLight), Customized(StrikethroughColorDark, V1.StrikethroughDark));
-        SetForeground(mode, StyledElements.Link,
-            Customized(LinkColorLight, V1.LinkLight), Customized(LinkColorDark, V1.LinkDark));
-        SetForeground(mode, StyledElements.ListMarker,
-            Customized(ListMarkerColorLight, V1.ListMarkerLight), Customized(ListMarkerColorDark, V1.ListMarkerDark));
-        SetForeground(mode, StyledElements.Comment,
-            Customized(CommentColorLight, V1.CommentLight), Customized(CommentColorDark, V1.CommentDark));
-
-        SetBackground(mode, StyledElements.Highlight,
-            Customized(HighlightBackgroundLight, V1.HighlightLight), Customized(HighlightBackgroundDark, V1.HighlightDark));
-
-        // Inline code and fenced blocks shared one palette; they become independently editable, but
-        // migrate identically so a customized palette stays consistent across both.
-        foreach (var key in new[] { StyledElements.InlineCode, StyledElements.CodeBlock })
-        {
-            SetForeground(mode, key,
-                Customized(CodeForegroundLight, V1.CodeForegroundLight), Customized(CodeForegroundDark, V1.CodeForegroundDark));
-            SetBackground(mode, key,
-                Customized(CodeBackgroundLight, V1.CodeBackgroundLight), Customized(CodeBackgroundDark, V1.CodeBackgroundDark));
-        }
-    }
-
-    // Null halves are left alone rather than written through: a hand-edited file may carry only one
-    // of a pair, and overwriting the other with null would turn a colour the user never touched into
-    // an inherit.
-    private static void SetForeground(ModeStyles mode, string key, string? light, string? dark)
-    {
-        if (light is null && dark is null) return;
-        var style = Style(mode, key);
-        if (light is not null) style.ForegroundLight = light;
-        if (dark is not null) style.ForegroundDark = dark;
-    }
-
-    private static void SetBackground(ModeStyles mode, string key, string? light, string? dark)
-    {
-        if (light is null && dark is null) return;
-        var style = Style(mode, key);
-        if (light is not null) style.BackgroundLight = light;
-        if (dark is not null) style.BackgroundDark = dark;
-    }
-
-    // Creates the entry when absent rather than assuming the defaults are intact: settings.json is
-    // hand-editable, and a missing key here would otherwise drop a migrated colour on the floor.
-    private static ElementStyle Style(ModeStyles mode, string key)
-    {
-        if (!mode.Elements.TryGetValue(key, out var style))
-            mode.Elements[key] = style = new ElementStyle();
-        return style;
-    }
 }
 
 /// <summary>
@@ -497,8 +295,7 @@ internal sealed class ModeStyles
     // A deliberate terminal look, chosen rather than inherited: green on black in light theme,
     // amber on the dark surface in dark theme. These are NOT the pre-§6 values (#C7254E on #FEF2F2
     // / #FF7B72), so they are the one place the "unmodified install renders identically" bar is
-    // knowingly given up — which is exactly why Migrate now carries over only values the user
-    // actually changed, so an upgrading install lands on these too.
+    // knowingly given up — an upgrading install lands on these too.
     private static ElementStyle CodeColors() => new()
     {
         ForegroundLight = "#00FF33",
@@ -619,21 +416,24 @@ internal static class SettingsService
     }
 
     /// <summary>
-    /// Parses settings JSON and brings it up to the current schema. Split out from
-    /// <see cref="Load"/>, which owns the fixed file path, so the migration is reachable from tests
-    /// without touching <c>%AppData%</c>.
+    /// Parses settings JSON into a usable <see cref="AppSettings"/>. Split out from
+    /// <see cref="Load"/>, which owns the fixed file path, so this is reachable from tests without
+    /// touching <c>%AppData%</c>.
     /// </summary>
+    /// <remarks>
+    /// A file written before per-element styling needs no conversion: its flat properties are simply
+    /// unrecognized, which System.Text.Json ignores, so it loads and lands on current defaults. That
+    /// is the whole recovery story now — see <see cref="EditorPreferences.Version"/>.
+    /// </remarks>
     internal static AppSettings Deserialize(string json)
     {
         var settings = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
 
         // An explicit "editorPreferences": null in a hand-edited file deserializes as null despite
-        // the non-nullable declaration, and would take the migration below down with an NRE — which
-        // Load's catch filter doesn't cover, so it would fail startup rather than fall back.
-        if (settings.EditorPreferences is null)
-            settings.EditorPreferences = new EditorPreferences();
+        // the non-nullable declaration, and everything downstream would hit an NRE — which Load's
+        // catch filter doesn't cover, so it would fail startup rather than fall back to defaults.
+        settings.EditorPreferences ??= new EditorPreferences();
 
-        settings.EditorPreferences.Migrate();
         return settings;
     }
 

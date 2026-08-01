@@ -11,28 +11,13 @@ namespace MDEdit.Tests;
 public class EditorPreferencesTests
 {
     [Fact]
-    public void LegacyProperties_AreNullOnAFreshObject()
-    {
-        // They are migration input only — a settings.json written before per-element styling. A
-        // fresh object must have nothing to fold, or every new install would run the migration and
-        // overwrite its own defaults. What they used to hold is now pinned by
-        // SourceDefaults_MatchPreviouslyHardcodedValues, in the one place it now lives.
-        var prefs = new EditorPreferences();
-
-        Assert.Null(prefs.WysiwygFontFamily);
-        Assert.Null(prefs.CodeFontFamily);
-        Assert.Null(prefs.HeadingColorLight);
-        Assert.Null(prefs.CodeBackgroundDark);
-        Assert.Null(prefs.CommentColorDark);
-    }
-
-    [Fact]
     public void Version_IsUnstampedUntilSaved()
     {
         // Version records the schema a settings.json was WRITTEN with, and SettingsService.Save
         // stamps it. It deliberately has no initializer: System.Text.Json leaves an initializer in
-        // place for a property absent from the JSON, so defaulting this to CurrentVersion would
-        // make every pre-per-element file claim to be migrated already and skip the fold entirely.
+        // place for a property absent from the JSON, so defaulting this to CurrentVersion would make
+        // an unstamped file claim to be current — destroying the one distinction the field exists to
+        // preserve for a future migration.
         Assert.Equal(2, EditorPreferences.CurrentVersion);
         Assert.Equal(0, new EditorPreferences().Version);
     }
