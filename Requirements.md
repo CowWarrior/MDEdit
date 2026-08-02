@@ -5,6 +5,10 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 ## 1. Document Management
 
 - The user can create a new empty document at any time.
+- The user can open a second editor window from the File menu, so more than one document can be
+  worked on at once. Each window is independent: its own document, its own unsaved-changes prompt,
+  and closing one leaves the others open. Today the only way to get a second window is to
+  double-click a file in Explorer, which requires a file to already exist *(planned)*
 - The user can open an existing Markdown file (`.md`, `.markdown`) or plain text file (`.txt`) from disk.
 - The user can save the current document to its existing location.
 - The user can save the current document to a new location and file type (Save As), choosing between Markdown and plain text formats.
@@ -24,6 +28,11 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 - The user can type and edit text freely regardless of file format.
 - The editor supports standard text operations: undo, redo, cut, copy, paste, and select all.
 - The editor supports a find/search function within the current document, reachable via Ctrl+F or Edit → Find.
+- The user can replace text in the current document, reachable via Ctrl+H or Edit → Replace. Replace
+  works from the same panel as find and shares its match options, so switching between searching and
+  replacing does not mean re-entering the search term. The user can replace the current match and
+  move to the next, or replace every match at once; replacing all is a single undo step, so one
+  Ctrl+Z restores the document rather than unwinding the replacements one at a time *(planned)*
 
 ## 3. Markdown Formatting
 
@@ -141,6 +150,13 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - The user can choose the application theme: Light, Dark, or System (follows the Windows app theme, including live OS theme changes).
 - The user can choose how the status bar's character count charges a line break: as 0, 1, or 2
   characters (§9).
+- The user can zoom the editor text in, out, and back to normal, from the View menu and with the
+  usual shortcuts (Ctrl+= , Ctrl+- , Ctrl+0) or Ctrl and the mouse wheel. Zoom scales everything
+  proportionally — body text, headings, code and drawn elements alike — so the relative sizes set in
+  Preferences are preserved at every level. **Zoom is a view setting and never rewrites those
+  Preferences values**: returning to normal restores exactly the configured appearance, so zooming
+  cannot quietly become a permanent change to the user's styling. The level persists between
+  sessions *(planned)*
 - The user can customize the editor's appearance from a Preferences window, opened via View →
   Preferences. Changes apply immediately, with no separate Apply step.
   - **WYSIWYG mode and source mode are styled independently**, on one tab each. The same document is
@@ -258,3 +274,59 @@ edits, rather than the file as last written to disk.
 - If the application was launched to open a specific file — from a file association, a "send to", or a
   command-line argument — that file takes precedence and the release notes are not shown. The user's
   intent to open a particular document is never overridden.
+
+## 11. Markdown Conformance
+
+The constructs MDEdit understands are those listed in the sections above. Several standard CommonMark
+and GFM constructs beyond them are not recognised, and a small number of ordinary text patterns are
+rendered incorrectly. Closing these gaps is *(planned)*, in the order below.
+
+**Text that renders wrongly today comes first, ahead of syntax that is merely unsupported.** An
+unrecognised construct displays as its literal source, which is harmless and obvious; a misrendered
+one silently changes the meaning of what the user wrote, and looks like a defect in the editor.
+
+- A backslash escapes the character after it, so `\*not emphasis\*` displays the asterisks literally
+  instead of rendering as italic. Escaping is currently absent everywhere.
+- An underscore inside a word does not open or close emphasis, so identifiers such as
+  `snake_case_name` display unchanged. This is CommonMark's flanking rule, which exists for this case.
+
+The following standard constructs are then recognised as they are elsewhere:
+
+- Setext headings — a line of text underlined with `===` or `---`.
+- Indented code blocks — four leading spaces — alongside the fenced form already supported.
+- Autolinks (`<https://example.com>`, `<user@example.com>`) and bare URLs written without any markup.
+- The shortcut (`[text]`) and collapsed (`[text][]`) forms of reference links; the full `[text][ref]`
+  form is already recognised. Reference definitions (`[ref]: url "title"`) stop appearing as ordinary
+  body text, as they do in any renderer.
+- Closing sequences on ATX headings, so `### Heading ###` renders without the trailing hashes.
+
+Two boundaries are deliberate. Emphasis spanning a line break is **out of scope** here: it is an
+architectural change to how the editor models spans, not a conformance fix, and is decided
+separately. Constructs that are extensions rather than part of CommonMark or GFM — footnotes,
+definition lists, custom heading IDs — are also out of scope, so that this requirement stays finite
+and shippable rather than becoming a standing obligation to match every dialect.
+
+## Potential future directions
+
+Ideas recorded for consideration. **These are explicitly not commitments**, and deliberately do not
+appear in the user-facing "Planned" lists in `README.md` and `MDEdit/samples/ReleaseNotes.md` — those
+carry only items marked *(planned)* in the numbered sections above. An entry leaves this section by
+being decided and promoted to a numbered requirement, not by someone starting work on it.
+
+### BBCode support
+
+Support for BBCode (`[b]`, `[url]`, `[quote]` and similar), the markup used by many forum and bulletin
+board platforms. **The scope is undecided, and the two candidate answers are materially different
+products:**
+
+- **Import and export only.** BBCode becomes a format MDEdit converts to and from, while the editor
+  itself stays Markdown-only. This sits comfortably with what MDEdit already is: Markdown remains the
+  single source of truth, and conversion happens at the file boundary rather than in the editor.
+- **BBCode as a first-class markup.** The editor would highlight, live-preview and format BBCode the
+  way it does Markdown today. This is the far larger change, and it would make MDEdit a general markup
+  editor rather than a Markdown editor — a change of product identity, not merely of feature set. It
+  would also touch nearly every part of the editing layer, all of which is Markdown-specific by
+  construction.
+
+Considered a candidate for a 2.x release rather than the current line, chiefly because the second
+option is a change of direction rather than an addition to the existing one.

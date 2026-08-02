@@ -71,9 +71,15 @@ Specified and intended for a future release, with no date attached:
 
 - **Convert emoji to shortcodes** — a command to replace literal emoji characters with their
   `:shortcode:` equivalents, across the selection or the whole document.
+- **Find and replace** — replace matches one at a time or all at once, from the same panel as Find,
+  with Ctrl+H. Replacing all counts as a single undo.
 - **Formatting inside table cells** — bold, links and emoji inside a table will render in WYSIWYG
   mode instead of showing their raw markers.
 - **Improved Markdown conformance** — better support for niche Markdown features and edge cases.
+- **New window** — open a second editor window from the File menu, so more than one document can be
+  edited at once without going through Explorer.
+- **Zoom** — scale the editor text up or down from the View menu, with Ctrl+= / Ctrl+- / Ctrl+0 or
+  Ctrl and the mouse wheel.
 
 ## Built with
 
