@@ -7,8 +7,9 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 - The user can create a new empty document at any time.
 - The user can open a second editor window from the File menu, so more than one document can be
   worked on at once. Each window is independent: its own document, its own unsaved-changes prompt,
-  and closing one leaves the others open. Today the only way to get a second window is to
-  double-click a file in Explorer, which requires a file to already exist *(planned)*
+  and closing one leaves the others open. Independence extends to settings — each window reads them
+  when it opens, so a change made in one window does not reach the others until they are reopened,
+  and the last window to save a setting is the one whose choice persists.
 - The user can open an existing Markdown file (`.md`, `.markdown`) or plain text file (`.txt`) from disk.
 - The user can save the current document to its existing location.
 - The user can save the current document to a new location and file type (Save As), choosing between Markdown and plain text formats.
@@ -191,6 +192,7 @@ common word processors, its established shortcut is used in preference to invent
 | Action | Shortcut |
 |---|---|
 | New | Ctrl+N |
+| New Window | Ctrl+Shift+N |
 | Open | Ctrl+O |
 | Save | Ctrl+S |
 | Save As | Ctrl+Shift+S |

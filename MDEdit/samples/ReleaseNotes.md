@@ -76,7 +76,6 @@ Specified and intended for a future release, with no date attached:
 - Find and replace — replace matches one at a time or all at once, from the same panel you search in, with Ctrl+H. Replacing everything counts as a single undo, so one Ctrl+Z puts it all back.
 - Formatting inside table cells — bold, links and emoji inside a table will render in WYSIWYG mode instead of showing their raw markers.
 - Improved Markdown conformance — better handling of less common Markdown syntax and edge cases.
-- New window — open a second editor window from the File menu, so you can work on two documents at once without going through Explorer.
 - Zoom — make the text larger or smaller from the View menu, with Ctrl+= and Ctrl+-, or by holding Ctrl and scrolling the mouse wheel.
 
 ---

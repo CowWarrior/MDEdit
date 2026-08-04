@@ -61,6 +61,7 @@
             </Menu.Resources>
             <MenuItem Header="_File">
                 <MenuItem Header="_New"         Command="New"                              InputGestureText="Ctrl+N"/>
+                <MenuItem Header="New _Window"  Command="{x:Static local:MainWindow.NewWindowCommand}" InputGestureText="Ctrl+Shift+N"/>
                 <MenuItem Header="_Open…"        Command="Open"                             InputGestureText="Ctrl+O"/>
                 <Separator/>
                 <MenuItem Header="_Save"         Command="Save"                             InputGestureText="Ctrl+S"/>

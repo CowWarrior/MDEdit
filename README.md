@@ -76,8 +76,6 @@ Specified and intended for a future release, with no date attached:
 - **Formatting inside table cells** — bold, links and emoji inside a table will render in WYSIWYG
   mode instead of showing their raw markers.
 - **Improved Markdown conformance** — better support for niche Markdown features and edge cases.
-- **New window** — open a second editor window from the File menu, so more than one document can be
-  edited at once without going through Explorer.
 - **Zoom** — scale the editor text up or down from the View menu, with Ctrl+= / Ctrl+- / Ctrl+0 or
   Ctrl and the mouse wheel.
 

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -19,6 +20,15 @@ namespace MDEdit;
 public partial class MainWindow : Window
 {
     // ── Custom routed commands ────────────────────────────────────────────
+    // Requirements.md §1/§7. Ctrl+Shift+N follows VS Code's New Window. Nothing needs releasing for
+    // it: AvalonEdit's own gestures are Ctrl+D/I/U, Ctrl+Shift+U and Insert (see
+    // ReleaseConflictingEditorGestures), and while WPF's EditingCommands.ToggleNumbering does carry
+    // Ctrl+Shift+N, its gesture is registered as a class input binding on TextBoxBase — which
+    // AvalonEdit's TextArea is not — so it never resolves against this editor.
+    public static readonly RoutedUICommand NewWindowCommand = new(
+        "New Window", "NewWindow", typeof(MainWindow),
+        [new KeyGesture(Key.N, ModifierKeys.Control | ModifierKeys.Shift)]);
+
     public static readonly RoutedUICommand SaveAsCommand = new(
         "Save As", "SaveAs", typeof(MainWindow),
         [new KeyGesture(Key.S, ModifierKeys.Control | ModifierKeys.Shift)]);
@@ -277,6 +287,8 @@ public partial class MainWindow : Window
     {
         CommandBindings.Add(new CommandBinding(ApplicationCommands.New,
             (_, _) => NewDocument(), AlwaysCanExecute));
+        CommandBindings.Add(new CommandBinding(NewWindowCommand,
+            (_, _) => NewWindow(), AlwaysCanExecute));
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Open,
             (_, _) => OpenDocument(), AlwaysCanExecute));
         CommandBindings.Add(new CommandBinding(ApplicationCommands.Save,
@@ -356,6 +368,51 @@ public partial class MainWindow : Window
         ResetLivePreviewCaretTracking();
         UpdateTitle();
         UpdateStatusBar();
+    }
+
+    // Requirements.md §1: a second editor window, deliberately a second *process* rather than
+    // another Window inside this one. That is the mechanism MDEdit already ships — double-clicking
+    // an associated file runs "MDEdit.exe" "%1" (see FileAssociationService) — so it is proven here,
+    // and it makes each window independent for free: its own document, its own unsaved-changes
+    // prompt, its own AppSettings, and closing one leaves the others alone.
+    //
+    // An in-process Window was rejected because it would split the theme in half. ThemeService.Apply
+    // sets Application.ThemeMode and swaps the app's merged dictionaries *process-wide*, while the
+    // rest of ApplyTheme — the colorizer's IsDark, the active highlighting definition, the caret
+    // brush, the Highlight swatch — is per-window. Switching theme in one window would therefore
+    // re-chrome the other's menus and toolbar while leaving its document text on the old palette.
+    // Fixing that properly means one shared AppSettings plus a changed-broadcast every window
+    // subscribes to, which is a settings refactor rather than this feature.
+    //
+    // The accepted cost of separate processes: settings.json stays last-writer-wins between
+    // windows, so a View or Preferences change in one window can be overwritten by the other's next
+    // save and does not reach it until reopened. That is not a regression — it is exactly how two
+    // MDEdits already behave today when a second one is launched from Explorer.
+    private void NewWindow()
+    {
+        // The same path source FileAssociationService registers. Under ClickOnce this resolves to
+        // the real exe inside the current version's folder, so launching it directly is what
+        // Explorer already does; it skips ClickOnce's update check, which is right for a second
+        // window — this process made that check when it started.
+        if (Environment.ProcessPath is not string exePath)
+        {
+            MessageBox.Show("Could not determine where MDEdit is running from, so a new window could not be opened.",
+                "MDEdit", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        try
+        {
+            // UseShellExecute = false runs the executable directly instead of routing it through the
+            // shell. Disposing the returned Process only releases this process's handle to it — the
+            // new window goes on running independently, and outlives this one.
+            Process.Start(new ProcessStartInfo(exePath) { UseShellExecute = false })?.Dispose();
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not open a new window:\n\n{ex.Message}",
+                "MDEdit", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void OpenDocument()
