@@ -62,6 +62,9 @@ MDEdit emits literal `<u>` tags, relying on Markdown's pass-through of inline HT
   asterisks.
 - An underscore inside a word starts italics, so a name like `snake_case_name` renders partly
   italicised. Use `*` for emphasis to avoid this.
+- In WYSIWYG mode, moving the caret onto a blockquote reveals its `>` marker as intended, but the
+  quote's vertical accent bar does not hide with it and can overlap the marker. Cosmetic only, and
+  it corrects itself as soon as the caret leaves the line.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text
   engine MDEdit draws with, not a setting.
 
