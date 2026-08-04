@@ -12,6 +12,28 @@ work — see the `publish-clickonce` skill. Content also isn't padding: it's mos
 alternatives, and design rationale that reading the code cannot reconstruct, which is exactly what
 maintenance work needs.
 
+**Where to look, by task** — the sections below are long, so start here rather than reading top to
+bottom:
+
+| Doing this | Read |
+| --- | --- |
+| Adding a Markdown construct to live preview | **Live-preview constructs** (end of Architecture) — the reveal-scope/replacement table and the 8-step checklist |
+| Changing a colour, font, weight or size | the `StyledElements` / `StyleResolver` / `MarkdownHighlighting` bullets under `Editing/`, plus `Resources/Markdown.xshd` |
+| Adding a formatting command | the line-based-commands bullets under **Project**, `MarkdownFormatter`, and `ReleaseConflictingEditorGestures` before any new Ctrl gesture |
+| Touching Find / the search panel | `Resources/SearchPanelStyle.xaml` and the **Find (Ctrl+F)** bullet — three stacked bugs documented there, one still open |
+| Adding a setting | `Services/SettingsService.cs` — note the top-level-vs-`EditorPreferences` rule and why there is no migration |
+| Publishing a release | the `publish-clickonce` skill (load it; don't work from memory) |
+| Shipping any user-visible change | `MDEdit/samples/ReleaseNotes.md` **and** `README.md` — known issues and planned lists are maintained in both |
+| Adding a dependency or vendored asset | `THIRD-PARTY-NOTICES.md` in the same change |
+| Writing a test | the test-file table under **Build & Run** — one class per detection area, add to the matching file |
+
+`Requirements.md` section numbers are cited throughout as `§N`: **§1** Document Management ·
+**§2** Editing · **§3** Markdown Formatting · **§4** Syntax Highlighting · **§5** WYSIWYG Mode ·
+**§6** View Options · **§7** Keyboard Shortcuts · **§8** Toolbar · **§9** Status Bar ·
+**§10** Sample Documents · **§11** Markdown Conformance. Its unnumbered *Potential future
+directions* section is explicitly not a commitment — see the three-category rule under
+`ReleaseNotes.md` below.
+
 ## Project
 
 MDEdit is a WPF desktop Markdown editor (.NET, `net10.0-windows`) built around the AvalonEdit text editor control. See `Requirements.md` for the full product spec (document management, editing, Markdown formatting commands, syntax highlighting, keyboard shortcuts, toolbar, status bar).
@@ -57,6 +79,8 @@ dotnet run --project MDEdit/MDEdit.csproj
 dotnet test MDEdit.slnx
 dotnet test MDEdit.slnx --filter "FullyQualifiedName~MarkdownFormatterTests"   # single class; ~MethodName works too
 ```
+
+**AvalonEdit is pinned at `6.3.0.90`** (the one `PackageReference` in `MDEdit.csproj`), and its source is the authority for several behaviors documented below — `HighlightingColorizer.ApplyColorToElement`'s inherit semantics, `TextView`'s infinite measure constraint for inline objects, `SearchPanel.Open()`'s adorner-layer timing. Those citations name **tag `v6.3.1`**, which is not the same as the pinned package version — the two have never been reconciled, so treat a citation as "checked against v6.3.1 source" rather than "checked against the assembly we ship", and re-verify if the package is ever bumped.
 
 `MDEdit.Tests` (xUnit, `net10.0-windows` — it needs the WPF-targeted AvalonEdit assembly) covers the logic pulled out of `MainWindow.xaml.cs` into `MDEdit/Editing/` specifically so it's testable without a running window: `MarkdownFormatter` (formatting commands), `MarkdownSyntax` (line-construct detection), `RecentFiles` (MRU list logic), and `StatusFormatter` (status-bar number formatting) — plus `Markdown.xshd`, loaded through AvalonEdit's real `HighlightingLoader`. `MDEdit.csproj` grants it `InternalsVisibleTo` so those `internal` classes are testable directly. Running `dotnet test` is fine to do yourself; do not launch/drive the actual GUI app to verify behavior — that's for the user to do and report back.
 
