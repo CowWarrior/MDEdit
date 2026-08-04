@@ -20,7 +20,11 @@ internal static class ListMarkerStyling
     /// Starts from the editor's own text run properties and applies only what the element actually
     /// overrides, so an unset style renders exactly as it did before per-element styling existed.
     /// </summary>
-    public static TextBlock CreateMarkerBlock(string text, ITextRunConstructionContext context, ResolvedStyle style)
+    /// <param name="zoom">
+    /// Editor zoom (Requirements.md §6). Only the margin needs it — the font size already follows
+    /// zoom through <see cref="ResolvedStyle.EmSize"/> and the editor's own run properties.
+    /// </param>
+    public static TextBlock CreateMarkerBlock(string text, ITextRunConstructionContext context, ResolvedStyle style, double zoom)
     {
         var props = context.GlobalTextRunProperties;
         var typeface = props.Typeface;
@@ -37,7 +41,7 @@ internal static class ListMarkerStyling
             TextDecorations = style.Decorations,
             // Matches BlockquoteMarkerElementGenerator's indent so list items sit at the same pixel
             // depth as blockquote content.
-            Margin      = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel, 0, 0, 0),
+            Margin      = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel * zoom, 0, 0, 0),
         };
     }
 }

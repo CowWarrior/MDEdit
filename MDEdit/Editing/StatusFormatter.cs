@@ -55,4 +55,20 @@ internal static class StatusFormatter
         provider ??= CultureInfo.CurrentCulture;
         return $"{count.ToString("N0", provider)} selected";
     }
+
+    /// <summary>
+    /// "100%", "75%", "500%" — the editor zoom level (Requirements.md §6), taking the multiplier that
+    /// <c>AppSettings.ZoomLevel</c> stores.
+    /// </summary>
+    /// <remarks>
+    /// Rounds to a whole percent rather than showing a fraction: the ladder moves in whole percents,
+    /// so a decimal here could only ever come from a hand-edited settings file, and "72.5%" reads as
+    /// a bug rather than as fidelity.
+    /// </remarks>
+    public static string FormatZoom(double level, IFormatProvider? provider = null)
+    {
+        provider ??= CultureInfo.CurrentCulture;
+        if (!double.IsFinite(level)) level = 1.0;
+        return $"{Math.Round(level * 100).ToString("N0", provider)}%";
+    }
 }

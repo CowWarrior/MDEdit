@@ -73,7 +73,8 @@ internal sealed class TableGridRenderer : IBackgroundRenderer
         }
     }
 
-    private static void DrawTable(TextView textView, DrawingContext drawingContext,
+    // Instance rather than static so it can read zoom back off _generator — see the x0 comment.
+    private void DrawTable(TextView textView, DrawingContext drawingContext,
         int runStart, int runEnd, TableLayout layout, Brush lineBrush, Brush headerBrush)
     {
         var visualLines = textView.VisualLines;
@@ -81,7 +82,11 @@ internal sealed class TableGridRenderer : IBackgroundRenderer
         // The grid's left edge matches the row elements' left margin — the shared indent every
         // indented construct uses, read from where it's defined so the drawn lines always sit
         // exactly under the cells. Coordinates are rounded so the 1px lines land on whole pixels.
-        double x0     = Math.Round(BlockquoteMarkerElementGenerator.IndentPerLevel - textView.HorizontalOffset);
+        // Zoom is read back off the generator rather than kept as a second copy here: this class
+        // already holds that reference precisely so the grid and the rows can never disagree, and an
+        // indent mismatch would draw the lines beside the cells instead of under them.
+        double x0     = Math.Round(BlockquoteMarkerElementGenerator.IndentPerLevel * _generator.Zoom
+                                   - textView.HorizontalOffset);
         double width  = layout.TotalWidth;
         double top    = Math.Round(visualLines[runStart].VisualTop - textView.VerticalOffset);
         double bottom = Math.Round(visualLines[runEnd].VisualTop + visualLines[runEnd].Height - textView.VerticalOffset);

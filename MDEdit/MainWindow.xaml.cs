@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Reflection;
 using System.Text;
@@ -6,6 +7,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using System.Xml;
 using ICSharpCode.AvalonEdit;
 using ICSharpCode.AvalonEdit.Highlighting;
@@ -70,6 +72,10 @@ public partial class MainWindow : Window
     private bool _isDirty;
     private int _lastCaretLine = -1;
     private int _lastCaretOffset = -1;
+    // Ctrl+wheel zoom coalescing — see Editor_PreviewMouseWheel. The pending level is what the
+    // readout already shows; the flag keeps a burst of notches to one queued apply.
+    private double? _pendingZoomLevel;
+    private bool _zoomApplyQueued;
     // Indexed [dark ? 1 : 0, wysiwyg ? 1 : 0]. Four rather than the previous two, because
     // per-element styling (Requirements.md §6) differs by editor mode as well as by theme — a
     // heading may be large and proportional in WYSIWYG and plain mono in source. Rebuilt whole by
@@ -165,7 +171,8 @@ public partial class MainWindow : Window
         var p = _settings.EditorPreferences;
         foreach (bool wysiwyg in new[] { false, true })
         {
-            var mode = wysiwyg ? p.Wysiwyg : p.Source;
+            // Scaled, so zoom reaches the compiled definitions too — see ActiveModeStyles.
+            var mode = (wysiwyg ? p.Wysiwyg : p.Source).Scaled(_settings.ZoomLevel);
             foreach (bool dark in new[] { false, true })
                 _markdown[dark ? 1 : 0, wysiwyg ? 1 : 0] = MarkdownHighlighting.Build(mode, dark);
         }
@@ -198,8 +205,23 @@ public partial class MainWindow : Window
         ApplyTheme();
     }
 
+    /// <summary>
+    /// The active editor mode's styling <b>as rendered</b> — the stored preferences with zoom
+    /// applied (Requirements.md §6).
+    /// </summary>
+    /// <remarks>
+    /// Zoom lives here, at the single point every rendering path already reads its styles from, so
+    /// scaling one number reaches all of them: <c>Editor.FontSize</c>, the colorizer, the list-marker
+    /// styles and (via <see cref="LoadSyntaxHighlighting"/>) the four compiled definitions.
+    /// <para>
+    /// <b>PreferencesWindow deliberately does not come through here</b> — it reads
+    /// <c>_settings.EditorPreferences</c> directly, so it keeps editing and displaying the
+    /// <i>configured</i> sizes rather than zoomed ones, which is what makes zoom non-destructive.
+    /// </para>
+    /// </remarks>
     private ModeStyles ActiveModeStyles()
-        => _settings.LivePreview ? _settings.EditorPreferences.Wysiwyg : _settings.EditorPreferences.Source;
+        => (_settings.LivePreview ? _settings.EditorPreferences.Wysiwyg : _settings.EditorPreferences.Source)
+            .Scaled(_settings.ZoomLevel);
 
     /// <summary>
     /// Points everything that styles text from code at the editor mode currently in effect
@@ -353,6 +375,18 @@ public partial class MainWindow : Window
             new RelayCommand(() => InsertHeading(2)), Key.D2, ModifierKeys.Control));
         InputBindings.Add(new KeyBinding(
             new RelayCommand(() => InsertHeading(3)), Key.D3, ModifierKeys.Control));
+
+        // Zoom (Requirements.md §6). Nothing needs releasing for these — AvalonEdit's own gestures
+        // are Ctrl+D/I/U, Ctrl+Shift+U and Insert. Note these are Ctrl WITHOUT Shift: the
+        // Ctrl+Shift+OemMinus/OemPlus pair just above is subscript/superscript, which is a different
+        // gesture and must keep working. The numpad duplicates are registered because a keyboard's
+        // +/-/0 there are distinct keys, and users reach for whichever is nearer.
+        foreach (var key in new[] { Key.OemPlus, Key.Add })
+            InputBindings.Add(new KeyBinding(new RelayCommand(ZoomIn), key, ModifierKeys.Control));
+        foreach (var key in new[] { Key.OemMinus, Key.Subtract })
+            InputBindings.Add(new KeyBinding(new RelayCommand(ZoomOut), key, ModifierKeys.Control));
+        foreach (var key in new[] { Key.D0, Key.NumPad0 })
+            InputBindings.Add(new KeyBinding(new RelayCommand(ZoomReset), key, ModifierKeys.Control));
     }
 
     private static void AlwaysCanExecute(object sender, CanExecuteRoutedEventArgs e) => e.CanExecute = true;
@@ -875,6 +909,22 @@ public partial class MainWindow : Window
         _blockquoteAccentBarRenderer.Enabled = _settings.LivePreview;
         _tableGridRenderer.Enabled           = _settings.LivePreview;
         _horizontalRuleRenderer.Enabled      = _settings.LivePreview;
+
+        // Zoom (Requirements.md §6). Text sizes follow zoom on their own, since everything resolves
+        // from the scaled ModeStyles ActiveModeStyles hands out — but these classes lay out against
+        // fixed pixel constants (the shared blockquote indent, and the image height clamp), so they
+        // have to be told. Pushed here because this method already fans state out to every one of
+        // them. TableGridRenderer is absent on purpose: it reads zoom back off _tableRowGenerator so
+        // the drawn grid and the rows can never disagree.
+        double zoom = _settings.ZoomLevel;
+        _blockquoteMarkerGenerator.Zoom   = zoom;
+        _blockquoteAccentBarRenderer.Zoom = zoom;
+        _bulletListMarkerGenerator.Zoom   = zoom;
+        _numberedListMarkerGenerator.Zoom = zoom;
+        _taskListMarkerGenerator.Zoom     = zoom;
+        _tableRowGenerator.Zoom           = zoom;
+        _imageGenerator.Zoom              = zoom;
+
         ResetLivePreviewCaretTracking();
         MenuEditorModeSource.IsChecked   = !_settings.LivePreview;
         MenuEditorModeWysiwyg.IsChecked  = _settings.LivePreview;
@@ -954,10 +1004,14 @@ public partial class MainWindow : Window
         // settings.json is user-editable, so the persisted list is re-checked rather than trusted.
         _settings.RecentFiles = RecentFiles.Sanitize(_settings.RecentFiles);
         RebuildRecentFilesMenu();
+        // Likewise for the zoom level, and it must be sanitized BEFORE the calls below: they read it
+        // through ActiveModeStyles to size everything they apply.
+        _settings.ZoomLevel = ZoomLevels.Sanitize(_settings.ZoomLevel);
         UpdateLivePreviewState();
         ApplyTheme();
         ApplyLineBreakCharWeight();
         ApplyLoadRemoteImages();
+        ApplyZoom();
     }
 
     // ── Theme ─────────────────────────────────────────────────────────────
@@ -1037,7 +1091,7 @@ public partial class MainWindow : Window
             if (FindSearchPanelPart<System.Windows.Shapes.Path>(name) is { } icon)
                 icon.Stroke = chromeForeground;
         }
-        // SearchPanelFlatButtonStyle's custom template (see SearchPanelStyle.xaml — Fluent's own
+        // ChromeFlatButtonStyle's custom template (see SearchPanelStyle.xaml — Fluent's own
         // default Button template doesn't paint content in the resting state at all, which is why
         // these three need a custom template) reads its chrome from TemplateBinding Background, so
         // it needs a real value pushed here the same way every other part above does.
@@ -1084,6 +1138,107 @@ public partial class MainWindow : Window
     private void MenuLineBreakZero_Click(object sender, RoutedEventArgs e) => SetLineBreakCharWeight(0);
     private void MenuLineBreakOne_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(1);
     private void MenuLineBreakTwo_Click(object sender, RoutedEventArgs e)  => SetLineBreakCharWeight(2);
+
+    // ── Zoom (Requirements.md §6) ─────────────────────────────────────────
+    // Zoom scales the editor's rendered text without touching the sizes Preferences stores — see
+    // ActiveModeStyles and ModeStyles.Scaled for how, and AppSettings.ZoomLevel for why the level
+    // lives at the top of the settings rather than inside EditorPreferences.
+
+    /// <summary>Pushes the current level onto the UI. The Set/Apply split matches
+    /// <see cref="SetLineBreakCharWeight"/>/<see cref="ApplyLineBreakCharWeight"/>.</summary>
+    private void ApplyZoom()
+    {
+        StatusZoom.Text = StatusFormatter.FormatZoom(_settings.ZoomLevel);
+        foreach (var item in MenuZoomPresets.Items.OfType<MenuItem>())
+            item.IsChecked = item.Tag is string tag
+                && double.TryParse(tag, NumberStyles.Float, CultureInfo.InvariantCulture, out double preset)
+                && Math.Abs(preset - _settings.ZoomLevel) < 0.0005;
+    }
+
+    private void SetZoom(double level)
+    {
+        level = ZoomLevels.Sanitize(level);
+        if (Math.Abs(level - _settings.ZoomLevel) < 0.0005) return; // nothing changed; skip the rebuild
+
+        _settings.ZoomLevel = level;
+        SettingsService.Save(_settings);
+        // ApplyEditorPreferences already recompiles the four highlighting definitions, resets
+        // Editor.FontSize from the (now scaled) base, re-pushes the colorizer and marker styles and
+        // redraws — so zoom needs no redraw path of its own.
+        ApplyEditorPreferences();
+        ApplyZoom();
+    }
+
+    private void ZoomIn()    => SetZoom(ZoomLevels.In(_settings.ZoomLevel));
+    private void ZoomOut()   => SetZoom(ZoomLevels.Out(_settings.ZoomLevel));
+    private void ZoomReset() => SetZoom(ZoomLevels.Default);
+
+    private void MenuZoomIn_Click(object sender, RoutedEventArgs e)    => ZoomIn();
+    private void MenuZoomOut_Click(object sender, RoutedEventArgs e)   => ZoomOut();
+    private void MenuZoomReset_Click(object sender, RoutedEventArgs e) => ZoomReset();
+
+    private void BtnZoomIn_Click(object sender, RoutedEventArgs e)  => ZoomIn();
+    private void BtnZoomOut_Click(object sender, RoutedEventArgs e) => ZoomOut();
+
+    // Opening the preset list on a plain left click, which a ContextMenu doesn't do by itself.
+    // PlacementTarget must be set explicitly: a menu opened from code rather than by right-click
+    // has no target of its own, and Placement="Top" would otherwise resolve against the mouse.
+    private void BtnZoomLevel_Click(object sender, RoutedEventArgs e)
+    {
+        MenuZoomPresets.PlacementTarget = BtnZoomLevel;
+        MenuZoomPresets.IsOpen = true;
+    }
+
+    // Tag carries the level as an invariant string — the levels are XAML literals, so they must not
+    // be read back with the current culture's decimal separator.
+    private void MenuZoomPreset_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: string tag }
+            && double.TryParse(tag, NumberStyles.Float, CultureInfo.InvariantCulture, out double level))
+            SetZoom(level);
+
+        // The checkmarks are owned by ApplyZoom, which SetZoom calls. Re-sync unconditionally so a
+        // click on the already-current level doesn't leave the item toggled off by IsCheckable.
+        ApplyZoom();
+    }
+
+    /// <summary>
+    /// Ctrl+wheel zoom, coalesced so a fast scroll doesn't recompile the highlighting on every notch.
+    /// </summary>
+    /// <remarks>
+    /// At 10% steps a 100%→500% sweep is around forty notches, and each apply rebuilds four
+    /// definitions — so the level is updated immediately but the expensive apply is posted once at
+    /// <see cref="DispatcherPriority.Background"/> behind a queued flag. Every Normal-priority wheel
+    /// event drains before any Background item runs, so a burst costs exactly one rebuild. Same
+    /// mechanism <c>RemoteImageLoader</c> uses to collapse a burst of image completions into one
+    /// redraw: deterministic, with no timer interval to tune, and Background cannot re-enter an
+    /// in-progress layout pass.
+    /// <para>
+    /// Preview, not the bubbling event, because AvalonEdit's own ScrollViewer would otherwise scroll
+    /// the document first.
+    /// </para>
+    /// </remarks>
+    private void Editor_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.Control || e.Delta == 0) return;
+        e.Handled = true;
+
+        double level = e.Delta > 0
+            ? ZoomLevels.In(_pendingZoomLevel ?? _settings.ZoomLevel)
+            : ZoomLevels.Out(_pendingZoomLevel ?? _settings.ZoomLevel);
+        _pendingZoomLevel = level;
+        StatusZoom.Text = StatusFormatter.FormatZoom(level); // the readout still tracks every notch
+
+        if (_zoomApplyQueued) return;
+        _zoomApplyQueued = true;
+        Dispatcher.BeginInvoke(DispatcherPriority.Background, () =>
+        {
+            _zoomApplyQueued = false;
+            if (_pendingZoomLevel is not double pending) return;
+            _pendingZoomLevel = null;
+            SetZoom(pending);
+        });
+    }
 
     // ── Remote images (Requirements.md §5) ────────────────────────────────
     private void ApplyLoadRemoteImages()

@@ -58,6 +58,13 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
     internal const double MinColumnWidth = 8.0;  // an all-empty column still gets a visible cell
 
     public bool Enabled { get; set; }
+
+    /// <summary>
+    /// Editor zoom (Requirements.md §6) — scales the row's left indent only. Column widths need no
+    /// help: they are measured from the editor's own typeface and em size, which zoom already moves,
+    /// and the layout cache invalidates on exactly that em-size change.
+    /// </summary>
+    public double Zoom { get; set; } = 1.0;
     public int CaretLine { get; set; } = -1;
 
     // Column widths are measured with the editor's own typeface, once per table, and cached.
@@ -205,7 +212,7 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
             // Same indent as bullets, checkboxes, and blockquote content, read from the one
             // place it's defined — so a table sits at the same pixel depth as every other
             // indented construct instead of tight against the page edge.
-            Margin = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel, 0, 0, 0),
+            Margin = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel * Zoom, 0, 0, 0),
         };
         for (int i = 0; i < layout.ColumnCount; i++)
         {

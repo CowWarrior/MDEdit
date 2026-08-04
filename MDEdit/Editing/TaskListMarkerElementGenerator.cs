@@ -25,6 +25,10 @@ namespace MDEdit.Editing;
 internal sealed class TaskListMarkerElementGenerator : VisualLineElementGenerator
 {
     public bool Enabled { get; set; }
+
+    /// <summary>Editor zoom (Requirements.md §6) — scales the checkbox's indent; the box itself
+    /// already follows the editor's font size.</summary>
+    public double Zoom { get; set; } = 1.0;
     public int CaretLine { get; set; } = -1;
 
     public override int GetFirstInterestedOffset(int startOffset)
@@ -53,7 +57,8 @@ internal sealed class TaskListMarkerElementGenerator : VisualLineElementGenerato
         }
 
         var props = CurrentContext.GlobalTextRunProperties;
-        return new InlineObjectElement(markerLength, BuildCheckbox(props.FontRenderingEmSize, props.ForegroundBrush, isChecked));
+        return new InlineObjectElement(markerLength,
+            BuildCheckbox(props.FontRenderingEmSize, props.ForegroundBrush, isChecked, Zoom));
     }
 
     // Drawn rather than rendered from a glyph. U+2610/U+2611 (☐/☑) were the obvious choice, but the
@@ -61,7 +66,8 @@ internal sealed class TaskListMarkerElementGenerator : VisualLineElementGenerato
     // the two states came out visibly different sizes. Drawing makes both states identical by
     // construction, removes the dependency on any font happening to have the glyphs, and still
     // scales with the editor's font size and follows the theme's foreground brush.
-    private static FrameworkElement BuildCheckbox(double emSize, Brush foreground, bool isChecked)
+    // The box itself already follows zoom through emSize; only the indent needs telling.
+    private static FrameworkElement BuildCheckbox(double emSize, Brush foreground, bool isChecked, double zoom)
     {
         double side = Math.Round(emSize * 0.78);
 
@@ -70,7 +76,7 @@ internal sealed class TaskListMarkerElementGenerator : VisualLineElementGenerato
             Width  = side,
             Height = side,
             // Same indent as bullets and blockquote content, read from the one place it's defined.
-            Margin = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel, 0, 0, 0),
+            Margin = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel * zoom, 0, 0, 0),
             SnapsToDevicePixels = true,
         };
 

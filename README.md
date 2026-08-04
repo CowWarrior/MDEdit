@@ -76,15 +76,13 @@ Specified and intended for a future release, with no date attached:
 - **Formatting inside table cells** — bold, links and emoji inside a table will render in WYSIWYG
   mode instead of showing their raw markers.
 - **Improved Markdown conformance** — better support for niche Markdown features and edge cases.
-- **Zoom** — scale the editor text up or down from the View menu, with Ctrl+= / Ctrl+- / Ctrl+0 or
-  Ctrl and the mouse wheel.
 
 ## Built with
 
 - **C# on .NET 10** (`net10.0-windows`), **WPF** — Fluent theming, with Light/Dark/System modes
 - **[AvalonEdit](https://github.com/icsharpcode/AvalonEdit) 6.3.0.90** — the text editor control
   everything is built on
-- **xUnit** — 532 tests over the editing logic, deliberately factored out of the window to be
+- **xUnit** — 575 tests over the editing logic, deliberately factored out of the window to be
   testable without one
 - **ClickOnce**, published to GitHub Pages from `docs/`
 

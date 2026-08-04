@@ -21,6 +21,9 @@ namespace MDEdit.Editing;
 internal sealed class NumberedListMarkerElementGenerator : VisualLineElementGenerator
 {
     public bool Enabled { get; set; }
+
+    /// <summary>Editor zoom (Requirements.md §6) — scales the marker's indent, nothing else.</summary>
+    public double Zoom { get; set; } = 1.0;
     public int CaretLine { get; set; } = -1;
 
     public override int GetFirstInterestedOffset(int startOffset)
@@ -42,7 +45,7 @@ internal sealed class NumberedListMarkerElementGenerator : VisualLineElementGene
         MarkdownSyntax.TryGetNumberedListMarker(doc, line, out int markerOffset, out int markerLength);
 
         var marker = ListMarkerStyling.CreateMarkerBlock(
-            doc.GetText(markerOffset, markerLength), CurrentContext, MarkerStyle);
+            doc.GetText(markerOffset, markerLength), CurrentContext, MarkerStyle, Zoom);
         return new InlineObjectElement(markerLength, marker);
     }
 

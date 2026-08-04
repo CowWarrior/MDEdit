@@ -75,6 +75,18 @@ internal sealed class ImageElementGenerator : VisualLineElementGenerator
     public bool Enabled { get; set; }
     public int CaretOffset { get; set; } = -1;
 
+    /// <summary>
+    /// Editor zoom (Requirements.md §6), scaling the <see cref="MaxImageHeight"/> display clamp so a
+    /// picture grows with the text around it instead of staying pinned while the prose doubles.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="DecodeHeightCap"/> is deliberately left alone. It already carries 2x headroom, so
+    /// quality holds to 200% and softens gently above that — whereas making the decode size
+    /// zoom-dependent would re-decode every visible bitmap on every zoom step, and the cache is
+    /// keyed by path rather than by size.
+    /// </remarks>
+    public double Zoom { get; set; } = 1.0;
+
     private readonly RemoteImageLoader _remote = new();
 
     private bool _loadRemoteImages;
@@ -186,7 +198,7 @@ internal sealed class ImageElementGenerator : VisualLineElementGenerator
                 return new InlineObjectElement(span.End - span.Start, new Image
                 {
                     Source    = bitmap,
-                    MaxHeight = MaxImageHeight,
+                    MaxHeight = MaxImageHeight * Zoom,
                     Stretch   = Stretch.Uniform,
                 });
             }

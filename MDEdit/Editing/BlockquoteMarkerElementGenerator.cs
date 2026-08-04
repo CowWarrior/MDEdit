@@ -39,6 +39,18 @@ internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenera
     public bool Enabled { get; set; }
     public int CaretLine { get; set; } = -1;
 
+    /// <summary>
+    /// Editor zoom (Requirements.md §6), multiplying the constants above. 1.0 is unzoomed.
+    /// </summary>
+    /// <remarks>
+    /// Text sizes follow zoom on their own — everything resolves from <c>ModeStyles.BaseFontSize</c>,
+    /// which zoom scales. These indents are fixed pixel constants, so they are the one part of the
+    /// layout that has to be told. Every class that reads these constants carries the same property,
+    /// all pushed from <c>MainWindow.UpdateLivePreviewState</c>; without it a 300% document would
+    /// draw large text against an unchanged 17px indent.
+    /// </remarks>
+    public double Zoom { get; set; } = 1.0;
+
     public override int GetFirstInterestedOffset(int startOffset)
     {
         if (!Enabled) return -1;
@@ -63,6 +75,7 @@ internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenera
         // Height 0: this element only reserves horizontal space (Width), same zero-visual-height
         // technique the other generators use for a plain hide — the visible bar comes from
         // BlockquoteAccentBarRenderer instead, so nothing needs to be drawn here.
-        return new InlineObjectElement(markerLength, new Rectangle { Width = LeadingIndent + depth * IndentPerLevel, Height = 0 });
+        return new InlineObjectElement(markerLength,
+            new Rectangle { Width = (LeadingIndent + depth * IndentPerLevel) * Zoom, Height = 0 });
     }
 }

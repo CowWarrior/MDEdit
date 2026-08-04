@@ -33,6 +33,12 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
 
     public bool Enabled { get; set; }
 
+    /// <summary>
+    /// Editor zoom — must match <see cref="BlockquoteMarkerElementGenerator.Zoom"/>, or the drawn bar
+    /// stops lining up with the space that generator reserves. Both are pushed from one place.
+    /// </summary>
+    public double Zoom { get; set; } = 1.0;
+
     public KnownLayer Layer => KnownLayer.Background;
 
     public void Draw(TextView textView, DrawingContext drawingContext)
@@ -57,9 +63,9 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
         // lines are still at least depth 1), while level 2 only spans the deeper sub-run.
         for (int level = 1; level <= maxDepth; level++)
         {
-            double x = BlockquoteMarkerElementGenerator.LeadingIndent
-                     + BlockquoteMarkerElementGenerator.LeadingGap
-                     + (level - 1) * BlockquoteMarkerElementGenerator.IndentPerLevel
+            double x = (BlockquoteMarkerElementGenerator.LeadingIndent
+                      + BlockquoteMarkerElementGenerator.LeadingGap
+                      + (level - 1) * BlockquoteMarkerElementGenerator.IndentPerLevel) * Zoom
                      - textView.HorizontalOffset;
 
             int i = 0;
@@ -80,7 +86,7 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
                 double bottom = visualLines[runEnd].VisualTop + visualLines[runEnd].Height - textView.VerticalOffset;
 
                 drawingContext.DrawRectangle(brush, null,
-                    new Rect(x, top, BlockquoteMarkerElementGenerator.BarWidth, bottom - top));
+                    new Rect(x, top, BlockquoteMarkerElementGenerator.BarWidth * Zoom, bottom - top));
             }
         }
     }

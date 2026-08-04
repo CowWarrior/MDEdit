@@ -27,6 +27,9 @@ namespace MDEdit.Editing;
 internal sealed class BulletListMarkerElementGenerator : VisualLineElementGenerator
 {
     public bool Enabled { get; set; }
+
+    /// <summary>Editor zoom (Requirements.md §6) — scales the marker's indent, nothing else.</summary>
+    public double Zoom { get; set; } = 1.0;
     public int CaretLine { get; set; } = -1;
 
     public override int GetFirstInterestedOffset(int startOffset)
@@ -50,7 +53,7 @@ internal sealed class BulletListMarkerElementGenerator : VisualLineElementGenera
 
     public override VisualLineElement ConstructElement(int offset)
     {
-        var glyph = ListMarkerStyling.CreateMarkerBlock("•", CurrentContext, MarkerStyle);
+        var glyph = ListMarkerStyling.CreateMarkerBlock("•", CurrentContext, MarkerStyle, Zoom);
         return new InlineObjectElement(1, glyph);
     }
 

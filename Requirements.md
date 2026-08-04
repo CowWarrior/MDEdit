@@ -157,7 +157,11 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   Preferences are preserved at every level. **Zoom is a view setting and never rewrites those
   Preferences values**: returning to normal restores exactly the configured appearance, so zooming
   cannot quietly become a permanent change to the user's styling. The level persists between
-  sessions *(planned)*
+  sessions.
+  - Zoom runs from 10% to 500% in steps of 10%, and 100% means whatever base size Preferences is
+    set to, so zoom is always relative to the user's own styling rather than to a fixed size.
+  - The status bar shows the current level, with buttons either side to step it and a list of
+    common levels — 50%, 75%, 100%, 125%, 150% — on clicking the level itself.
 - The user can customize the editor's appearance from a Preferences window, opened via View →
   Preferences. Changes apply immediately, with no separate Apply step.
   - **WYSIWYG mode and source mode are styled independently**, on one tab each. The same document is
@@ -205,6 +209,9 @@ common word processors, its established shortcut is used in preference to invent
 | Heading 2 | Ctrl+2 |
 | Heading 3 | Ctrl+3 |
 | Find | Ctrl+F |
+| Zoom In | Ctrl+= (or Ctrl and the mouse wheel) |
+| Zoom Out | Ctrl+- (or Ctrl and the mouse wheel) |
+| Reset Zoom | Ctrl+0 |
 | Undo | Ctrl+Z |
 | Redo | Ctrl+Y |
 | Cut | Ctrl+X |
@@ -238,6 +245,9 @@ A status bar is always visible and displays:
 - When text is selected, an additional section showing the number of characters selected. The section
   is hidden entirely when nothing is selected.
 - The current cursor position (line and column number).
+- The current zoom level (§6), with a button either side to step it down or up, and a list of common
+  levels shown by clicking the level itself. This is the only part of the status bar the user can
+  interact with; everything else is a readout.
 
 The filename and the unsaved-changes indicator are deliberately **not** shown in the status bar — the
 title bar already carries both, and repeating them wastes the space.

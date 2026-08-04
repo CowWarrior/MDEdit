@@ -31,6 +31,8 @@ public class AppSettingsTests
         Assert.Empty(settings.RecentFiles);
         Assert.Equal("", settings.LastReleaseNotesVersionShown);
         Assert.Equal(2, settings.LineBreakCharWeight);
+        // 1.0 means "exactly what Preferences says" — zoom starts non-destructive.
+        Assert.Equal(1.0, settings.ZoomLevel);
         Assert.NotNull(settings.EditorPreferences);
     }
 

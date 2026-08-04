@@ -13,7 +13,7 @@
          fallback only — MainWindow.ApplySearchPanelColors is what actually pushes correct colors,
          explicitly, as local values; (2) that push has to happen on SearchPanel.IsVisibleChanged, not
          at window startup, because the panel's adorner isn't connected to a live visual tree until
-         the user's first Ctrl+F; (3) Prev/Next/Close needed SearchPanelFlatButtonStyle below because
+         the user's first Ctrl+F; (3) Prev/Next/Close needed ChromeFlatButtonStyle below because
          Fluent's default Button template doesn't paint content in the resting state at all. Only two
          part names are load-bearing — PART_searchTextBox and PART_dropdownPopup, per
          SearchPanel.OnApplyTemplate — everything else was free to restyle. Merged once in App.xaml,
@@ -78,8 +78,13 @@
          sitting in a ToolBar (which gets ToolBar.ButtonStyleKey instead, a different template
          entirely), but it means content set here is invisible until hovered — not a color problem,
          a template problem. This mirrors DropDownButton's own custom template above, which is why
-         its arrow has been visible throughout this investigation while these three weren't. -->
-    <Style x:Key="SearchPanelFlatButtonStyle" TargetType="Button">
+         its arrow has been visible throughout this investigation while these three weren't.
+
+         Named for the app chrome rather than for the search panel because it is no longer
+         search-specific: the status bar's zoom -/+ buttons (Requirements.md §6) use it too, for
+         exactly the same reason. This dictionary is merged in App.xaml, so the key resolves as a
+         StaticResource from MainWindow.xaml with no extra plumbing. -->
+    <Style x:Key="ChromeFlatButtonStyle" TargetType="Button">
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
@@ -153,25 +158,25 @@
                                  surface. Replaced with the same Stroke-geometry Path convention
                                  Resources/ToolbarIcons.xaml uses, so these track the theme exactly
                                  like every toolbar icon does. Style="{StaticResource
-                                 SearchPanelFlatButtonStyle}" (see above) is required — without it,
+                                 ChromeFlatButtonStyle}" (see above) is required — without it,
                                  Fluent's default Button template doesn't paint content in the
                                  resting state at all, regardless of any Background/Stroke value.
                                  Background/BorderBrush are also pushed from code-behind (see
                                  MainWindow.ApplySearchPanelColors) so the custom template's chrome
                                  tracks the theme too. -->
-                            <Button x:Name="PART_prevButton" Style="{StaticResource SearchPanelFlatButtonStyle}" Margin="3" Height="24" Width="24" Command="search:SearchCommands.FindPrevious"
+                            <Button x:Name="PART_prevButton" Style="{StaticResource ChromeFlatButtonStyle}" Margin="3" Height="24" Width="24" Command="search:SearchCommands.FindPrevious"
                                     ToolTip="{Binding Localization.FindPreviousText, RelativeSource={RelativeSource TemplatedParent}}">
                                 <Path x:Name="PART_prevIcon" Data="M6 15l6 -6l6 6" Stretch="Uniform" Width="12" Height="12"
                                       Stroke="{DynamicResource AppChromeForegroundBrush}" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
                             </Button>
-                            <Button x:Name="PART_nextButton" Style="{StaticResource SearchPanelFlatButtonStyle}" Margin="3" Height="24" Width="24" Command="search:SearchCommands.FindNext"
+                            <Button x:Name="PART_nextButton" Style="{StaticResource ChromeFlatButtonStyle}" Margin="3" Height="24" Width="24" Command="search:SearchCommands.FindNext"
                                     ToolTip="{Binding Localization.FindNextText, RelativeSource={RelativeSource TemplatedParent}}">
                                 <Path x:Name="PART_nextIcon" Data="M6 9l6 6l6 -6" Stretch="Uniform" Width="12" Height="12"
                                       Stroke="{DynamicResource AppChromeForegroundBrush}" StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"/>
                             </Button>
-                            <Button x:Name="PART_closeButton" Style="{StaticResource SearchPanelFlatButtonStyle}" Height="16" Width="16" HorizontalAlignment="Right" VerticalAlignment="Top"
+                            <Button x:Name="PART_closeButton" Style="{StaticResource ChromeFlatButtonStyle}" Height="16" Width="16" HorizontalAlignment="Right" VerticalAlignment="Top"
                                     Command="search:SearchCommands.CloseSearchPanel"
                                     VerticalContentAlignment="Center" HorizontalContentAlignment="Center" Focusable="False">
                                 <Path x:Name="PART_closeIcon" Data="M 0,0 L 8,8 M 8,0 L 0,8" Stroke="{DynamicResource AppChromeForegroundBrush}" StrokeThickness="1"/>

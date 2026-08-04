@@ -34,6 +34,14 @@ internal sealed class AppSettings
     // that was the only behavior before this setting existed (Editor.Document.TextLength counts
     // a CRLF literally). See Editing/CharacterCounter.
     public int LineBreakCharWeight { get; set; } = 2;
+    // Editor zoom as a multiplier of the configured base sizes, 0.10–5.00 (Requirements.md §6,
+    // View > Zoom). 1.0 means "exactly what Preferences says", so zoom is always relative to the
+    // user's own styling rather than to a fixed point size. Deliberately NOT in EditorPreferences,
+    // for the same reason as LoadRemoteImages above: that object is replaced wholesale by
+    // PreferencesWindow's Cancel and Reset, and a view setting must not be reverted by a dialog
+    // that never showed it. Sanitized on load via Editing/ZoomLevels; MainWindow.SetZoom is the
+    // only writer, and it never touches EditorPreferences — zoom scales a copy at render time.
+    public double ZoomLevel { get; set; } = ZoomLevels.Default;
     // WYSIWYG/code fonts and formatted-span colors (Requirements.md §6, View > Preferences).
     // See MainWindow.ApplyEditorPreferences.
     public EditorPreferences EditorPreferences { get; set; } = new();
@@ -127,6 +135,35 @@ internal sealed class ModeStyles
             Elements[key] = style = new ElementStyle();
         return style;
     }
+
+    /// <summary>
+    /// This mode's styling with every size multiplied by <paramref name="factor"/> — how zoom is
+    /// applied (Requirements.md §6).
+    /// </summary>
+    /// <remarks>
+    /// Scaling <see cref="BaseFontSize"/> alone scales <i>everything</i>, because every other size is
+    /// a multiple of it: <c>StyleResolver.EmSize</c> resolves each element as
+    /// <c>BaseFontSize * FontScale</c>, and <c>Editor.FontSize</c> — which every generator reads back
+    /// as <c>GlobalTextRunProperties.FontRenderingEmSize</c> — is set from it too. So headings, code,
+    /// table cells, the drawn task checkbox, bullets and emoji all follow with no per-construct work,
+    /// and the relative sizes the user configured are preserved exactly.
+    /// <para>
+    /// <b>Returns a copy and never mutates this instance</b> — the spec makes non-destructiveness
+    /// explicit, so zoom must never be able to become a permanent edit to the user's Preferences.
+    /// </para>
+    /// <para>
+    /// <b><see cref="Elements"/> is shared by reference, not cloned</b>, which is deliberate: the
+    /// render path only ever reads it (see the remarks on <see cref="Style"/> — that is the one
+    /// mutating accessor and it is for editing only), so a live Preferences edit shows through
+    /// without anything having to re-clone or invalidate. The copy is rebuilt on every apply anyway.
+    /// </para>
+    /// </remarks>
+    public ModeStyles Scaled(double factor) => new()
+    {
+        BaseFontFamily = BaseFontFamily,
+        BaseFontSize = BaseFontSize * factor,
+        Elements = Elements,
+    };
 
     // The editor's pre-Requirements-§6 hardcoded values, kept as the defaults so an unmodified or
     // upgrading install renders identically. MainWindow.xaml's editor carries the same two.

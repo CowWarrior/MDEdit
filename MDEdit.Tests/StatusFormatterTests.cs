@@ -75,6 +75,33 @@ public class StatusFormatterTests
         Assert.Equal(expected, StatusFormatter.FormatSelectionCount(count, Inv));
     }
 
+    [Theory]
+    [InlineData(1.0, "100%")]
+    [InlineData(0.1, "10%")]
+    [InlineData(0.75, "75%")]
+    [InlineData(1.25, "125%")]
+    [InlineData(5.0, "500%")]
+    public void FormatZoom_RendersWholePercent(double level, string expected)
+    {
+        Assert.Equal(expected, StatusFormatter.FormatZoom(level, Inv));
+    }
+
+    // The ladder only ever produces whole percents, so a fraction can only come from a hand-edited
+    // settings file — showing "72.5%" there would read as a bug rather than as fidelity.
+    [Theory]
+    [InlineData(0.7249, "72%")]
+    [InlineData(0.7251, "73%")]
+    public void FormatZoom_RoundsRatherThanShowingAFraction(double level, string expected)
+    {
+        Assert.Equal(expected, StatusFormatter.FormatZoom(level, Inv));
+    }
+
+    [Fact]
+    public void FormatZoom_SurvivesNonFiniteInput()
+    {
+        Assert.Equal("100%", StatusFormatter.FormatZoom(double.NaN, Inv));
+    }
+
     [Fact]
     public void Formatters_HonourTheSuppliedCulture()
     {

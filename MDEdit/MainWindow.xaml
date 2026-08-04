@@ -136,6 +136,14 @@
                     <MenuItem x:Name="MenuLineBreakOne"  Header="_1 Character"  IsCheckable="True" Click="MenuLineBreakOne_Click"/>
                     <MenuItem x:Name="MenuLineBreakTwo"  Header="_2 Characters" IsCheckable="True" IsChecked="True" Click="MenuLineBreakTwo_Click"/>
                 </MenuItem>
+                <!-- Zoom (Requirements.md §6). In/Out/Reset only, matching Notepad; the preset levels
+                     live in the status bar's drop-down instead. InputGestureText is written by hand
+                     because these are InputBindings, not a RoutedUICommand's own gestures. -->
+                <MenuItem Header="_Zoom">
+                    <MenuItem Header="Zoom _In"            InputGestureText="Ctrl+=" Click="MenuZoomIn_Click"/>
+                    <MenuItem Header="Zoom _Out"           InputGestureText="Ctrl+-" Click="MenuZoomOut_Click"/>
+                    <MenuItem Header="_Restore Default Zoom" InputGestureText="Ctrl+0" Click="MenuZoomReset_Click"/>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="_Preferences…" Click="MenuPreferences_Click"/>
             </MenuItem>
@@ -315,8 +323,41 @@
                     <TextBlock x:Name="StatusSelection" Visibility="Collapsed"/>
                 </StackPanel>
 
-                <TextBlock x:Name="StatusPosition" Grid.Column="1"
-                           VerticalAlignment="Center" Text="Ln 1, Col 1"/>
+                <!-- Zoom (Requirements.md §6). Deliberately on the right, beside Ln/Col: the left
+                     group already carries size, characters and selection. Padding is kept tight on
+                     purpose — the Border above uses MinHeight, not Height, so generous padding here
+                     makes the whole status bar grow rather than clip.
+                     ChromeFlatButtonStyle is required, not cosmetic: Fluent's default Button
+                     template paints no content at rest, so these would be invisible until hovered
+                     (see Resources/SearchPanelStyle.xaml, where that was first diagnosed). -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,12,0">
+                    <Button x:Name="BtnZoomOut" Style="{StaticResource ChromeFlatButtonStyle}"
+                            Width="18" Height="18" Content="&#x2212;" FontSize="12"
+                            ToolTip="Zoom out (Ctrl+-)" Click="BtnZoomOut_Click"/>
+                    <!-- A Button, not a TextBlock, so it is keyboard-reachable and gets the flat
+                         hover cue; its ContextMenu is opened from code with Placement="Top" so the
+                         preset list rises out of the status bar instead of dropping off-screen. -->
+                    <Button x:Name="BtnZoomLevel" Style="{StaticResource ChromeFlatButtonStyle}"
+                            MinWidth="42" Height="18" Padding="4,0"
+                            ToolTip="Zoom level — click to choose a preset"
+                            Click="BtnZoomLevel_Click">
+                        <TextBlock x:Name="StatusZoom" Text="100%"/>
+                        <Button.ContextMenu>
+                            <ContextMenu x:Name="MenuZoomPresets" Placement="Top">
+                                <MenuItem Header="50%"  Tag="0.5"  IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="75%"  Tag="0.75" IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="100%" Tag="1"    IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="125%" Tag="1.25" IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="150%" Tag="1.5"  IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button x:Name="BtnZoomIn" Style="{StaticResource ChromeFlatButtonStyle}"
+                            Width="18" Height="18" Content="+" FontSize="12"
+                            ToolTip="Zoom in (Ctrl+=)" Click="BtnZoomIn_Click"/>
+                    <TextBlock Text="  |  " Opacity="0.4" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="StatusPosition" VerticalAlignment="Center" Text="Ln 1, Col 1"/>
+                </StackPanel>
             </Grid>
         </Border>
 
@@ -333,6 +374,7 @@
                 Background="{DynamicResource EditorBackgroundBrush}"
                 Foreground="{DynamicResource EditorForegroundBrush}"
                 LineNumbersForeground="{DynamicResource EditorLineNumberBrush}"
+                PreviewMouseWheel="Editor_PreviewMouseWheel"
                 Padding="8,4"/>
         </Border>
 
