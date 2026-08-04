@@ -6,6 +6,12 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.1.2
+
+- Added New Window — open a second editor window from the File menu or with Ctrl+Shift+N, so you can work on two documents at once without going through Explorer.
+- Added Zoom, from 10% to 500% — use the View menu, Ctrl+= and Ctrl+-, Ctrl+0 to go back to normal, or hold Ctrl and scroll the mouse wheel. The status bar shows the level and offers the common sizes, and zooming never changes the font sizes you set in Preferences.
+- Fixed the vertical bar beside a quote staying on screen in WYSIWYG mode when you moved the cursor onto that line.
+
 ### Version 1.1.1
 
 - Help → About now links to MDEdit's licence and to the licences of the components it is built on, both of which now ship with the application.
