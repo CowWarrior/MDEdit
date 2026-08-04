@@ -1,4 +1,5 @@
 using System.Windows.Shapes;
+using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
 
 namespace MDEdit.Editing;
@@ -51,19 +52,49 @@ internal sealed class BlockquoteMarkerElementGenerator : VisualLineElementGenera
     /// </remarks>
     public double Zoom { get; set; } = 1.0;
 
+    /// <summary>
+    /// Whether <paramref name="lineNumber"/> is currently being <i>rendered</i> as a blockquote, and
+    /// at what nesting depth — the single gate this generator and
+    /// <see cref="BlockquoteAccentBarRenderer"/> both decide from.
+    /// </summary>
+    /// <remarks>
+    /// <b>Shared rather than duplicated, because the two halves have already drifted apart once.</b>
+    /// This generator reveals the caret's line (returning −1 for it, so the raw <c>&gt;</c> shows and
+    /// no indent is reserved), but the renderer used to decide purely from
+    /// <c>MarkdownSyntax.TryGetBlockquoteMarkerLength</c> with no caret state at all — so it kept
+    /// painting a bar for that line, at the x the now-absent spacer would have created, leaving the
+    /// bar sitting over the revealed marker. Routing both through one method is what the other two
+    /// generator/renderer pairs already do (<c>HorizontalRuleElementGenerator.IsRendered</c>,
+    /// <c>TableRowElementGenerator.TryGetRenderedTable</c>); this pair shared only layout constants,
+    /// which is exactly how it got out of step.
+    /// <para>
+    /// Returning false for the caret line also splits the renderer's contiguous-run scan around it,
+    /// which a check confined to the depth lookup would not have done — a bar would still have been
+    /// drawn straight across the revealed line as part of a longer run.
+    /// </para>
+    /// </remarks>
+    public bool TryGetRenderedDepth(TextDocument doc, int lineNumber, out int depth)
+    {
+        depth = 0;
+        if (!Enabled || lineNumber == CaretLine) return false;
+        if (lineNumber < 1 || lineNumber > doc.LineCount) return false;
+
+        var line = doc.GetLineByNumber(lineNumber);
+        return MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out depth);
+    }
+
     public override int GetFirstInterestedOffset(int startOffset)
     {
-        if (!Enabled) return -1;
-
         var doc  = CurrentContext.Document;
         var line = doc.GetLineByOffset(startOffset);
-        if (line.LineNumber == CaretLine) return -1;
 
         // The marker only ever occupies the very start of the line; once startOffset has moved
         // past it there is nothing further on this line for this generator to hide.
         if (startOffset > line.Offset) return -1;
 
-        return MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out _) ? line.Offset : -1;
+        // Enabled and the caret-line reveal are both folded into the gate, so there is one place
+        // that decides and the renderer cannot disagree with it.
+        return TryGetRenderedDepth(doc, line.LineNumber, out _) ? line.Offset : -1;
     }
 
     public override VisualLineElement ConstructElement(int offset)

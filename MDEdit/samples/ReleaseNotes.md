@@ -66,7 +66,6 @@ Things that do not work correctly today, listed so they do not come as a surpris
 - Switching the theme while the Find panel is open closes the panel, and it cannot be reopened. Restarting MDEdit restores it.
 - A backslash does not escape formatting: `\*text\*` still renders as italic instead of showing the asterisks.
 - An underscore inside a word starts italics, so a name like `snake_case_name` renders partly italicised. Use `*` for emphasis to avoid this.
-- In WYSIWYG mode, putting the cursor on a quoted line correctly brings back its `>` marker, but the quote's vertical bar stays on screen instead of going with it, and can sit over the marker. Cosmetic only — the text is unaffected, and the bar looks right again once the cursor moves to another line.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text engine MDEdit draws with, not a setting.
 
 ## Planned

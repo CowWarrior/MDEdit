@@ -29,15 +29,27 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
     // editor mode as well as by theme, and only the colorizer knows which mode is live.
     private readonly MarkdownLineColorizer _colorizer;
 
-    public BlockquoteAccentBarRenderer(MarkdownLineColorizer colorizer) => _colorizer = colorizer;
+    // Held for the same reason TableGridRenderer holds its generator: the reveal decision and the
+    // geometry must come from one place. Reading them off the generator is what stops the drawn bar
+    // disagreeing with the space reserved for it — see TryGetRenderedDepth for the bug that caused.
+    private readonly BlockquoteMarkerElementGenerator _generator;
 
-    public bool Enabled { get; set; }
+    public BlockquoteAccentBarRenderer(MarkdownLineColorizer colorizer, BlockquoteMarkerElementGenerator generator)
+    {
+        _colorizer = colorizer;
+        _generator = generator;
+    }
 
     /// <summary>
-    /// Editor zoom — must match <see cref="BlockquoteMarkerElementGenerator.Zoom"/>, or the drawn bar
-    /// stops lining up with the space that generator reserves. Both are pushed from one place.
+    /// A cheap early-out only. Per-line rendering decisions belong to
+    /// <see cref="BlockquoteMarkerElementGenerator.TryGetRenderedDepth"/>, which checks the
+    /// generator's own <c>Enabled</c> anyway.
     /// </summary>
-    public double Zoom { get; set; } = 1.0;
+    public bool Enabled { get; set; }
+
+    // Zoom is read off the generator rather than kept here: it scales the same constants, so a
+    // second copy is a second chance for the bar and the reserved space to disagree.
+    private double Zoom => _generator.Zoom;
 
     public KnownLayer Layer => KnownLayer.Background;
 
@@ -91,16 +103,8 @@ internal sealed class BlockquoteAccentBarRenderer : IBackgroundRenderer
         }
     }
 
-    private static int GetDepth(TextDocument doc, int lineNumber)
-    {
-        var line = doc.GetLineByNumber(lineNumber);
-        return MarkdownSyntax.TryGetBlockquoteMarkerLength(doc, line, out _, out int depth) ? depth : 0;
-    }
-
-    private static SolidColorBrush Freeze(Color color)
-    {
-        var b = new SolidColorBrush(color);
-        b.Freeze();
-        return b;
-    }
+    // Zero for a line that isn't a blockquote AND for the caret's line, whose raw source is
+    // revealed — so that line both draws no bar and breaks any run passing through it.
+    private int GetDepth(TextDocument doc, int lineNumber)
+        => _generator.TryGetRenderedDepth(doc, lineNumber, out int depth) ? depth : 0;
 }

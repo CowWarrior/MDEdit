@@ -88,7 +88,7 @@ public partial class MainWindow : Window
     {
         _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
         _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator, _colorizer);
-        _blockquoteAccentBarRenderer = new BlockquoteAccentBarRenderer(_colorizer);
+        _blockquoteAccentBarRenderer = new BlockquoteAccentBarRenderer(_colorizer, _blockquoteMarkerGenerator);
         InitializeComponent();
         ApplyEditorPreferences(); // fonts, span colors, and the compiled highlighting definitions
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
@@ -914,11 +914,11 @@ public partial class MainWindow : Window
         // from the scaled ModeStyles ActiveModeStyles hands out — but these classes lay out against
         // fixed pixel constants (the shared blockquote indent, and the image height clamp), so they
         // have to be told. Pushed here because this method already fans state out to every one of
-        // them. TableGridRenderer is absent on purpose: it reads zoom back off _tableRowGenerator so
-        // the drawn grid and the rows can never disagree.
+        // them. TableGridRenderer and BlockquoteAccentBarRenderer are absent on purpose: each reads
+        // zoom back off the generator it pairs with, so a drawn overlay and the space reserved for
+        // it can never disagree.
         double zoom = _settings.ZoomLevel;
         _blockquoteMarkerGenerator.Zoom   = zoom;
-        _blockquoteAccentBarRenderer.Zoom = zoom;
         _bulletListMarkerGenerator.Zoom   = zoom;
         _numberedListMarkerGenerator.Zoom = zoom;
         _taskListMarkerGenerator.Zoom     = zoom;

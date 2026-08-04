@@ -62,9 +62,6 @@ MDEdit emits literal `<u>` tags, relying on Markdown's pass-through of inline HT
   asterisks.
 - An underscore inside a word starts italics, so a name like `snake_case_name` renders partly
   italicised. Use `*` for emphasis to avoid this.
-- In WYSIWYG mode, moving the caret onto a blockquote reveals its `>` marker as intended, but the
-  quote's vertical accent bar does not hide with it and can overlap the marker. Cosmetic only, and
-  it corrects itself as soon as the caret leaves the line.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text
   engine MDEdit draws with, not a setting.
 
@@ -85,7 +82,7 @@ Specified and intended for a future release, with no date attached:
 - **C# on .NET 10** (`net10.0-windows`), **WPF** — Fluent theming, with Light/Dark/System modes
 - **[AvalonEdit](https://github.com/icsharpcode/AvalonEdit) 6.3.0.90** — the text editor control
   everything is built on
-- **xUnit** — 575 tests over the editing logic, deliberately factored out of the window to be
+- **xUnit** — 586 tests over the editing logic, deliberately factored out of the window to be
   testable without one
 - **ClickOnce**, published to GitHub Pages from `docs/`
 
