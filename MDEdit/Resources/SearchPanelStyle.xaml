@@ -85,6 +85,20 @@
          exactly the same reason. This dictionary is merged in App.xaml, so the key resolves as a
          StaticResource from MainWindow.xaml with no extra plumbing. -->
     <Style x:Key="ChromeFlatButtonStyle" TargetType="Button">
+        <!-- Chrome defaults, so a button using this style is themed by having the style and nothing
+             else. Without them the template's TemplateBindings resolve to Fluent's own Button
+             defaults, which don't track MDEdit's brushes — that is the third time Fluent's defaults
+             have won by being the only value present (after the checked ToggleButton's accent fill
+             and the invisible resting-state content this template exists to fix).
+             Transparent rather than AppChromeBackgroundBrush: every host here (status bar, toolbar)
+             already paints that behind the button, and Transparent lets the IsMouseOver trigger
+             below read as a hover cue instead of a colour swap.
+             These are Setters, so the search panel is unaffected — ApplySearchPanelColors pushes
+             Background/BorderBrush as *local* values on its three buttons, and a local value
+             outranks a style setter. -->
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderBrush" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{DynamicResource AppChromeForegroundBrush}"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
