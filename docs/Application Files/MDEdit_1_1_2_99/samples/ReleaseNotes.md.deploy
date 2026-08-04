@@ -6,6 +6,12 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.1.2
+
+- Added New Window — open a second editor window from the File menu or with Ctrl+Shift+N, so you can work on two documents at once without going through Explorer.
+- Added Zoom, from 10% to 500% — use the View menu, Ctrl+= and Ctrl+-, Ctrl+0 to go back to normal, or hold Ctrl and scroll the mouse wheel. The status bar shows the level and offers the common sizes, and zooming never changes the font sizes you set in Preferences.
+- Fixed the vertical bar beside a quote staying on screen in WYSIWYG mode when you moved the cursor onto that line.
+
 ### Version 1.1.1
 
 - Help → About now links to MDEdit's licence and to the licences of the components it is built on, both of which now ship with the application.
@@ -73,6 +79,7 @@ Things that do not work correctly today, listed so they do not come as a surpris
 Specified and intended for a future release, with no date attached:
 
 - Convert emoji to shortcodes — a command to replace literal emoji characters with their `:shortcode:` equivalents, across your selection or the whole document.
+- Find and replace — replace matches one at a time or all at once, from the same panel you search in, with Ctrl+H. Replacing everything counts as a single undo, so one Ctrl+Z puts it all back.
 - Formatting inside table cells — bold, links and emoji inside a table will render in WYSIWYG mode instead of showing their raw markers.
 - Improved Markdown conformance — better handling of less common Markdown syntax and edge cases.
 
