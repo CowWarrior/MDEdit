@@ -344,11 +344,16 @@
                         <TextBlock x:Name="StatusZoom" Text="100%"/>
                         <Button.ContextMenu>
                             <ContextMenu x:Name="MenuZoomPresets" Placement="Top">
-                                <MenuItem Header="50%"  Tag="0.5"  IsCheckable="True" Click="MenuZoomPreset_Click"/>
-                                <MenuItem Header="75%"  Tag="0.75" IsCheckable="True" Click="MenuZoomPreset_Click"/>
-                                <MenuItem Header="100%" Tag="1"    IsCheckable="True" Click="MenuZoomPreset_Click"/>
-                                <MenuItem Header="125%" Tag="1.25" IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <!-- Largest at the top, descending. The menu opens upward out of the
+                                     status bar, so this puts the biggest level furthest up and the
+                                     smallest nearest the button the user just clicked.
+                                     Display order only — ApplyZoom matches items by Tag, and
+                                     ZoomLevels.Presets stays ascending as an ordinary data list. -->
                                 <MenuItem Header="150%" Tag="1.5"  IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="125%" Tag="1.25" IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="100%" Tag="1"    IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="75%"  Tag="0.75" IsCheckable="True" Click="MenuZoomPreset_Click"/>
+                                <MenuItem Header="50%"  Tag="0.5"  IsCheckable="True" Click="MenuZoomPreset_Click"/>
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
