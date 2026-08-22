@@ -41,6 +41,24 @@ internal sealed class ModeStyleEditor
     // Guards every handler while Refresh/SelectElement are themselves setting control values.
     private bool _suppress;
 
+    /// <summary>
+    /// The colour picker's sixteen custom slots, carried across dialog instances — a
+    /// <see cref="System.Windows.Forms.ColorDialog"/> starts with them empty, so without this every
+    /// colour the user mixes is lost the moment the picker closes.
+    /// </summary>
+    /// <remarks>
+    /// <b>Static deliberately.</b> There are four swatch buttons per editor and two
+    /// <see cref="ModeStyleEditor"/> instances (one per tab), so an instance field would give eight
+    /// independent sets of slots; the OS picker's custom colours read to a user as one shared
+    /// scratchpad, not one per button.
+    /// <para>
+    /// <b>Session-only by choice</b> — no <c>AppSettings</c> field, so the slots reset when MDEdit
+    /// restarts. That matches the picker's behaviour in Windows applications generally, and keeps a
+    /// transient UI convenience out of a settings file that is hand-editable and schema-versioned.
+    /// </para>
+    /// </remarks>
+    private static int[]? _customColors;
+
     private ListBox _elements = null!;
     private TextBlock _elementTitle = null!;
     private ComboBox _font = null!;
@@ -307,7 +325,16 @@ internal sealed class ModeStyleEditor
                 Color = System.Drawing.ColorTranslator.FromHtml(currentHex ?? "#000000"),
                 FullOpen = true,
             };
-            if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+            if (_customColors is not null) dialog.CustomColors = _customColors;
+
+            var result = dialog.ShowDialog();
+
+            // Read back before acting on the result, not after the early return below: mixing a
+            // custom colour and then cancelling is ordinary, and discarding the slots in that case
+            // would lose exactly the work this is meant to keep.
+            _customColors = dialog.CustomColors;
+
+            if (result != System.Windows.Forms.DialogResult.OK) return;
 
             var hex = $"#{dialog.Color.R:X2}{dialog.Color.G:X2}{dialog.Color.B:X2}";
             if (background)
