@@ -103,8 +103,8 @@ internal sealed class TableGridRenderer : IBackgroundRenderer
         // A horizontal line at the top edge of every visible band (the topmost doubles as the
         // table's outer top when the header is visible, and as an interior boundary when the
         // table is scrolled mid-block), plus the outer bottom when the last row is visible.
-        // The hidden delimiter band gets a line at both edges this way, reading as the
-        // separator zone under the header.
+        // The delimiter row contributes no band of its own — TableDelimiterCollapser collapses it
+        // to zero height — so the header/body divider is simply the first body row's own top line.
         for (int v = runStart; v <= runEnd; v++)
         {
             double y = Math.Round(visualLines[v].VisualTop - textView.VerticalOffset);

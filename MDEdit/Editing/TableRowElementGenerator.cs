@@ -76,6 +76,13 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
     public double Zoom { get; set; } = 1.0;
     public int CaretLine { get; set; } = -1;
 
+    /// <summary>
+    /// Whether a given document line is currently collapsed — supplied by
+    /// <see cref="TableDelimiterCollapser.IsCollapsed"/>, pushed from MainWindow like every other
+    /// generator dependency. Null (unset) simply means nothing is collapsed.
+    /// </summary>
+    public Func<int, bool>? IsLineCollapsed { get; set; }
+
     // Column widths are measured with the editor's own typeface, once per table, and cached.
     // Any document change clears the cache wholesale (ReferenceEquals on the version object)
     // rather than tracking which table a change touched — recomputing is cheap and only
@@ -137,10 +144,27 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
             return new InlineObjectElement(0, new TextBlock());
         }
 
-        // The delimiter row is pure syntax with no content of its own; hide it whole (the
-        // fence-line idiom). Its band stays a blank strip inside the grid — TableGridRenderer
-        // draws horizontal lines at both its edges, so it reads as the separator zone under
-        // the header rather than as an empty row.
+        // The header's element swallows the delimiter line whenever that line is collapsed, which is
+        // what makes the two ONE visual line. AvalonEdit extends a VisualLine across document lines
+        // purely from an element's DocumentLength (VisualLine.PerformVisualElementConstruction's
+        // "if (offset > currentLineEnd)"), and its contract is that a visual line may span lines
+        // only "if all but the first are collapsed" — so the span and the collapse are two halves of
+        // one operation. Driven off what is ACTUALLY collapsed rather than re-deriving it here: see
+        // TableDelimiterCollapser.IsCollapsed for why the two must never be computed independently.
+        if (line.LineNumber == layout.StartLine && IsLineCollapsed?.Invoke(layout.StartLine + 1) == true)
+        {
+            var delimiter = doc.GetLineByNumber(layout.StartLine + 1);
+            // EndOffset, i.e. the end of the delimiter's TEXT. An element finishing inside the line
+            // delimiter itself is a different AvalonEdit exception ("produced an element which ends
+            // within the line delimiter").
+            return new InlineObjectElement(delimiter.EndOffset - line.Offset,
+                BuildRow(doc, line, layout, isHeader: true));
+        }
+
+        // Not collapsed yet — the transient before the collapser's first pass, and the only
+        // direction that is harmless. The delimiter row is pure syntax with no content of its own,
+        // so hide it whole (the fence-line idiom); the band it leaves is the old blank row, which
+        // disappears one frame later once the collapse lands.
         if (line.LineNumber == layout.StartLine + 1)
             return new InlineObjectElement(line.Length, new Rectangle { Width = 0, Height = 0 });
 

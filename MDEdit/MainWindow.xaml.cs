@@ -62,6 +62,9 @@ public partial class MainWindow : Window
     // cells, the same arrangement the two background renderers use — so like them it needs
     // _colorizer and is built in the ctor, since a field initializer cannot reference another field.
     private readonly TableRowElementGenerator _tableRowGenerator;
+    // Needs the TextView, so built immediately after InitializeComponent rather than here — and
+    // before ApplyEditorPreferences, which reaches ResetLivePreviewCaretTracking and uses it.
+    private readonly TableDelimiterCollapser _tableDelimiterCollapser;
     private readonly HorizontalRuleElementGenerator _horizontalRuleGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer; // needs _colorizer, so built in the ctor
     private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
@@ -95,6 +98,27 @@ public partial class MainWindow : Window
         _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator, _colorizer);
         _blockquoteAccentBarRenderer = new BlockquoteAccentBarRenderer(_colorizer, _blockquoteMarkerGenerator);
         InitializeComponent();
+        // A rendered table's delimiter row is replaced with a zero-size element, but the visual line
+        // still claims a full line height — so it read as an empty row rather than a separator.
+        // Collapsing the line is the only thing that removes that height; VisualLinesChanged is the
+        // single trigger because every cause (an edit, a caret move revealing a table, the live
+        // preview toggle, a document load) reaches it, and the collapser coalesces and no-ops when
+        // the applied set already matches, so the loop this creates settles after one pass.
+        //
+        // Constructed HERE, immediately after InitializeComponent gives us the TextView and before
+        // anything can use it: ApplyEditorPreferences below reaches ResetLivePreviewCaretTracking,
+        // which calls Reset() on this. Building it later left that first call dereferencing null.
+        _tableDelimiterCollapser = new TableDelimiterCollapser(Editor.TextArea.TextView, _tableRowGenerator);
+        // The generator spans its header element across the delimiter only when that line is
+        // ACTUALLY collapsed, never by re-deriving the condition — the span and the collapse are two
+        // halves of one operation and must never be computed independently. See
+        // TableDelimiterCollapser.IsCollapsed.
+        _tableRowGenerator.IsLineCollapsed = _tableDelimiterCollapser.IsCollapsed;
+        // Async, and only for the bootstrap: TryGetRenderedTable can't answer until a first layout
+        // has given the generator its typeface, and mutating the height tree from inside a layout
+        // pass is not allowed. Everything that can stop a table being rendered refreshes
+        // synchronously instead — see the Refresh call sites.
+        Editor.TextArea.TextView.VisualLinesChanged += (_, _) => _tableDelimiterCollapser.RequestRefresh();
         ApplyEditorPreferences(); // fonts, span colors, and the compiled highlighting definitions
         Editor.TextArea.TextView.LineTransformers.Add(_colorizer);
         Editor.TextArea.TextView.ElementGenerators.Add(_headingMarkerGenerator);
@@ -154,6 +178,10 @@ public partial class MainWindow : Window
         {
             MarkDirty();
             UpdateDocumentStats();
+            // Synchronously, before the layout this change schedules: an edit can stop a table being
+            // a table, and a delimiter left collapsed with no element spanning it makes that layout
+            // throw. See TableDelimiterCollapser.Refresh.
+            _tableDelimiterCollapser.Refresh();
         };
         UpdateDocumentStats();
 
@@ -834,6 +862,11 @@ public partial class MainWindow : Window
         _colorizer.CaretLine                 = line;
         _colorizer.CaretOffset               = offset;
 
+        // Before the redraws below, and synchronously: the caret entering a table stops it being
+        // rendered, so the generator will no longer span its delimiter on the next layout — the one
+        // ordering that crashes if the collapse is still installed. See TableDelimiterCollapser.
+        _tableDelimiterCollapser.Refresh();
+
         RedrawLine(previousLine);
         if (line != previousLine) RedrawLine(line);
         RedrawEnclosingFenceLines(previousLine);
@@ -886,6 +919,11 @@ public partial class MainWindow : Window
         _horizontalRuleGenerator.CaretLine   = _lastCaretLine;
         _colorizer.CaretLine                 = _lastCaretLine;
         _colorizer.CaretOffset               = _lastCaretOffset;
+
+        // The document has been replaced, so the collapsed sections refer to lines that are gone.
+        // Dropped here rather than left to the next refresh, which would compare against an applied
+        // set describing the previous document.
+        _tableDelimiterCollapser.Reset();
     }
 
     private void UpdateLivePreviewState()

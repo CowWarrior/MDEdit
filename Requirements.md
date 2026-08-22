@@ -138,7 +138,8 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
   markers — also shows in the fixed-width font, signalling that source text is being edited
   there. The source view is unaffected and remains entirely fixed-width.
 - A table displays as a grid: columns sized to their widest cell, a bold shaded header row, the
-  delimiter row hidden, and the delimiter row's column alignments honored. Moving the cursor into
+  delimiter row taking up no vertical space at all while its column alignments are honored, so the
+  header sits directly above the body. Moving the cursor into
   the table reverts the whole table to its source text — like a fenced code block — so it is always
   edited as raw Markdown. Inline formatting inside a cell renders on the same terms as it does
   outside one — bold, italic, strikethrough, highlight, inline code, underline, links, emoji and
