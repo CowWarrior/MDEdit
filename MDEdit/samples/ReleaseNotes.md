@@ -76,7 +76,6 @@ Things that do not work correctly today, listed so they do not come as a surpris
 
 Specified and intended for a future release, with no date attached:
 
-- Convert emoji to shortcodes — a command to replace literal emoji characters with their `:shortcode:` equivalents, across your selection or the whole document.
 - Find and replace — replace matches one at a time or all at once, from the same panel you search in, with Ctrl+H. Replacing everything counts as a single undo, so one Ctrl+Z puts it all back.
 - Improved Markdown conformance — better handling of less common Markdown syntax and edge cases.
 

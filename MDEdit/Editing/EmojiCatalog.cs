@@ -23,7 +23,14 @@ internal static class EmojiCatalog
     // picker to browse — Dictionary enumeration order is not a documented guarantee, so the picker
     // needs a real list rather than iterating Entries.Value directly. Built in one pass over the
     // same file so the two views can never drift apart.
-    private static readonly Lazy<(Dictionary<string, string> ByShortcode, List<(string Shortcode, string Emoji)> Ordered)> Data = new(Load);
+    private static readonly Lazy<CatalogData> Data = new(Load);
+
+    private sealed record CatalogData(
+        Dictionary<string, string> ByShortcode,
+        List<(string Shortcode, string Emoji)> Ordered,
+        Dictionary<string, string> ByEmoji,
+        HashSet<char> EmojiFirstChars,
+        int MaxEmojiLength);
 
     /// <summary>Number of shortcodes in the catalogue. Exposed for tests and diagnostics.</summary>
     public static int Count => Data.Value.Ordered.Count;
@@ -34,7 +41,35 @@ internal static class EmojiCatalog
     public static bool TryGet(string shortcode, out string emoji)
         => Data.Value.ByShortcode.TryGetValue(shortcode, out emoji!);
 
-    private static (Dictionary<string, string>, List<(string, string)>) Load()
+    /// <summary>
+    /// The reverse lookup: the shortcode to write for a literal emoji character (Requirements.md §3,
+    /// Format → Convert Emoji to Shortcodes).
+    /// </summary>
+    /// <remarks>
+    /// <b>Not simply the forward map inverted</b>, because aliases collide — <c>thumbsup</c> and
+    /// <c>+1</c> are both 👍, <c>thumbsdown</c> and <c>-1</c> both 👎 — so one shortcode per
+    /// character has to win, deterministically. <b>First listed in <c>Emoji.txt</c> wins</b>: the
+    /// file is hand-ordered with the preferred name first, so that rule needs no second list to
+    /// express the preference, and reordering the file is how you change the answer. Decided here
+    /// rather than at the call site so every consumer gets the same one.
+    /// </remarks>
+    public static bool TryGetShortcode(string emoji, out string shortcode)
+        => Data.Value.ByEmoji.TryGetValue(emoji, out shortcode!);
+
+    /// <summary>
+    /// Longest catalogue emoji in UTF-16 code units — a scanner must try lengths from this downward
+    /// so a variation-selector form (❤️) wins over its bare base character (❤).
+    /// </summary>
+    public static int MaxEmojiLength => Data.Value.MaxEmojiLength;
+
+    /// <summary>
+    /// Whether any catalogue emoji begins with this character. Lets a scan reject the overwhelming
+    /// majority of positions in O(1), instead of building a substring per candidate length at every
+    /// character of the document.
+    /// </summary>
+    public static bool CouldStartEmoji(char c) => Data.Value.EmojiFirstChars.Contains(c);
+
+    private static CatalogData Load()
     {
         var byShortcode = new Dictionary<string, string>(StringComparer.Ordinal);
         var ordered = new List<(string, string)>();
@@ -42,7 +77,8 @@ internal static class EmojiCatalog
 
         using var stream = typeof(EmojiCatalog).Assembly
             .GetManifestResourceStream("MDEdit.Resources.Emoji.txt");
-        if (stream is null) return (byShortcode, ordered);   // Missing resource shouldn't take the editor down.
+        // Missing resource shouldn't take the editor down.
+        if (stream is null) return new CatalogData(byShortcode, ordered, new(StringComparer.Ordinal), [], 0);
 
         using var reader = new StreamReader(stream, Encoding.UTF8);
         while (reader.ReadLine() is string line)
@@ -71,6 +107,21 @@ internal static class EmojiCatalog
             }
         }
 
-        return (byShortcode, ordered);
+        // The reverse map is built from `ordered` after the forward pass rather than alongside it,
+        // so a shortcode redefined later in the file contributes its final emoji, and file order —
+        // which is what decides alias collisions — is the order actually seen here.
+        var byEmoji = new Dictionary<string, string>(StringComparer.Ordinal);
+        var firstChars = new HashSet<char>();
+        int maxEmojiLength = 0;
+
+        foreach (var (name, emoji) in ordered)
+        {
+            // First listed wins; see TryGetShortcode.
+            if (!byEmoji.ContainsKey(emoji)) byEmoji[emoji] = name;
+            firstChars.Add(emoji[0]);
+            if (emoji.Length > maxEmojiLength) maxEmojiLength = emoji.Length;
+        }
+
+        return new CatalogData(byShortcode, ordered, byEmoji, firstChars, maxEmojiLength);
     }
 }

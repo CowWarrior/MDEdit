@@ -152,6 +152,84 @@ public class MarkdownSyntaxEmojiTests
         Assert.Equal(":joy:", text[span.Start..span.End]);
     }
 
+    // ── Reverse lookup (Convert Emoji to Shortcodes) ─────────────────────────
+
+    [Fact]
+    public void TryGetShortcode_PrefersTheNameListedFirstInTheFile()
+    {
+        // The alias collision the reverse map exists to resolve: 👍 is both "thumbsup" and "+1",
+        // 👎 both "thumbsdown" and "-1". Emoji.txt is hand-ordered with the preferred name first,
+        // so first-listed-wins needs no second list to express the preference — but nothing else
+        // would catch it silently flipping to the alias.
+        Assert.True(EmojiCatalog.TryGetShortcode("👍", out var up));
+        Assert.Equal("thumbsup", up);
+
+        Assert.True(EmojiCatalog.TryGetShortcode("👎", out var down));
+        Assert.Equal("thumbsdown", down);
+    }
+
+    [Fact]
+    public void TryGetShortcode_RoundTripsWithTheForwardLookup()
+    {
+        // Every shortcode the reverse map yields must map back to the same character, or the
+        // command would rewrite a document into something that renders differently.
+        foreach (var (_, emoji) in EmojiCatalog.All)
+        {
+            Assert.True(EmojiCatalog.TryGetShortcode(emoji, out var shortcode));
+            Assert.True(EmojiCatalog.TryGet(shortcode, out var roundTripped));
+            Assert.Equal(emoji, roundTripped);
+        }
+    }
+
+    [Fact]
+    public void TryGetShortcode_UnknownCharacterIsNotConverted()
+    {
+        Assert.False(EmojiCatalog.TryGetShortcode("x", out _));
+    }
+
+    [Fact]
+    public void CouldStartEmoji_IsAProperFilterRatherThanAlwaysTrue()
+    {
+        // The O(1) rejection the scan leans on. A version returning true for everything would still
+        // pass every other test here while making the scan build a substring at every character.
+        Assert.False(EmojiCatalog.CouldStartEmoji('a'));
+        Assert.False(EmojiCatalog.CouldStartEmoji(' '));
+        // Indexed off the string, not a char literal: 👍 is a surrogate pair and does not fit in one.
+        Assert.True(EmojiCatalog.CouldStartEmoji("👍"[0]));
+    }
+
+    [Fact]
+    public void FindEmojiCharacterSpans_FindsLiteralEmojiWithItsShortcode()
+    {
+        var doc = new TextDocument("hi 👍 there");
+
+        var span = Assert.Single(MarkdownSyntax.FindEmojiCharacterSpans(doc, doc.GetLineByNumber(1)));
+
+        Assert.Equal("thumbsup", span.Shortcode);
+        Assert.Equal("👍", doc.GetText(span.Start, span.End - span.Start));
+    }
+
+    [Fact]
+    public void FindEmojiCharacterSpans_SkipsInlineCode()
+    {
+        // Mirrors FindEmojiSpans skipping code the other way round. MDEdit will not render a
+        // shortcode inside backticks back into an emoji, so it must not convert one to a shortcode
+        // there either.
+        var doc = new TextDocument("`👍` 👎");
+
+        var span = Assert.Single(MarkdownSyntax.FindEmojiCharacterSpans(doc, doc.GetLineByNumber(1)));
+
+        Assert.Equal("thumbsdown", span.Shortcode);
+    }
+
+    [Fact]
+    public void FindEmojiCharacterSpans_UncataloguedCharacterIsLeftAlone()
+    {
+        var doc = new TextDocument("plain text ‱ here");
+
+        Assert.Empty(MarkdownSyntax.FindEmojiCharacterSpans(doc, doc.GetLineByNumber(1)));
+    }
+
     [Fact]
     public void FindEmojiSpans_EscapedColon_IsNotAnEmoji()
     {

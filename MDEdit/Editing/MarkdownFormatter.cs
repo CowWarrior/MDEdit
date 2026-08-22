@@ -338,6 +338,81 @@ internal static class MarkdownFormatter
     }
 
     /// <summary>
+    /// Replaces literal emoji characters with their catalogue shortcodes — across the selection if
+    /// there is one, the whole document otherwise (Requirements.md §3). Characters with no catalogue
+    /// entry are left alone.
+    /// </summary>
+    /// <remarks>
+    /// <b>The first operation here that rewrites content rather than adding or removing syntax</b>,
+    /// which is why two things are deliberate. Every replacement is made inside one
+    /// <c>doc.RunUpdate()</c>, so a single Ctrl+Z undoes the whole conversion rather than unwinding
+    /// it one emoji at a time — a whole-document run could otherwise take hundreds of presses. And
+    /// replacements are collected first and applied <b>last-to-first</b>, so each edit only shifts
+    /// offsets that have already been used; collecting and applying in one forward pass would
+    /// invalidate every subsequent offset, since a shortcode is longer than the character it
+    /// replaces.
+    /// <para>
+    /// <b>Code is skipped, in both forms.</b> Inline code is excluded by
+    /// <see cref="MarkdownSyntax.FindEmojiCharacterSpans"/> itself; fenced blocks are excluded here,
+    /// because whether a line sits inside one is a document-wide property no line-local scan can
+    /// see. The rule is symmetry with rendering: MDEdit will not turn a shortcode inside code back
+    /// into an emoji, so it must not convert an emoji inside code into a shortcode either —
+    /// otherwise running this command silently edits the contents of code samples.
+    /// </para>
+    /// </remarks>
+    public static SelectionRange? ConvertEmojiToShortcodes(TextDocument doc, SelectionRange sel)
+    {
+        bool wholeDocument = sel.Length == 0;
+        int rangeStart = wholeDocument ? 0 : sel.Start;
+        int rangeEnd   = wholeDocument ? doc.TextLength : sel.Start + sel.Length;
+
+        int firstLine = doc.GetLineByOffset(rangeStart).LineNumber;
+        int lastLine  = doc.GetLineByOffset(rangeEnd).LineNumber;
+
+        var replacements = new List<EmojiCharacterSpan>();
+        for (int n = firstLine; n <= lastLine; n++)
+        {
+            var line = doc.GetLineByNumber(n);
+
+            // The O(1) check first, so the document-wide fence walk is only paid for actual fence
+            // lines — the calling convention TryGetEnclosingFenceBlock documents. Skipping to the
+            // block's end also means each block costs one walk rather than one per line inside it.
+            if (MarkdownSyntax.IsFenceDelimiterLine(doc, line)
+                && MarkdownSyntax.TryGetEnclosingFenceBlock(doc, n, out _, out int blockEnd))
+            {
+                n = blockEnd;
+                continue;
+            }
+
+            foreach (var span in MarkdownSyntax.FindEmojiCharacterSpans(doc, line))
+            {
+                // A selection can start or end mid-line, so clip to it rather than converting the
+                // whole of the first and last lines it touches.
+                if (span.Start < rangeStart || span.End > rangeEnd) continue;
+                replacements.Add(span);
+            }
+        }
+
+        if (replacements.Count == 0) return null;
+
+        int delta = 0;
+        using (doc.RunUpdate())
+        {
+            for (int i = replacements.Count - 1; i >= 0; i--)
+            {
+                var span = replacements[i];
+                var shortcode = $":{span.Shortcode}:";
+                doc.Replace(span.Start, span.End - span.Start, shortcode);
+                delta += shortcode.Length - (span.End - span.Start);
+            }
+        }
+
+        // Nothing before the selection changed, so only its length moves. A whole-document run
+        // leaves caret placement to the document's own anchor movement.
+        return wholeDocument ? null : new SelectionRange(sel.Start, sel.Length + delta);
+    }
+
+    /// <summary>
     /// Inserts a starter table (header row, delimiter row, three body rows), selecting "Header 1"
     /// so the first keystroke replaces it — the same placeholder-selection idiom as
     /// <see cref="Link"/>. Any existing selection is replaced outright rather than wrapped: unlike

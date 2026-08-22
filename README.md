@@ -65,8 +65,6 @@ MDEdit emits literal `<u>` tags, relying on Markdown's pass-through of inline HT
 
 Specified and intended for a future release, with no date attached:
 
-- **Convert emoji to shortcodes** — a command to replace literal emoji characters with their
-  `:shortcode:` equivalents, across the selection or the whole document.
 - **Find and replace** — replace matches one at a time or all at once, from the same panel as Find,
   with Ctrl+H. Replacing all counts as a single undo.
 - **Improved Markdown conformance** — better support for niche Markdown features and edge cases.

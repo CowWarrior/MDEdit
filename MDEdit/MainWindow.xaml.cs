@@ -1023,6 +1023,11 @@ public partial class MainWindow : Window
         if (picker.ShowDialog() == true)
             ApplyFormat(MarkdownFormatter.InsertEmoji(Editor.Document, CurrentSelection, picker.SelectedShortcode!));
     }
+    // Menu-only, no toolbar button: this rewrites existing content rather than inserting syntax at
+    // the cursor, so it doesn't belong among the one-shot insert commands the toolbar carries.
+    private void MenuConvertEmoji_Click(object sender, RoutedEventArgs e)
+        => ApplyFormat(MarkdownFormatter.ConvertEmojiToShortcodes(Editor.Document, CurrentSelection));
+
     private void BtnTable_Click(object sender, RoutedEventArgs e)      => InsertTable();
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);

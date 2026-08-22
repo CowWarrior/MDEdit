@@ -105,6 +105,9 @@
                 <MenuItem Header="Code _Block"   Click="BtnCodeBlock_Click"/>
                 <MenuItem Header="_Link…"        Click="BtnLink_Click"/>
                 <MenuItem Header="Emo_ji"        Click="BtnEmoji_Click"/>
+                <MenuItem Header="Convert Emoji to _Shortcodes"
+                          Click="MenuConvertEmoji_Click"
+                          ToolTip="Replaces literal emoji with their :shortcode: form — the selection if there is one, otherwise the whole document. Text inside code spans and code blocks is left alone."/>
                 <MenuItem Header="_Table"        Click="BtnTable_Click"/>
                 <Separator/>
                 <MenuItem Header="• Bullet List"    Click="BtnBulletList_Click"/>

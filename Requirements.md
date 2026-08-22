@@ -81,8 +81,10 @@ carries a number is renumbered in place.
 - Convert emoji to shortcodes — a command that replaces literal emoji characters with their catalogue
   shortcodes, across the selection if there is one and the whole document otherwise. This makes a
   pasted or imported document consistent with the shortcode form MDEdit writes, and keeps the source
-  readable in editors that cannot display emoji. Characters with no catalogue entry are left alone
-  *(planned)*
+  readable in editors that cannot display emoji. Characters with no catalogue entry are left alone,
+  as is anything inside inline code or a fenced code block — the editor does not render a shortcode
+  back into an emoji there, so it does not convert one either. Where a character has more than one
+  shortcode, the catalogue's preferred name is used. The whole conversion is a single undo step
 
 Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are all *extended* Markdown syntax rather than part of the original specification. They are widely supported (GitHub, GitLab, and most modern renderers) but not universally, and a document using them may render as literal text elsewhere.
 

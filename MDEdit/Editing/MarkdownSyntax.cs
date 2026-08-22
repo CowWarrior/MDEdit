@@ -42,6 +42,12 @@ internal readonly record struct UnderlineSpan(int Start, int ContentStart, int C
 internal readonly record struct EmojiSpan(int Start, int End, string Emoji);
 
 /// <summary>
+/// A literal emoji <em>character</em> run and the shortcode it should be written as — the reverse of
+/// <see cref="EmojiSpan"/>, for Format → Convert Emoji to Shortcodes (Requirements.md §3).
+/// </summary>
+internal readonly record struct EmojiCharacterSpan(int Start, int End, string Shortcode);
+
+/// <summary>
 /// A link or image found on a single line: "[text](url)", "![alt](url)", or "[text][ref]".
 /// Start/End are absolute document offsets (End exclusive) for the whole construct; TextStart/
 /// TextEnd bound the visible label ("text"/"alt") — live preview keeps [TextStart, TextEnd)
@@ -662,6 +668,55 @@ internal static class MarkdownSyntax
                 _ => InlineStyles.Italic,
             },
         };
+    }
+
+    /// <summary>
+    /// The literal emoji characters on a line that have a catalogue shortcode, with the shortcode to
+    /// write for each. The detection half of Convert Emoji to Shortcodes (Requirements.md §3).
+    /// </summary>
+    /// <remarks>
+    /// The mirror image of <see cref="FindEmojiSpans"/>, and it skips inline code for the same
+    /// reason: a shortcode inside backticks is literal, so an emoji inside backticks must stay one —
+    /// converting it would produce a shortcode that this editor then refuses to render back.
+    /// Symmetry between the two directions is the rule; <c>MarkdownFormatter</c> extends it to
+    /// fenced code blocks, which are a block property this line-local scan cannot see.
+    /// <para>
+    /// <b>Longest match wins at each position</b>, which matters because a variation-selector form
+    /// (❤️, two code units) has its bare base character (❤) as a prefix — shortest-first would
+    /// convert the base and strand the selector. Positions are rejected in O(1) via
+    /// <see cref="EmojiCatalog.CouldStartEmoji"/> before any substring is built, since almost no
+    /// character in a document starts an emoji.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<EmojiCharacterSpan> FindEmojiCharacterSpans(TextDocument doc, DocumentLine line)
+    {
+        var results = new List<EmojiCharacterSpan>();
+        var text = doc.GetText(line);
+
+        // From 0, deliberately unlike the scanners above: the leading-bullet skip exists so "* " is
+        // not read as an italic opener, which has no bearing on finding emoji characters.
+        int pos = 0;
+        while (pos < text.Length)
+        {
+            var code = InlineCodePattern.Match(text, pos);
+            if (code.Success) { pos += code.Length; continue; }
+
+            if (!EmojiCatalog.CouldStartEmoji(text[pos])) { pos++; continue; }
+
+            bool matched = false;
+            int longest = Math.Min(EmojiCatalog.MaxEmojiLength, text.Length - pos);
+            for (int length = longest; length >= 1; length--)
+            {
+                if (!EmojiCatalog.TryGetShortcode(text.Substring(pos, length), out var shortcode)) continue;
+
+                results.Add(new EmojiCharacterSpan(line.Offset + pos, line.Offset + pos + length, shortcode));
+                pos += length;
+                matched = true;
+                break;
+            }
+            if (!matched) pos++;
+        }
+        return results;
     }
 
     private static List<(EmphasisSpan Span, EmphasisKind Kind)> ScanLine(TextDocument doc, DocumentLine line)

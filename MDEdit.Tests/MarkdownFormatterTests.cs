@@ -248,4 +248,98 @@ public class MarkdownFormatterTests
         Assert.Equal("before :rocket: after", doc.Text);
         Assert.Equal(new SelectionRange(15, 0), result);
     }
+
+    // ── Convert Emoji to Shortcodes ──────────────────────────────────────────
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_NoSelection_ConvertsTheWholeDocument()
+    {
+        var doc = new TextDocument("a 👍 b\nc 👎 d");
+
+        var result = MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+
+        Assert.Equal("a :thumbsup: b\nc :thumbsdown: d", doc.Text);
+        // Whole-document runs leave caret placement to the document's own anchor movement.
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_WithSelection_ConvertsOnlyInsideIt()
+    {
+        var doc = new TextDocument("👍 kept 👍 changed");
+        // Just the second emoji onward.
+        var sel = new SelectionRange(7, doc.TextLength - 7);
+
+        var result = MarkdownFormatter.ConvertEmojiToShortcodes(doc, sel);
+
+        Assert.Equal("👍 kept :thumbsup: changed", doc.Text);
+        // Nothing before the selection moved, so only its length grows.
+        Assert.Equal(new SelectionRange(7, sel.Length + ":thumbsup:".Length - "👍".Length), result);
+    }
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_MultipleOnOneLine_AllConvert()
+    {
+        // Applied last-to-first, so each edit only shifts offsets already consumed. A forward pass
+        // would misplace every replacement after the first, since a shortcode is longer than the
+        // character it replaces.
+        var doc = new TextDocument("👍👎👍");
+
+        MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+
+        Assert.Equal(":thumbsup::thumbsdown::thumbsup:", doc.Text);
+    }
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_IsOneUndoStep()
+    {
+        // A whole-document run can be hundreds of replacements; without RunUpdate grouping them,
+        // undoing it would take hundreds of Ctrl+Z presses.
+        var doc = new TextDocument("👍 a 👎 b 👍");
+        var original = doc.Text;
+
+        MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+        Assert.NotEqual(original, doc.Text);
+
+        doc.UndoStack.Undo();
+        Assert.Equal(original, doc.Text);
+    }
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_SkipsInlineCodeAndFencedBlocks()
+    {
+        // Symmetry with rendering: MDEdit will not turn a shortcode inside code back into an emoji,
+        // so converting one there would silently edit the contents of a code sample.
+        var doc = new TextDocument("`👍` stays\n```\n👍 stays\n```\n👍 converts");
+
+        MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+
+        Assert.Equal("`👍` stays\n```\n👍 stays\n```\n:thumbsup: converts", doc.Text);
+    }
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_UncataloguedCharactersAreLeftAlone()
+    {
+        var doc = new TextDocument("‱ ordinary text");
+
+        var result = MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+
+        Assert.Equal("‱ ordinary text", doc.Text);
+        Assert.Null(result);
+    }
+
+    [Fact]
+    public void ConvertEmojiToShortcodes_ExistingShortcodesAreNotDoubled()
+    {
+        // The command is idempotent: a second run has nothing left to find, so a user who runs it
+        // twice does not end up with ":​:thumbsup::".
+        var doc = new TextDocument("👍 and :rocket:");
+
+        MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+        var once = doc.Text;
+        MarkdownFormatter.ConvertEmojiToShortcodes(doc, new SelectionRange(0, 0));
+
+        Assert.Equal(":thumbsup: and :rocket:", once);
+        Assert.Equal(once, doc.Text);
+    }
 }
