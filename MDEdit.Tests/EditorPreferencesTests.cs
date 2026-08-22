@@ -18,7 +18,7 @@ public class EditorPreferencesTests
         // place for a property absent from the JSON, so defaulting this to CurrentVersion would make
         // an unstamped file claim to be current — destroying the one distinction the field exists to
         // preserve for a future migration.
-        Assert.Equal(2, EditorPreferences.CurrentVersion);
+        Assert.Equal(3, EditorPreferences.CurrentVersion);
         Assert.Equal(0, new EditorPreferences().Version);
     }
 

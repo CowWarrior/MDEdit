@@ -238,7 +238,7 @@ internal sealed class ModeStyleEditor
             else styles.Elements.Remove(key);
 
             SelectElement();
-            Changed();
+            Reset(key);
         };
         panel.Children.Add(reset);
 
@@ -447,7 +447,37 @@ internal sealed class ModeStyleEditor
 
     private ElementStyle Current() => _styles().Style(SelectedKey);
 
+    /// <summary>
+    /// Applies an edit the user just made to the selected element: marks it as user-set, then
+    /// re-renders.
+    /// </summary>
+    /// <remarks>
+    /// <b>The single place a touch is recorded</b>, which is why every handler above routes through
+    /// it. The mark is what stops a future <c>EditorPreferences.CurrentDefaultsRevision</c> bump
+    /// overwriting a value the user chose — see <see cref="ModeStyles.TouchedElements"/>.
+    /// </remarks>
     private void Changed()
+    {
+        _styles().TouchedElements.Add(SelectedKey);
+        Applied();
+    }
+
+    /// <summary>
+    /// Applies a reset of <paramref name="key"/> back to the shipped default: clears the touch mark,
+    /// then re-renders.
+    /// </summary>
+    /// <remarks>
+    /// Deliberately <i>not</i> <see cref="Changed"/>. The element now holds exactly what this build
+    /// ships, so recording it as user-set would permanently opt it out of future default updates —
+    /// the opposite of what "Reset this element" means.
+    /// </remarks>
+    private void Reset(string key)
+    {
+        _styles().TouchedElements.Remove(key);
+        Applied();
+    }
+
+    private void Applied()
     {
         UpdateSample();
         _onChanged();

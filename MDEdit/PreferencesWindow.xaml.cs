@@ -57,7 +57,14 @@ public partial class PreferencesWindow : Window
 
     private void BtnResetToDefault_Click(object sender, RoutedEventArgs e)
     {
-        _settings.EditorPreferences = new EditorPreferences { Version = EditorPreferences.CurrentVersion };
+        // A fresh instance is by definition at this build's defaults with nothing user-set, so it is
+        // stamped current on both counts — including DefaultsRevision, or the next Load would run a
+        // re-apply that could only be a no-op.
+        _settings.EditorPreferences = new EditorPreferences
+        {
+            Version = EditorPreferences.CurrentVersion,
+            DefaultsRevision = EditorPreferences.CurrentDefaultsRevision,
+        };
         RefreshFromSettings();
         _onChanged();
     }

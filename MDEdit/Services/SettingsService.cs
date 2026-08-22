@@ -83,7 +83,30 @@ internal sealed class EditorPreferences
     /// </remarks>
     public int Version { get; set; }
 
-    public const int CurrentVersion = 2;
+    public const int CurrentVersion = 3;
+
+    /// <summary>
+    /// The revision of this build's shipped defaults — see <see cref="ModeStyles.WysiwygDefaults"/>
+    /// and <see cref="ModeStyles.SourceDefaults"/>. <b>Bump this whenever a shipped default value
+    /// changes</b>; that is the entire mechanism by which the new value reaches an install whose
+    /// <c>settings.json</c> was written before it.
+    /// </summary>
+    public const int CurrentDefaultsRevision = 1;
+
+    /// <summary>
+    /// The defaults revision the <c>settings.json</c> this came from was written with — 0 for any
+    /// file written before the mechanism existed.
+    /// </summary>
+    /// <remarks>
+    /// <b>Deliberately separate from <see cref="Version"/>, not folded into it.</b>
+    /// <see cref="Version"/> is the <i>schema</i>: it changes when the shape of this object changes,
+    /// and a mismatch may need code to convert. This is the <i>content</i>: it changes when a shipped
+    /// value changes, and a mismatch needs only <see cref="ModeStyles.ReapplyUntouchedDefaults"/>.
+    /// Conflating them would mean every schema bump silently re-applied defaults, and every retuned
+    /// colour had to claim to be a schema change.
+    /// <para>No initializer, for exactly the reason given on <see cref="Version"/>.</para>
+    /// </remarks>
+    public int DefaultsRevision { get; set; }
 
     /// <summary>
     /// Per-element styling for WYSIWYG mode and for source mode, kept fully independent
@@ -98,6 +121,51 @@ internal sealed class EditorPreferences
     /// </remarks>
     public ModeStyles Wysiwyg { get; set; } = ModeStyles.WysiwygDefaults();
     public ModeStyles Source { get; set; } = ModeStyles.SourceDefaults();
+
+    /// <summary>
+    /// Replaces anything a hand-edited file may have nulled outright.
+    /// </summary>
+    /// <remarks>
+    /// The non-nullable declarations do not stop System.Text.Json producing null, and everything
+    /// downstream would NRE — which <see cref="SettingsService.Load"/>'s catch filter does not
+    /// cover, so it would fail startup rather than fall back to defaults. Same hazard the
+    /// <c>EditorPreferences</c> null-guard in <see cref="SettingsService.Deserialize"/> already
+    /// covers, one level down.
+    /// </remarks>
+    internal void Normalize()
+    {
+        Wysiwyg ??= ModeStyles.WysiwygDefaults();
+        Source ??= ModeStyles.SourceDefaults();
+        Wysiwyg.Normalize();
+        Source.Normalize();
+    }
+
+    /// <summary>
+    /// Brings a just-deserialized instance up to this build's defaults: reconstructs
+    /// <see cref="ModeStyles.TouchedElements"/> if the file predates it, then re-applies current
+    /// defaults to every element the user has never set.
+    /// </summary>
+    /// <remarks>
+    /// <b>The order is load-bearing.</b> A file written before touch tracking deserializes with an
+    /// <i>empty</i> touched set, which reads as "the user has never set anything" — so re-applying
+    /// defaults first would wipe every customization it holds. <see cref="Version"/> is what
+    /// distinguishes such a file, and this is precisely the use the stamp was kept for when the
+    /// one-time migration was deleted.
+    /// </remarks>
+    internal void UpgradeToCurrentDefaults()
+    {
+        if (Version < CurrentVersion)
+        {
+            Wysiwyg.InferTouchedElements(ModeStyles.WysiwygDefaults());
+            Source.InferTouchedElements(ModeStyles.SourceDefaults());
+        }
+
+        if (DefaultsRevision >= CurrentDefaultsRevision) return;
+
+        Wysiwyg.ReapplyUntouchedDefaults(ModeStyles.WysiwygDefaults());
+        Source.ReapplyUntouchedDefaults(ModeStyles.SourceDefaults());
+        DefaultsRevision = CurrentDefaultsRevision;
+    }
 }
 
 /// <summary>
@@ -123,6 +191,26 @@ internal sealed class ModeStyles
     /// <see cref="StyledElements.All"/> to stay valid.
     /// </summary>
     public Dictionary<string, ElementStyle> Elements { get; set; } = new();
+
+    /// <summary>
+    /// Keys of the elements the user has actually set in Preferences, as opposed to those still
+    /// sitting at whatever this build ships as the default (Requirements.md §6). Read only by
+    /// <see cref="ReapplyUntouchedDefaults"/>; nothing in the render path consults it.
+    /// </summary>
+    /// <remarks>
+    /// <b>This exists because <see cref="ElementStyle"/>'s nullable fields cannot express it.</b>
+    /// There, null means "inherit" — a rendering instruction — so "never set" and "deliberately set
+    /// to a value that happens to equal the default" are indistinguishable. That is why retuning a
+    /// shipped default used to reach nobody who had ever saved a <c>settings.json</c>: every element
+    /// the file carried won over the code's defaults forever, and the only recovery was Preferences →
+    /// Reset to Default, which discards the user's own work along with the stale value.
+    /// <para>
+    /// A separate set rather than making every field tri-state: it leaves the 20 × 9 style model and
+    /// <c>StyleResolver</c> completely untouched, and <c>ModeStyleEditor</c> becomes the single place
+    /// that records a touch — one writer, rather than nine per element.
+    /// </para>
+    /// </remarks>
+    public HashSet<string> TouchedElements { get; set; } = [];
 
     /// <summary>
     /// The style for one element, created on demand. For <b>editing</b> only — rendering reads
@@ -163,7 +251,74 @@ internal sealed class ModeStyles
         BaseFontFamily = BaseFontFamily,
         BaseFontSize = BaseFontSize * factor,
         Elements = Elements,
+        // Shared by reference for the same reason as Elements above. Nothing on the render path
+        // reads it, but a copy carrying an empty set would look authoritative and read as "the user
+        // has never set anything" to any future caller that did.
+        TouchedElements = TouchedElements,
     };
+
+    /// <summary>Replaces collections a hand-edited file may have nulled — see <see cref="EditorPreferences.Normalize"/>.</summary>
+    internal void Normalize()
+    {
+        Elements ??= new();
+        TouchedElements ??= [];
+    }
+
+    /// <summary>
+    /// Copies <paramref name="defaults"/> over every element the user has never set, leaving those
+    /// in <see cref="TouchedElements"/> exactly as they are.
+    /// </summary>
+    /// <remarks>
+    /// Elements present here but absent from <paramref name="defaults"/> are left alone: the defaults
+    /// tables define every key in <c>StyledElements.All</c>, so that can only be junk from a
+    /// hand-edited file, and deleting a key nothing renders from buys nothing.
+    /// </remarks>
+    internal void ReapplyUntouchedDefaults(ModeStyles defaults)
+    {
+        // Normal's family and size live on the mode rather than in its ElementStyle, so they follow
+        // Normal's touch mark — the same coupling "Reset this element" already has to honour.
+        if (!TouchedElements.Contains(StyledElements.Normal))
+        {
+            BaseFontFamily = defaults.BaseFontFamily;
+            BaseFontSize = defaults.BaseFontSize;
+        }
+
+        foreach (var (key, fallback) in defaults.Elements)
+        {
+            if (TouchedElements.Contains(key)) continue;
+            Style(key).CopyFrom(fallback);
+        }
+    }
+
+    /// <summary>
+    /// Best-effort reconstruction of <see cref="TouchedElements"/> for a <c>settings.json</c> written
+    /// before the set existed: an element differing from <paramref name="defaults"/> was necessarily
+    /// set by hand, so it is marked touched and protected from <see cref="ReapplyUntouchedDefaults"/>.
+    /// </summary>
+    /// <remarks>
+    /// <b>Conservative in the one direction that matters.</b> An element the user set to a value that
+    /// happens to equal the current default is read as untouched, costing at worst a later default
+    /// change reaching a value they had chosen anyway. The reverse mistake would silently discard
+    /// real customization, so it is the one this must never make.
+    /// <para>
+    /// Comparing against <i>current</i> defaults rather than a frozen historical table is what keeps
+    /// the deleted baseline-table approach out of this codebase, and it degrades safely if defaults
+    /// have moved since the file was written: an element sitting at a superseded default differs from
+    /// the current one, so it is preserved rather than overwritten. Such a file simply doesn't
+    /// benefit from that particular revision — it is never damaged by it.
+    /// </para>
+    /// </remarks>
+    internal void InferTouchedElements(ModeStyles defaults)
+    {
+        if (BaseFontFamily != defaults.BaseFontFamily || BaseFontSize != defaults.BaseFontSize)
+            TouchedElements.Add(StyledElements.Normal);
+
+        foreach (var (key, style) in Elements)
+        {
+            if (!defaults.Elements.TryGetValue(key, out var fallback) || !style.Matches(fallback))
+                TouchedElements.Add(key);
+        }
+    }
 
     // The editor's pre-Requirements-§6 hardcoded values, kept as the defaults so an unmodified or
     // upgrading install renders identically. MainWindow.xaml's editor carries the same two.
@@ -430,6 +585,27 @@ internal sealed class ElementStyle
         BackgroundLight = other.BackgroundLight;
         BackgroundDark = other.BackgroundDark;
     }
+
+    /// <summary>
+    /// Whether every property equals <paramref name="other"/>'s — the comparison behind
+    /// <see cref="ModeStyles.InferTouchedElements"/>.
+    /// </summary>
+    /// <remarks>
+    /// A named method rather than an <c>Equals</c> override or a record: these are mutable and handed
+    /// out by reference (the Preferences editor holds one for the selected element and writes through
+    /// it), so value-equality semantics would be actively misleading for a type used as an identity
+    /// everywhere else.
+    /// </remarks>
+    public bool Matches(ElementStyle other)
+        => FontFamily == other.FontFamily
+        && FontScale == other.FontScale
+        && FontWeight == other.FontWeight
+        && Italic == other.Italic
+        && Decoration == other.Decoration
+        && ForegroundLight == other.ForegroundLight
+        && ForegroundDark == other.ForegroundDark
+        && BackgroundLight == other.BackgroundLight
+        && BackgroundDark == other.BackgroundDark;
 }
 
 internal static class SettingsService
@@ -470,6 +646,11 @@ internal static class SettingsService
         // the non-nullable declaration, and everything downstream would hit an NRE — which Load's
         // catch filter doesn't cover, so it would fail startup rather than fall back to defaults.
         settings.EditorPreferences ??= new EditorPreferences();
+        settings.EditorPreferences.Normalize();
+
+        // Re-applies any default this build has changed to the elements the user has never set —
+        // without this, a file that has been saved once wins over the code's defaults forever.
+        settings.EditorPreferences.UpgradeToCurrentDefaults();
 
         return settings;
     }
@@ -480,6 +661,9 @@ internal static class SettingsService
         // per-element file from a pre-per-element one. See EditorPreferences.Version for why this
         // can't be a property initializer instead.
         settings.EditorPreferences.Version = EditorPreferences.CurrentVersion;
+        // Likewise the defaults the file is being written against, so the next Load can tell whether
+        // any shipped default has moved since.
+        settings.EditorPreferences.DefaultsRevision = EditorPreferences.CurrentDefaultsRevision;
 
         Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings));
