@@ -31,10 +31,11 @@ internal sealed class HorizontalRuleRenderer : IBackgroundRenderer
     private const double Thickness  = 1.0;
 
     private readonly HorizontalRuleElementGenerator _generator;
-    // HRuleBrushLight/Dark are now settable (AppSettings.EditorPreferences drives them, see
-    // MainWindow.ApplyEditorPreferences), so this reads them through a reference to the colorizer
-    // instance rather than a static field — the same reason this already holds one to
-    // HorizontalRuleElementGenerator.
+    // The rule's colour is the horizontalRule element's own (AppSettings.EditorPreferences drives
+    // it, and it varies by editor mode as well as by theme), so this reads it through a reference
+    // to the colorizer — Resolve(StyledElements.HorizontalRule) — rather than holding its own copy.
+    // Same reason this already holds a reference to HorizontalRuleElementGenerator: the drawn line
+    // and the raw text revealed under the caret must never disagree.
     private readonly MarkdownLineColorizer _colorizer;
 
     public HorizontalRuleRenderer(HorizontalRuleElementGenerator generator, MarkdownLineColorizer colorizer)
