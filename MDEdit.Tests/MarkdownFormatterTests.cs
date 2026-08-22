@@ -43,6 +43,22 @@ public class MarkdownFormatterTests
         Assert.Equal("## Title", doc.Text);
     }
 
+    [Theory]
+    [InlineData(4, "#### text")]
+    [InlineData(5, "##### text")]
+    [InlineData(6, "###### text")]
+    public void Heading_LevelsFourToSix_AreInsertable(int level, string expected)
+    {
+        // These levels always rendered (TryGetHeadingLevel caps at 6, and each has its own
+        // EditorPreferences entry); only the insertion commands stopped at 3, and the Format menu
+        // now reaches them. Pins that the formatter needed no change to support that.
+        var doc = new TextDocument("text");
+
+        MarkdownFormatter.Heading(doc, new SelectionRange(0, 0), level);
+
+        Assert.Equal(expected, doc.Text);
+    }
+
     [Fact]
     public void Heading_ReplacesExistingHeadingLevel()
     {

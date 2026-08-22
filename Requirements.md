@@ -62,7 +62,8 @@ carries a number is renumbered in place.
 - Underline — `<u>text</u>`
 
 ### Block formatting
-- Heading levels 1, 2, and 3
+- Heading levels 1 through 6, grouped under a Heading submenu in the Format menu, each with its own
+  keyboard shortcut. The toolbar carries 1–3 only, those being much the most frequently used
 - Fenced code block
 - Blockquote
 - Bullet (unordered) list item
@@ -214,6 +215,9 @@ common word processors, its established shortcut is used in preference to invent
 | Heading 1 | Ctrl+1 |
 | Heading 2 | Ctrl+2 |
 | Heading 3 | Ctrl+3 |
+| Heading 4 | Ctrl+4 |
+| Heading 5 | Ctrl+5 |
+| Heading 6 | Ctrl+6 |
 | Find | Ctrl+F |
 | Zoom In | Ctrl+= (or Ctrl and the mouse wheel) |
 | Zoom Out | Ctrl+- (or Ctrl and the mouse wheel) |

@@ -97,23 +97,36 @@
                 <MenuItem Header="Su_perscript"   Click="BtnSuperscript_Click" InputGestureText="Ctrl+Shift++"/>
                 <MenuItem Header="_Highlight"     Click="BtnHighlight_Click"/>
                 <Separator/>
-                <MenuItem Header="Heading _1"    Click="BtnH1_Click"         InputGestureText="Ctrl+1"/>
-                <MenuItem Header="Heading _2"    Click="BtnH2_Click"         InputGestureText="Ctrl+2"/>
-                <MenuItem Header="Heading _3"    Click="BtnH3_Click"         InputGestureText="Ctrl+3"/>
+                <!-- InputGestureText is written by hand because these are InputBindings rather than
+                     a RoutedUICommand's own gestures, which is the only case WPF fills in itself.
+                     The toolbar still carries 1-3 only. -->
+                <MenuItem Header="Headin_g">
+                    <MenuItem Header="Heading _1" Click="BtnH1_Click" InputGestureText="Ctrl+1"/>
+                    <MenuItem Header="Heading _2" Click="BtnH2_Click" InputGestureText="Ctrl+2"/>
+                    <MenuItem Header="Heading _3" Click="BtnH3_Click" InputGestureText="Ctrl+3"/>
+                    <MenuItem Header="Heading _4" Click="BtnH4_Click" InputGestureText="Ctrl+4"/>
+                    <MenuItem Header="Heading _5" Click="BtnH5_Click" InputGestureText="Ctrl+5"/>
+                    <MenuItem Header="Heading _6" Click="BtnH6_Click" InputGestureText="Ctrl+6"/>
+                </MenuItem>
+                <!-- Blockquote is deliberately outside the Lists submenu: it shares the line-prefix
+                     mechanism with the list commands but is not a list, and grouping it in would say
+                     it is. It sits beside them because all three are block constructs. -->
+                <MenuItem Header="_Lists">
+                    <MenuItem Header="• _Bullet List"    Click="BtnBulletList_Click"/>
+                    <MenuItem Header="☐ _Task List"      Click="BtnTaskList_Click"/>
+                    <MenuItem Header="1. _Numbered List" Click="BtnNumberList_Click"/>
+                </MenuItem>
+                <MenuItem Header="&gt; Blockquote"  Click="BtnBlockquote_Click"/>
                 <Separator/>
                 <MenuItem Header="Inline _Code"  Click="BtnCode_Click"/>
                 <MenuItem Header="Code _Block"   Click="BtnCodeBlock_Click"/>
-                <MenuItem Header="_Link…"        Click="BtnLink_Click"/>
+                <!-- "k" rather than "L", so the Lists submenu above can have "L" unambiguously. -->
+                <MenuItem Header="Lin_k…"        Click="BtnLink_Click"/>
                 <MenuItem Header="Emo_ji"        Click="BtnEmoji_Click"/>
                 <MenuItem Header="Convert Emoji to _Shortcodes"
                           Click="MenuConvertEmoji_Click"
                           ToolTip="Replaces literal emoji with their :shortcode: form — the selection if there is one, otherwise the whole document. Text inside code spans and code blocks is left alone."/>
                 <MenuItem Header="_Table"        Click="BtnTable_Click"/>
-                <Separator/>
-                <MenuItem Header="• Bullet List"    Click="BtnBulletList_Click"/>
-                <MenuItem Header="☐ Tas_k List"     Click="BtnTaskList_Click"/>
-                <MenuItem Header="1. Numbered List" Click="BtnNumberList_Click"/>
-                <MenuItem Header="&gt; Blockquote"  Click="BtnBlockquote_Click"/>
             </MenuItem>
 
             <MenuItem Header="_View">

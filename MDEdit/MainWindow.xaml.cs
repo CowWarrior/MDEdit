@@ -402,12 +402,20 @@ public partial class MainWindow : Window
         InputBindings.Add(new KeyBinding(
             new RelayCommand(() => WrapSelection("^", "^")), Key.OemPlus, ModifierKeys.Control | ModifierKeys.Shift));
 
-        InputBindings.Add(new KeyBinding(
-            new RelayCommand(() => InsertHeading(1)), Key.D1, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(
-            new RelayCommand(() => InsertHeading(2)), Key.D2, ModifierKeys.Control));
-        InputBindings.Add(new KeyBinding(
-            new RelayCommand(() => InsertHeading(3)), Key.D3, ModifierKeys.Control));
+        // Headings 1-6 (Requirements.md §3/§7). Nothing needs releasing: AvalonEdit declares no
+        // digit-key gesture at all — checked against AvalonEditCommands and both command handlers at
+        // tag v6.3.1, whose only Control gestures are Ctrl+D and Ctrl+I. The run starts at 1 because
+        // Ctrl+0 is Zoom Reset below. Key.D0..D9 are contiguous, so `Key.D0 + level` is exact.
+        // Top-row digits only, matching how these have always been bound — unlike zoom, which also
+        // takes the numpad because +/-/0 there are the keys a user actually reaches for.
+        for (int level = 1; level <= 6; level++)
+        {
+            // A `for` variable is shared across iterations, so every lambda would otherwise capture
+            // the same variable and insert heading 7.
+            int captured = level;
+            InputBindings.Add(new KeyBinding(
+                new RelayCommand(() => InsertHeading(captured)), Key.D0 + level, ModifierKeys.Control));
+        }
 
         // Zoom (Requirements.md §6). Nothing needs releasing for these — AvalonEdit's own gestures
         // are Ctrl+D/I/U, Ctrl+Shift+U and Insert. Note these are Ctrl WITHOUT Shift: the
@@ -1032,6 +1040,10 @@ public partial class MainWindow : Window
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);
     private void BtnH3_Click(object sender, RoutedEventArgs e)       => InsertHeading(3);
+    // 4-6 are menu-only; the toolbar keeps 1-3, and only 1-3 carry a Ctrl gesture.
+    private void BtnH4_Click(object sender, RoutedEventArgs e)       => InsertHeading(4);
+    private void BtnH5_Click(object sender, RoutedEventArgs e)       => InsertHeading(5);
+    private void BtnH6_Click(object sender, RoutedEventArgs e)       => InsertHeading(6);
     private void BtnCode_Click(object sender, RoutedEventArgs e)     => WrapSelection("`", "`");
     private void BtnCodeBlock_Click(object sender, RoutedEventArgs e)=> InsertCodeBlock();
     private void BtnLink_Click(object sender, RoutedEventArgs e)     => InsertLink();
