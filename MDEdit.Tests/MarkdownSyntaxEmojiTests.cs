@@ -151,4 +151,23 @@ public class MarkdownSyntaxEmojiTests
 
         Assert.Equal(":joy:", text[span.Start..span.End]);
     }
+
+    [Fact]
+    public void FindEmojiSpans_EscapedColon_IsNotAnEmoji()
+    {
+        Assert.Empty(Emojis(@"\:joy:"));
+    }
+
+    [Fact]
+    public void FindEmojiSpans_BackslashInsideCodeSpan_DoesNotDisturbTheCodeSkip()
+    {
+        // The escape check runs AFTER the code-span skip, since a backslash inside backticks is
+        // literal. Reversing the two would let an escape consume a character inside the code span
+        // and desynchronise the scan position from the span's real end.
+        var text = @"`\:joy:` :joy:";
+        var span = Assert.Single(Emojis(text));
+
+        Assert.Equal(":joy:", text[span.Start..span.End]);
+        Assert.Equal(9, span.Start);
+    }
 }

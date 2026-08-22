@@ -55,6 +55,30 @@ internal readonly record struct EmojiSpan(int Start, int End, string Emoji);
 /// </summary>
 internal readonly record struct LinkSpan(int Start, int TextStart, int TextEnd, int End, bool IsImage, string? Url);
 
+/// <summary>
+/// The inline constructs that apply to one run of rendered text. A flags enum because they compose:
+/// <c>**bold `code`**</c> yields a run carrying both <see cref="Bold"/> and <see cref="Code"/>.
+/// </summary>
+internal enum InlineStyles
+{
+    None          = 0,
+    Bold          = 1 << 0,
+    Italic        = 1 << 1,
+    Code          = 1 << 2,
+    Strikethrough = 1 << 3,
+    Highlight     = 1 << 4,
+    Underline     = 1 << 5,
+    Link          = 1 << 6,
+    Superscript   = 1 << 7,
+    Subscript     = 1 << 8,
+}
+
+/// <summary>
+/// A stretch of text to render with one set of styles, markers already removed and emoji shortcodes
+/// already substituted — see <see cref="MarkdownSyntax.FormatInline"/>.
+/// </summary>
+internal readonly record struct InlineRun(string Text, InlineStyles Styles);
+
 internal enum FenceKind { None, Backtick, Tilde }
 
 /// <summary>
@@ -251,6 +275,36 @@ internal static class MarkdownSyntax
     private static int LeadingBulletMarkerLength(TextDocument doc, DocumentLine line)
         => TryGetBulletListMarker(doc, line, out int markerOffset) ? markerOffset - line.Offset + 2 : 0;
 
+    // CommonMark's escapable set: any ASCII punctuation character. A backslash before anything else
+    // (a letter, a digit, a space) is a literal backslash and escapes nothing.
+    private const string EscapablePunctuation = @"!""#$%&'()*+,-./:;<=>?@[\]^_`{|}~";
+
+    /// <summary>
+    /// The number of characters a backslash escape occupies at <paramref name="pos"/> — 2 for a
+    /// real escape, 0 when there is none.
+    /// </summary>
+    /// <remarks>
+    /// <b>Every scanner in this file consumes this before trying its patterns</b>, which is what
+    /// stops an escaped character opening a run: on <c>\*not emphasis\*</c> the scan steps over both
+    /// backslash pairs, so neither <c>*</c> is ever offered to a pattern as a start position. That
+    /// single rule covers openers for emphasis, links, underline and emoji alike.
+    /// <para>
+    /// Escaped <i>closers</i> need the patterns' own content classes instead (see
+    /// <see cref="EmphasisPatterns"/>), since a closing delimiter is matched by the pattern rather
+    /// than visited by the scan.
+    /// </para>
+    /// <para>
+    /// Inline code is the deliberate exception: CommonMark gives code spans precedence over
+    /// backslash escapes, so a backslash inside backticks is literal and
+    /// <see cref="InlineCodePattern"/> stays escape-blind.
+    /// </para>
+    /// </remarks>
+    private static int EscapeLength(string text, int pos)
+        => text[pos] == '\\'
+        && pos + 1 < text.Length
+        && EscapablePunctuation.Contains(text[pos + 1])
+            ? 2 : 0;
+
     // Same patterns and precedence as Markdown.xshd (bold+italic before bold before italic; no
     // wildcard quantifiers, character-class exclusion instead, to avoid catastrophic backtracking —
     // see the comments there). \G anchors each pattern to the exact scan position passed to Match,
@@ -274,20 +328,40 @@ internal static class MarkdownSyntax
     // costs nothing — "10:30:45" contains ":30:" but "30" is not a shortcode.
     private static readonly Regex EmojiPattern = new(@"\G:([a-z0-9_+-]+):");
 
+    // Two CommonMark rules are folded into the patterns themselves, both matched by Markdown.xshd:
+    //
+    // 1. ESCAPED CLOSERS. Each content class is "(?:\\.|[^\\<delim>\n])+" — an escape pair, or any
+    //    character that is neither the delimiter nor a backslash. So "*a \* b*" runs to the real
+    //    closer instead of stopping at the escaped one. The two branches are deliberately DISJOINT
+    //    (the plain branch excludes '\\'): overlapping branches under a '+' is the classic
+    //    catastrophic-backtracking shape, and a run of backslashes with no closer would hit it. The
+    //    escaped-OPENER half is not here — the scanners step over escapes before matching, see
+    //    EscapeLength.
+    //
+    // 2. INTRAWORD '_'. The three '_' patterns carry "(?<!\w)" and "(?!\w)" so a '_' flanked by word
+    //    characters can neither open nor close, which is what keeps "snake_case_name" plain text.
+    //    '*' deliberately has no such guard: CommonMark restricts only '_' this way, and "foo*bar*"
+    //    IS emphasis. This is a simplification of the full left/right-flanking algorithm, which also
+    //    weighs punctuation on each side — it fixes the case that silently misrenders ordinary
+    //    identifiers without pulling a whole delimiter-run parser into a line-local lexer.
+    //    The lookbehind reads real text: Regex.Match(input, startat) can inspect before startat,
+    //    unlike Match(input, beginning, length). ScanEmphasis's recursion passes a SUBSTRING, where
+    //    position 0 has nothing to look behind at — harmless, because inner content always begins
+    //    right after a delimiter character, which is never a word character anyway.
     private static readonly (Regex Pattern, int MarkerLength, bool RecurseIntoContent, EmphasisKind Kind)[] EmphasisPatterns =
     [
-        (new Regex(@"\G\*{3}[^\*\n]+\*{3}"), 3, true, EmphasisKind.Other),
-        (new Regex(@"\G_{3}[^_\n]+_{3}"), 3, true, EmphasisKind.Other),
-        (new Regex(@"\G\*{2}[^\*\n]+\*{2}"), 2, true, EmphasisKind.Other),
-        (new Regex(@"\G_{2}[^_\n]+_{2}"), 2, true, EmphasisKind.Other),
-        (new Regex(@"\G\*[^\*\n]+\*"), 1, true, EmphasisKind.Other),
-        (new Regex(@"\G_[^_\n]+_"), 1, true, EmphasisKind.Other),
-        (new Regex(@"\G~{2}[^~\n]+~{2}"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G\*{3}(?:\\.|[^\\\*\n])+\*{3}"), 3, true, EmphasisKind.Other),
+        (new Regex(@"\G(?<!\w)_{3}(?:\\.|[^\\_\n])+_{3}(?!\w)"), 3, true, EmphasisKind.Other),
+        (new Regex(@"\G\*{2}(?:\\.|[^\\\*\n])+\*{2}"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G(?<!\w)_{2}(?:\\.|[^\\_\n])+_{2}(?!\w)"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G\*(?:\\.|[^\\\*\n])+\*"), 1, true, EmphasisKind.Other),
+        (new Regex(@"\G(?<!\w)_(?:\\.|[^\\_\n])+_(?!\w)"), 1, true, EmphasisKind.Other),
+        (new Regex(@"\G~{2}(?:\\.|[^\\~\n])+~{2}"), 2, true, EmphasisKind.Other),
         // Subscript MUST stay below strikethrough: both open with '~', and at a position starting
         // "~~" the two-character pattern has to win — the same precedence bold has over italic.
-        (new Regex(@"\G~[^~\n]+~"), 1, true, EmphasisKind.Subscript),
-        (new Regex(@"\G\^[^\^\n]+\^"), 1, true, EmphasisKind.Superscript),
-        (new Regex(@"\G={2}[^=\n]+={2}"), 2, true, EmphasisKind.Other),
+        (new Regex(@"\G~(?:\\.|[^\\~\n])+~"), 1, true, EmphasisKind.Subscript),
+        (new Regex(@"\G\^(?:\\.|[^\\\^\n])+\^"), 1, true, EmphasisKind.Superscript),
+        (new Regex(@"\G={2}(?:\\.|[^\\=\n])+={2}"), 2, true, EmphasisKind.Other),
         (InlineCodePattern, 1, false, EmphasisKind.Other),
     ];
 
@@ -390,24 +464,31 @@ internal static class MarkdownSyntax
     public static IReadOnlyList<UnderlineSpan> FindUnderlineSpans(TextDocument doc, DocumentLine line)
     {
         var results = new List<UnderlineSpan>();
-        var text = doc.GetText(line);
-        int pos = LeadingBulletMarkerLength(doc, line);
+        ScanUnderlines(doc.GetText(line), LeadingBulletMarkerLength(doc, line), line.Offset, results);
+        return results;
+    }
+
+    private static void ScanUnderlines(string text, int startPos, int baseOffset, List<UnderlineSpan> results)
+    {
+        int pos = startPos;
         while (pos < text.Length)
         {
+            int escape = EscapeLength(text, pos);
+            if (escape > 0) { pos += escape; continue; }
+
             var m = UnderlinePattern.Match(text, pos);
             if (m.Success)
             {
                 results.Add(new UnderlineSpan(
-                    line.Offset + pos,
-                    line.Offset + pos + UnderlineOpenLength,
-                    line.Offset + pos + m.Length - UnderlineCloseLength,
-                    line.Offset + pos + m.Length));
+                    baseOffset + pos,
+                    baseOffset + pos + UnderlineOpenLength,
+                    baseOffset + pos + m.Length - UnderlineCloseLength,
+                    baseOffset + pos + m.Length));
                 pos += m.Length;
                 continue;
             }
             pos++;
         }
-        return results;
     }
 
     /// <summary>
@@ -422,8 +503,13 @@ internal static class MarkdownSyntax
     public static IReadOnlyList<EmojiSpan> FindEmojiSpans(TextDocument doc, DocumentLine line)
     {
         var results = new List<EmojiSpan>();
-        var text = doc.GetText(line);
-        int pos = LeadingBulletMarkerLength(doc, line);
+        ScanEmoji(doc.GetText(line), LeadingBulletMarkerLength(doc, line), line.Offset, results);
+        return results;
+    }
+
+    private static void ScanEmoji(string text, int startPos, int baseOffset, List<EmojiSpan> results)
+    {
+        int pos = startPos;
         while (pos < text.Length)
         {
             var code = InlineCodePattern.Match(text, pos);
@@ -433,17 +519,149 @@ internal static class MarkdownSyntax
                 continue;
             }
 
+            // After the code-span skip, not before: a backslash inside backticks is literal, so the
+            // escape rule must not reach into a code span. Same ordering reason everywhere else.
+            int escape = EscapeLength(text, pos);
+            if (escape > 0) { pos += escape; continue; }
+
             var m = EmojiPattern.Match(text, pos);
             if (m.Success && EmojiCatalog.TryGet(m.Groups[1].Value, out var emoji))
             {
-                results.Add(new EmojiSpan(line.Offset + pos, line.Offset + pos + m.Length, emoji));
+                results.Add(new EmojiSpan(baseOffset + pos, baseOffset + pos + m.Length, emoji));
                 pos += m.Length;
                 continue;
             }
 
             pos++;
         }
-        return results;
+    }
+
+    /// <summary>
+    /// Resolves a standalone string — a table cell — into the styled runs it should render as, with
+    /// every marker removed and every recognized emoji shortcode substituted.
+    /// </summary>
+    /// <remarks>
+    /// String-based rather than line-based because a cell is a *substring* of a line, so no document
+    /// offset describes it. It reuses the very same scanners the line-based entry points do (they
+    /// were split into string cores for exactly this), which is what stops a cell disagreeing with
+    /// the identical text written outside a table.
+    /// <para>
+    /// <b>Both halves of table rendering must go through this.</b> Column widths are measured from
+    /// the runs, not from the raw text — that is the whole reason cells could not render formatting
+    /// before: measuring raw text while displaying marker-free text misaligns every column by the
+    /// width of the hidden markers.
+    /// </para>
+    /// <para>
+    /// Nesting composes for free. The emphasis scan reports nested runs as a flat list, and each
+    /// one ORs its style over its own content range, so <c>**_x_**</c> lands as Bold|Italic on the
+    /// characters both cover without anything having to reconstruct a tree.
+    /// </para>
+    /// <para>
+    /// Two deliberate boundaries. An image renders as its alt text rather than a picture — a decoded
+    /// bitmap inside a fixed-width measured cell is a separate problem. And backslash escapes keep
+    /// their backslash visible, matching how they render everywhere else in the editor today;
+    /// hiding it is a whole-editor change, not a table one.
+    /// </para>
+    /// </remarks>
+    public static IReadOnlyList<InlineRun> FormatInline(string text)
+    {
+        if (text.Length == 0) return [];
+
+        var styles = new InlineStyles[text.Length];
+        var hidden = new bool[text.Length];
+        var substitution = new string?[text.Length];
+
+        var emphasis = new List<(EmphasisSpan Span, EmphasisKind Kind)>();
+        ScanEmphasis(text, 0, emphasis);
+        foreach (var (span, kind) in emphasis)
+        {
+            var style = ClassifyEmphasis(text[span.Start], span.MarkerLength, kind);
+            Hide(hidden, span.Start, span.Start + span.MarkerLength);
+            Hide(hidden, span.End - span.MarkerLength, span.End);
+            Apply(styles, span.Start + span.MarkerLength, span.End - span.MarkerLength, style);
+        }
+
+        var links = new List<LinkSpan>();
+        ScanLinks(text, 0, 0, links);
+        foreach (var link in links)
+        {
+            Hide(hidden, link.Start, link.TextStart);
+            Hide(hidden, link.TextEnd, link.End);
+            // An image's alt text is a description, not a link, so it carries no link styling.
+            if (!link.IsImage) Apply(styles, link.TextStart, link.TextEnd, InlineStyles.Link);
+        }
+
+        var underlines = new List<UnderlineSpan>();
+        ScanUnderlines(text, 0, 0, underlines);
+        foreach (var u in underlines)
+        {
+            Hide(hidden, u.Start, u.ContentStart);
+            Hide(hidden, u.ContentEnd, u.End);
+            Apply(styles, u.ContentStart, u.ContentEnd, InlineStyles.Underline);
+        }
+
+        var emoji = new List<EmojiSpan>();
+        ScanEmoji(text, 0, 0, emoji);
+        foreach (var e in emoji)
+        {
+            // The replacement is emitted at the span's first index and the whole run hidden, so the
+            // shortcode's own characters never reach the output.
+            substitution[e.Start] = e.Emoji;
+            Hide(hidden, e.Start, e.End);
+        }
+
+        var runs = new List<InlineRun>();
+        var buffer = new System.Text.StringBuilder();
+        var current = InlineStyles.None;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            var replacement = substitution[i];
+            if (replacement is null && hidden[i]) continue;
+
+            if (styles[i] != current)
+            {
+                if (buffer.Length > 0) { runs.Add(new InlineRun(buffer.ToString(), current)); buffer.Clear(); }
+                current = styles[i];
+            }
+            buffer.Append(replacement ?? text[i].ToString());
+        }
+        if (buffer.Length > 0) runs.Add(new InlineRun(buffer.ToString(), current));
+
+        return runs;
+    }
+
+    private static void Hide(bool[] hidden, int start, int end)
+    {
+        for (int i = start; i < end; i++) hidden[i] = true;
+    }
+
+    private static void Apply(InlineStyles[] styles, int start, int end, InlineStyles style)
+    {
+        for (int i = start; i < end; i++) styles[i] |= style;
+    }
+
+    // The delimiter character plus its length identifies the construct — EmphasisSpan carries only a
+    // marker length, which cannot tell '*' from '`' or '='. Superscript and subscript are the two
+    // the scanner already distinguishes, since their single-character markers make them
+    // indistinguishable from italic by length alone.
+    private static InlineStyles ClassifyEmphasis(char delimiter, int markerLength, EmphasisKind kind)
+    {
+        if (kind is EmphasisKind.Superscript) return InlineStyles.Superscript;
+        if (kind is EmphasisKind.Subscript) return InlineStyles.Subscript;
+
+        return delimiter switch
+        {
+            '`' => InlineStyles.Code,
+            '=' => InlineStyles.Highlight,
+            '~' => InlineStyles.Strikethrough,
+            _   => markerLength switch
+            {
+                3 => InlineStyles.Bold | InlineStyles.Italic,
+                2 => InlineStyles.Bold,
+                _ => InlineStyles.Italic,
+            },
+        };
     }
 
     private static List<(EmphasisSpan Span, EmphasisKind Kind)> ScanLine(TextDocument doc, DocumentLine line)
@@ -464,6 +682,11 @@ internal static class MarkdownSyntax
         int pos = 0;
         while (pos < text.Length)
         {
+            // Before any pattern is tried: an escaped delimiter is literal text and must never be
+            // offered as a run opener. See EscapeLength.
+            int escape = EscapeLength(text, pos);
+            if (escape > 0) { pos += escape; continue; }
+
             var matched = false;
             foreach (var (pattern, markerLength, recurseIntoContent, kind) in EmphasisPatterns)
             {
@@ -507,8 +730,13 @@ internal static class MarkdownSyntax
     public static IReadOnlyList<LinkSpan> FindLinkSpans(TextDocument doc, DocumentLine line)
     {
         var results = new List<LinkSpan>();
-        var text = doc.GetText(line);
-        int pos = LeadingBulletMarkerLength(doc, line);
+        ScanLinks(doc.GetText(line), LeadingBulletMarkerLength(doc, line), line.Offset, results);
+        return results;
+    }
+
+    private static void ScanLinks(string text, int startPos, int baseOffset, List<LinkSpan> results)
+    {
+        int pos = startPos;
         while (pos < text.Length)
         {
             if (TryMatchEmphasisPattern(text, pos, out int skipLength))
@@ -516,6 +744,13 @@ internal static class MarkdownSyntax
                 pos += skipLength;
                 continue;
             }
+
+            // An escaped '[' is literal, so "\[not a link\](url)" stays text. Note the link patterns
+            // themselves keep their plain content classes: an escaped ']' inside link text is a
+            // rarer case, and widening those classes would change what LinkSpan.Url carries, which
+            // ImagePathResolver and three generators read. Deliberate boundary, not an oversight.
+            int escape = EscapeLength(text, pos);
+            if (escape > 0) { pos += escape; continue; }
 
             var matched = false;
             foreach (var (pattern, isImage) in LinkPatterns)
@@ -525,10 +760,10 @@ internal static class MarkdownSyntax
 
                 var label = m.Groups[1];
                 results.Add(new LinkSpan(
-                    line.Offset + pos,
-                    line.Offset + label.Index,
-                    line.Offset + label.Index + label.Length,
-                    line.Offset + pos + m.Length,
+                    baseOffset + pos,
+                    baseOffset + label.Index,
+                    baseOffset + label.Index + label.Length,
+                    baseOffset + pos + m.Length,
                     isImage,
                     m.Groups[2].Success ? m.Groups[2].Value : null));
 
@@ -538,7 +773,6 @@ internal static class MarkdownSyntax
             }
             if (!matched) pos++;
         }
-        return results;
     }
 
     // Matches Markdown.xshd's fenced-code-block Begin/End patterns ("^```" / "^~~~") exactly: a

@@ -140,8 +140,11 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
 - A table displays as a grid: columns sized to their widest cell, a bold shaded header row, the
   delimiter row hidden, and the delimiter row's column alignments honored. Moving the cursor into
   the table reverts the whole table to its source text — like a fenced code block — so it is always
-  edited as raw Markdown. Cell text is shown as written; rendering inline formatting (bold, emoji,
-  links) inside cells is *(planned)*.
+  edited as raw Markdown. Inline formatting inside a cell renders on the same terms as it does
+  outside one — bold, italic, strikethrough, highlight, inline code, underline, links, emoji and
+  super/subscript all display formatted with their markers hidden, and column widths are measured
+  from what is displayed rather than from the raw text. An image inside a cell shows its alt text
+  rather than the picture.
 - Underlined text displays as underlined, with its `<u>` and `</u>` tags hidden, on the same terms as the other inline constructs.
 
 ## 6. View Options

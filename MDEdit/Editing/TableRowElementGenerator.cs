@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Documents;   // Run — the styled inline a rendered cell is built from
 using System.Windows.Media;
 using System.Windows.Shapes;
 using ICSharpCode.AvalonEdit.Document;
@@ -42,15 +43,23 @@ internal sealed record TableLayout(
 /// the saved file are unaffected; only the rendering changes.
 /// </summary>
 /// <remarks>
-/// Cell text is shown verbatim (markers of inline constructs inside a cell stay visible when
-/// the row is rendered) — the whole line is consumed by the row element, so the inline
-/// generators never run on it, and the measurement below is exact for the text actually
-/// displayed. Rendering inline formatting inside cells is a follow-up, not an oversight.
+/// Inline constructs inside a cell render (Requirements.md §5): the row element consumes the whole
+/// line, so the inline generators never run on it and this class has to do that work itself, via
+/// <see cref="MarkdownSyntax.FormatInline"/>. <b>Measurement and rendering must both go through
+/// those runs</b> — measuring raw text while displaying marker-free text misaligns every column by
+/// the width of the hidden markers, which is exactly why cells rendered verbatim before.
 /// A row wider than the viewport does not word-wrap (a single inline object can't) — known
 /// limitation, same per-block reveal makes the raw text reachable regardless.
 /// </remarks>
 internal sealed class TableRowElementGenerator : VisualLineElementGenerator
 {
+    // Per-element styling for the constructs a cell can contain, read through the colorizer rather
+    // than held as a second copy — the arrangement HorizontalRuleRenderer and
+    // BlockquoteAccentBarRenderer already use, and for the same reason: only the colorizer knows
+    // which editor mode is live, and two copies of a style that must agree is one too many.
+    private readonly MarkdownLineColorizer _colorizer;
+
+    public TableRowElementGenerator(MarkdownLineColorizer colorizer) => _colorizer = colorizer;
     // Layout knobs, referenced by TableGridRenderer so the drawn lines always match the
     // space the row elements occupy (the BlockquoteMarkerElementGenerator constant-sharing
     // convention).
@@ -81,6 +90,12 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
     private double _emSize = 13.0;
     private double _pixelsPerDip = 1.0;
 
+    // Widths are measured with the resolved typefaces of the constructs inside each cell, so a
+    // Preferences change to (say) the code font moves every measured width without touching the
+    // document or the base font the other two cache keys watch. Read from the colorizer rather than
+    // pushed by MainWindow, so no restyling site has to remember to invalidate this.
+    private int _styleGeneration = -1;
+
     public override int GetFirstInterestedOffset(int startOffset)
     {
         if (!Enabled) return -1;
@@ -89,14 +104,17 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
         // A font change (the WYSIWYG document-font flip) invalidates every measured width
         // even though the document hasn't changed, which the version-keyed cache can't see —
         // so compare the captured properties themselves. Typeface has value equality.
-        if (!Equals(_typeface, props.Typeface) || _emSize != props.FontRenderingEmSize)
+        if (!Equals(_typeface, props.Typeface)
+            || _emSize != props.FontRenderingEmSize
+            || _styleGeneration != _colorizer.StyleGeneration)
         {
             _layouts.Clear();
             _layoutsVersion = null;
         }
-        _typeface     = props.Typeface;
-        _emSize       = props.FontRenderingEmSize;
-        _pixelsPerDip = props.PixelsPerDip;
+        _typeface        = props.Typeface;
+        _emSize          = props.FontRenderingEmSize;
+        _pixelsPerDip    = props.PixelsPerDip;
+        _styleGeneration = _colorizer.StyleGeneration;
 
         var doc  = CurrentContext.Document;
         var line = doc.GetLineByOffset(startOffset);
@@ -184,11 +202,19 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
                 var display = CellDisplayText(text, cells[i]);
                 if (display.Length == 0) continue;
 
-                // The brush is required by the constructor but irrelevant to measurement.
-                var formatted = new FormattedText(display, CultureInfo.CurrentUICulture,
-                    FlowDirection.LeftToRight, n == startLine ? boldTypeface : typeface,
-                    _emSize, Brushes.Black, _pixelsPerDip);
-                widths[i] = Math.Max(widths[i], formatted.WidthIncludingTrailingWhitespace);
+                // Measured from the SAME runs BuildRow renders, so hidden markers, substituted
+                // emoji and per-run typefaces (bold and code are wider) are all accounted for.
+                // Summed per run rather than measured once: FormattedText takes a single typeface.
+                double width = 0;
+                foreach (var run in MarkdownSyntax.FormatInline(display))
+                {
+                    var format = FormatFor(run.Styles, n == startLine ? boldTypeface : typeface, _emSize);
+                    // The brush is required by the constructor but irrelevant to measurement.
+                    width += new FormattedText(run.Text, CultureInfo.CurrentUICulture,
+                        FlowDirection.LeftToRight, format.Typeface,
+                        format.EmSize, Brushes.Black, _pixelsPerDip).WidthIncludingTrailingWhitespace;
+                }
+                widths[i] = Math.Max(widths[i], width);
             }
         }
 
@@ -214,11 +240,14 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
             // indented construct instead of tight against the page edge.
             Margin = new Thickness(BlockquoteMarkerElementGenerator.IndentPerLevel * Zoom, 0, 0, 0),
         };
+        var cellTypeface = isHeader
+            ? new Typeface(typeface.FontFamily, typeface.Style, FontWeights.Bold, typeface.Stretch)
+            : typeface;
+
         for (int i = 0; i < layout.ColumnCount; i++)
         {
-            row.Children.Add(new TextBlock
+            var block = new TextBlock
             {
-                Text        = i < cells.Count ? CellDisplayText(text, cells[i]) : string.Empty,
                 FontFamily  = typeface.FontFamily,
                 FontStyle   = typeface.Style,
                 FontWeight  = isHeader ? FontWeights.Bold : typeface.Weight,
@@ -230,9 +259,101 @@ internal sealed class TableRowElementGenerator : VisualLineElementGenerator
                 TextAlignment = i < layout.Alignments.Length
                     ? ToTextAlignment(layout.Alignments[i])
                     : TextAlignment.Left,
-            });
+            };
+
+            if (i < cells.Count)
+            {
+                foreach (var run in MarkdownSyntax.FormatInline(CellDisplayText(text, cells[i])))
+                    block.Inlines.Add(BuildInline(run, cellTypeface, props.FontRenderingEmSize));
+            }
+            row.Children.Add(block);
         }
         return row;
+    }
+
+    private Run BuildInline(InlineRun run, Typeface baseTypeface, double baseEmSize)
+    {
+        var format = FormatFor(run.Styles, baseTypeface, baseEmSize);
+        var inline = new Run(run.Text)
+        {
+            FontFamily  = format.Typeface.FontFamily,
+            FontStyle   = format.Typeface.Style,
+            FontWeight  = format.Typeface.Weight,
+            FontStretch = format.Typeface.Stretch,
+            FontSize    = format.EmSize,
+        };
+
+        if (format.Foreground is not null) inline.Foreground = format.Foreground;
+        if (format.Background is not null) inline.Background = format.Background;
+        if (format.Decorations.Count > 0) inline.TextDecorations = format.Decorations;
+
+        // Superscript/subscript are the construct itself rather than decoration, the same reasoning
+        // MarkdownLineColorizer.StyleScriptSpans applies to ordinary lines — so they are not gated
+        // on anything and use the same scale, read from there rather than duplicated.
+        if (run.Styles.HasFlag(InlineStyles.Superscript)) inline.BaselineAlignment = BaselineAlignment.Superscript;
+        else if (run.Styles.HasFlag(InlineStyles.Subscript)) inline.BaselineAlignment = BaselineAlignment.Subscript;
+
+        return inline;
+    }
+
+    /// <summary>
+    /// One run's resolved visual properties. Produced once and consumed by <b>both</b>
+    /// <see cref="ComputeLayout"/> and <see cref="BuildInline"/>, so a column can never be measured
+    /// against a different typeface than it renders with.
+    /// </summary>
+    private readonly record struct RunFormat(
+        Typeface Typeface, double EmSize,
+        Brush? Foreground, Brush? Background, TextDecorationCollection Decorations);
+
+    private RunFormat FormatFor(InlineStyles styles, Typeface baseTypeface, double baseEmSize)
+    {
+        var family  = baseTypeface.FontFamily;
+        var style   = baseTypeface.Style;
+        var weight  = baseTypeface.Weight;
+        var stretch = baseTypeface.Stretch;
+        double emSize = baseEmSize;
+        Brush? foreground = null;
+        Brush? background = null;
+        var decorations = new TextDecorationCollection();
+
+        void Layer(string elementKey)
+        {
+            var resolved = _colorizer.Resolve(elementKey);
+            if (resolved.Family is { } f) family = f;
+            if (resolved.Weight is { } w) weight = w;
+            if (resolved.Style is { } s) style = s;
+            if (resolved.EmSize is { } em) emSize = em;
+            if (resolved.Foreground is { } fg) foreground = fg;
+            if (resolved.Background is { } bg) background = bg;
+            // Unioned rather than replaced. AvalonEdit cannot render underline and strikethrough
+            // together (its second SetTextDecorations replaces the first), which is why ElementStyle
+            // has one Decoration field — but a WPF Run has no such limit, and a struck hyperlink
+            // inside a cell should show both cues rather than silently drop one.
+            if (resolved.Decorations is { } resolvedDecorations)
+                foreach (var decoration in resolvedDecorations) decorations.Add(decoration);
+        }
+
+        // Order matters only where two elements set the same property; later wins. Link last of the
+        // colour-bearing ones so a link inside bold still reads as a link.
+        if (styles.HasFlag(InlineStyles.Highlight)) Layer(StyledElements.Highlight);
+        if (styles.HasFlag(InlineStyles.Strikethrough)) Layer(StyledElements.Strikethrough);
+        if (styles.HasFlag(InlineStyles.Underline)) Layer(StyledElements.Underline);
+
+        // Bold+italic is its own element, not the two layered: it exists precisely so the pair can
+        // be styled as one thing (see StyledElements), and layering would let Italic's weight
+        // override Bold's.
+        if (styles.HasFlag(InlineStyles.Bold) && styles.HasFlag(InlineStyles.Italic)) Layer(StyledElements.BoldItalic);
+        else if (styles.HasFlag(InlineStyles.Bold)) Layer(StyledElements.Bold);
+        else if (styles.HasFlag(InlineStyles.Italic)) Layer(StyledElements.Italic);
+
+        if (styles.HasFlag(InlineStyles.Code)) Layer(StyledElements.InlineCode);
+        if (styles.HasFlag(InlineStyles.Link)) Layer(StyledElements.Link);
+
+        if (styles.HasFlag(InlineStyles.Superscript) || styles.HasFlag(InlineStyles.Subscript))
+            emSize *= MarkdownLineColorizer.ScriptScale;
+
+        return new RunFormat(new Typeface(family, style, weight, stretch), emSize,
+            foreground, background, decorations);
     }
 
     // "\|" is a literal pipe in cell content (the split already honored the escape); everything

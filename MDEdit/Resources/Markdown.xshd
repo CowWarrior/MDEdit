@@ -50,9 +50,27 @@
     <Rule color="ListMarker">[-\*\+]\s</Rule>
     <Rule color="ListMarker">\d+\.\s</Rule>
 
+    <!-- Two CommonMark rules run through every emphasis pattern below; Editing/MarkdownSyntax.cs
+         mirrors both, and the two must not drift apart.
+
+         1. ESCAPED DELIMITERS. Content classes are "(?:\\.|[^\\<delim>\n])+" — an escape pair, or
+            any character that is neither the delimiter nor a backslash — so "*a \* b*" runs to the
+            real closer. The branches are deliberately disjoint (the plain one excludes backslash):
+            overlapping alternatives under a "+" is the catastrophic-backtracking shape this file's
+            no-wildcard-quantifier discipline exists to avoid. Span delimiters use a "(?<!\\)"
+            lookbehind instead, since Begin/End are matched separately rather than as one pattern.
+            Known simplification: an escaped backslash before a real delimiter ("\\*bold*") reads as
+            an escaped delimiter here. Rare enough to accept; a full fix needs delimiter-run parsing.
+
+         2. INTRAWORD '_'. The '_' families carry "(?<!\w)"/"(?!\w)" so an underscore flanked by word
+            characters neither opens nor closes — which is what keeps "snake_case_name" plain. '*'
+            gets no such guard: CommonMark restricts only '_', and "foo*bar*" IS emphasis.
+
+         Inline code and links are deliberately NOT escape-aware — see their own comments below. -->
+
     <!-- Bold+Italic (must precede Bold and Italic) -->
-    <Rule color="BoldItalic">\*{3}[^\*\n]+\*{3}</Rule>
-    <Rule color="BoldItalic">_{3}[^_\n]+_{3}</Rule>
+    <Rule color="BoldItalic">\*{3}(?:\\.|[^\\\*\n])+\*{3}</Rule>
+    <Rule color="BoldItalic">(?&lt;!\w)_{3}(?:\\.|[^\\_\n])+_{3}(?!\w)</Rule>
 
     <!-- Bold, each with a nested Rule recognizing italic wrapped in the OTHER delimiter
          character (e.g. "**_text_**") — CommonMark forbids nesting the same delimiter inside
@@ -61,42 +79,42 @@
          explicitly, since it's inside a Bold span and needs both weight and style, not a
          color override that might drop the surrounding boldness. -->
     <Span color="Bold">
-      <Begin>\*{2}</Begin>
-      <End>\*{2}</End>
+      <Begin>(?&lt;!\\)\*{2}</Begin>
+      <End>(?&lt;!\\)\*{2}</End>
       <RuleSet>
-        <Rule color="BoldItalic">_[^_\n]+_</Rule>
+        <Rule color="BoldItalic">(?&lt;!\w)_(?:\\.|[^\\_\n])+_(?!\w)</Rule>
       </RuleSet>
     </Span>
     <Span color="Bold">
-      <Begin>_{2}</Begin>
-      <End>_{2}</End>
+      <Begin>(?&lt;![\\\w])_{2}</Begin>
+      <End>(?&lt;!\\)_{2}(?!\w)</End>
       <RuleSet>
-        <Rule color="BoldItalic">\*[^\*\n]+\*</Rule>
+        <Rule color="BoldItalic">\*(?:\\.|[^\\\*\n])+\*</Rule>
       </RuleSet>
     </Span>
 
     <!-- Italic, each with a nested Rule recognizing bold wrapped in the OTHER delimiter
          character (e.g. "_**text**_") — same reasoning as above, reversed. -->
     <Span color="Italic">
-      <Begin>\*</Begin>
-      <End>\*</End>
+      <Begin>(?&lt;!\\)\*</Begin>
+      <End>(?&lt;!\\)\*</End>
       <RuleSet>
-        <Rule color="BoldItalic">_{2}[^_\n]+_{2}</Rule>
+        <Rule color="BoldItalic">(?&lt;!\w)_{2}(?:\\.|[^\\_\n])+_{2}(?!\w)</Rule>
       </RuleSet>
     </Span>
     <Span color="Italic">
-      <Begin>_</Begin>
-      <End>_</End>
+      <Begin>(?&lt;![\\\w])_</Begin>
+      <End>(?&lt;!\\)_(?!\w)</End>
       <RuleSet>
-        <Rule color="BoldItalic">\*{2}[^\*\n]+\*{2}</Rule>
+        <Rule color="BoldItalic">\*{2}(?:\\.|[^\\\*\n])+\*{2}</Rule>
       </RuleSet>
     </Span>
 
     <!-- Strikethrough -->
-    <Rule color="Strike">~~[^~\n]+~~</Rule>
+    <Rule color="Strike">~~(?:\\.|[^\\~\n])+~~</Rule>
 
     <!-- Highlight (extended syntax) -->
-    <Rule color="Highlight">={2}[^=\n]+={2}</Rule>
+    <Rule color="Highlight">={2}(?:\\.|[^\\=\n])+={2}</Rule>
 
     <!-- Underline: literal inline HTML, not Markdown. Lowercase tag only, no attributes. -->
     <Rule color="Underline">&lt;u&gt;[^&lt;\n]+&lt;/u&gt;</Rule>

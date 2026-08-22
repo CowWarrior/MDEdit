@@ -245,4 +245,124 @@ public class MarkdownSyntaxEmphasisTests
 
         Assert.Empty(spans);
     }
+
+    private static IReadOnlyList<EmphasisSpan> Spans(string text)
+    {
+        var doc = new TextDocument(text);
+        return MarkdownSyntax.FindEmphasisSpans(doc, doc.GetLineByNumber(1));
+    }
+
+    // ── Backslash escaping (CommonMark) ──────────────────────────────────────
+    //
+    // One of the two gaps that silently misrendered ORDINARY TEXT rather than merely failing to
+    // support extra syntax: before this, "\*text\*" rendered as italic and the asterisks the user
+    // explicitly escaped disappeared from view.
+
+    [Theory]
+    [InlineData(@"\*not emphasis\*")]
+    [InlineData(@"\_not emphasis\_")]
+    [InlineData(@"\`not code\`")]
+    [InlineData(@"\~\~not strike\~\~")]
+    [InlineData(@"\==not highlight\==")]
+    public void FindEmphasisSpans_EscapedDelimiters_OpenNothing(string text)
+    {
+        Assert.Empty(Spans(text));
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_EscapedCloser_DoesNotEndTheRunEarly()
+    {
+        // The half the scanner's opener-skip cannot cover: a closing delimiter is matched by the
+        // pattern rather than visited by the scan, so this rides on the content class instead.
+        var span = Assert.Single(Spans(@"*a \* b*"));
+
+        Assert.Equal(0, span.Start);
+        Assert.Equal(8, span.End);
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_EscapedBackslashBeforeDelimiter_StillOpens()
+    {
+        // "\\" is a literal backslash, so the "*" after it is a real delimiter — the escape is
+        // spent on the backslash itself. Markdown.xshd's lookbehind gets this case wrong (it sees
+        // only the adjacent backslash); the divergence is documented there and is colour-only.
+        var span = Assert.Single(Spans(@"\\*bold*"));
+
+        Assert.Equal(2, span.Start);
+        Assert.Equal(8, span.End);
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_BackslashBeforeNonPunctuation_IsNotAnEscape()
+    {
+        // CommonMark escapes ASCII punctuation only. "\w" is two literal characters, so it must not
+        // swallow the following character and shift everything after it.
+        var span = Assert.Single(Spans(@"\word *bold*"));
+
+        Assert.Equal(6, span.Start);
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_BackslashInsideCodeSpan_StaysLiteral()
+    {
+        // Code spans outrank escapes in CommonMark, so the scan must reach the closing backtick
+        // rather than treating "\`" inside as an escaped delimiter.
+        var span = Assert.Single(Spans(@"`a \* b`"));
+
+        Assert.Equal(0, span.Start);
+        Assert.Equal(8, span.End);
+        Assert.Equal(1, span.MarkerLength);
+    }
+
+    // ── Intraword underscore (CommonMark flanking) ───────────────────────────
+    //
+    // The other silent misrender: "snake_case_name" italicised its middle section, so ordinary
+    // identifiers in prose came out mangled.
+
+    [Theory]
+    [InlineData("snake_case_name")]
+    [InlineData("a_b_c")]
+    [InlineData("snake__case__name")]
+    [InlineData("a___b___c")]
+    [InlineData("_italic_word")]      // closer is followed by a word character
+    [InlineData("word_italic_")]      // opener is preceded by one
+    public void FindEmphasisSpans_IntrawordUnderscore_IsNotEmphasis(string text)
+    {
+        Assert.Empty(Spans(text));
+    }
+
+    [Theory]
+    [InlineData("_italic_", 1)]
+    [InlineData("__bold__", 2)]
+    [InlineData("___both___", 3)]
+    [InlineData("(_italic_)", 1)]     // punctuation flanking still opens and closes
+    [InlineData("a _italic_ b", 1)]
+    public void FindEmphasisSpans_UnderscoreAtWordBoundaries_IsStillEmphasis(string text, int markerLength)
+    {
+        Assert.Equal(markerLength, Assert.Single(Spans(text)).MarkerLength);
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_IntrawordAsterisk_IsStillEmphasis()
+    {
+        // The flanking restriction is '_'-only in CommonMark, and deliberately so here: "foo*bar*"
+        // IS emphasis. Guarding '*' the same way would break a documented behaviour.
+        var span = Assert.Single(Spans("foo*bar*baz"));
+
+        Assert.Equal(3, span.Start);
+        Assert.Equal(8, span.End);
+    }
+
+    [Fact]
+    public void FindEmphasisSpans_UnderscoreNestedInsideAsterisks_StillRecurses()
+    {
+        // The recursion scans a SUBSTRING, so the '_' lookbehind has nothing to inspect at its
+        // position 0. That is only safe because inner content always begins right after a delimiter
+        // character — if this regressed, every mixed-delimiter nesting would silently stop nesting.
+        var spans = Spans("**_italic_**");
+
+        Assert.Equal(2, spans.Count);
+        Assert.Equal(2, spans[0].MarkerLength);
+        Assert.Equal(1, spans[1].MarkerLength);
+    }
 }

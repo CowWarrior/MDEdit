@@ -58,10 +58,6 @@ MDEdit emits literal `<u>` tags, relying on Markdown's pass-through of inline HT
 
 - Switching the theme while the Find panel is open closes the panel, and it cannot be reopened.
   Restarting MDEdit restores it.
-- A backslash does not escape formatting: `\*text\*` still renders as italic instead of showing the
-  asterisks.
-- An underscore inside a word starts italics, so a name like `snake_case_name` renders partly
-  italicised. Use `*` for emphasis to avoid this.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text
   engine MDEdit draws with, not a setting.
 
@@ -73,8 +69,6 @@ Specified and intended for a future release, with no date attached:
   `:shortcode:` equivalents, across the selection or the whole document.
 - **Find and replace** — replace matches one at a time or all at once, from the same panel as Find,
   with Ctrl+H. Replacing all counts as a single undo.
-- **Formatting inside table cells** — bold, links and emoji inside a table will render in WYSIWYG
-  mode instead of showing their raw markers.
 - **Improved Markdown conformance** — better support for niche Markdown features and edge cases.
 
 ## Built with

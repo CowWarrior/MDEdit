@@ -58,7 +58,10 @@ public partial class MainWindow : Window
     private readonly BulletListMarkerElementGenerator _bulletListMarkerGenerator = new();
     private readonly TaskListMarkerElementGenerator _taskListMarkerGenerator = new();
     private readonly NumberedListMarkerElementGenerator _numberedListMarkerGenerator = new();
-    private readonly TableRowElementGenerator _tableRowGenerator = new();
+    // Reads the inline constructs' resolved styles through the colorizer to render them inside
+    // cells, the same arrangement the two background renderers use — so like them it needs
+    // _colorizer and is built in the ctor, since a field initializer cannot reference another field.
+    private readonly TableRowElementGenerator _tableRowGenerator;
     private readonly HorizontalRuleElementGenerator _horizontalRuleGenerator = new();
     private readonly BlockquoteAccentBarRenderer _blockquoteAccentBarRenderer; // needs _colorizer, so built in the ctor
     private readonly TableGridRenderer _tableGridRenderer; // needs _tableRowGenerator, so built in the ctor
@@ -86,6 +89,8 @@ public partial class MainWindow : Window
     // ── Constructor ───────────────────────────────────────────────────────
     public MainWindow()
     {
+        // Before _tableGridRenderer, which takes the generator it asks TryGetRenderedTable.
+        _tableRowGenerator = new TableRowElementGenerator(_colorizer);
         _tableGridRenderer = new TableGridRenderer(_tableRowGenerator);
         _horizontalRuleRenderer = new HorizontalRuleRenderer(_horizontalRuleGenerator, _colorizer);
         _blockquoteAccentBarRenderer = new BlockquoteAccentBarRenderer(_colorizer, _blockquoteMarkerGenerator);

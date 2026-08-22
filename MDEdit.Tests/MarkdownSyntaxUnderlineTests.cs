@@ -108,4 +108,12 @@ public class MarkdownSyntaxUnderlineTests
 
         Assert.Equal("item", text[span.ContentStart..span.ContentEnd]);
     }
+
+    [Fact]
+    public void FindUnderlineSpans_EscapedOpeningTag_IsNotUnderline()
+    {
+        // Underline rides on the same scanner-level escape skip as the other constructs, so showing
+        // a literal "<u>" in prose needs no special case here.
+        Assert.Empty(Underlines(@"\<u>not underlined</u>"));
+    }
 }

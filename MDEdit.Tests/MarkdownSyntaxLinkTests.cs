@@ -160,4 +160,39 @@ public class MarkdownSyntaxLinkTests
 
         Assert.Empty(spans);
     }
+
+    [Fact]
+    public void FindLinkSpans_EscapedOpeningBracket_IsNotALink()
+    {
+        var doc = new TextDocument(@"\[not a link\](url)");
+        Assert.Empty(MarkdownSyntax.FindLinkSpans(doc, doc.GetLineByNumber(1)));
+    }
+
+    [Fact]
+    public void FindLinkSpans_EscapedBang_DemotesAnImageToALink()
+    {
+        // The escape is spent on the "!" alone, so what remains is an ordinary inline link starting
+        // one character later — which is what CommonMark specifies, and worth pinning because it
+        // looks at a glance like the escape should have suppressed the whole construct.
+        var doc = new TextDocument(@"\![not an image](url)");
+
+        var span = Assert.Single(MarkdownSyntax.FindLinkSpans(doc, doc.GetLineByNumber(1)));
+
+        Assert.False(span.IsImage);
+        Assert.Equal(2, span.Start);
+    }
+
+    [Fact]
+    public void FindLinkSpans_EscapedBracketInsideLinkText_IsStillNotSupported()
+    {
+        // Pins a DELIBERATE boundary, not desired behaviour. The scanner skips escaped openers, but
+        // LinkPatterns keep plain content classes: widening them would change what LinkSpan.Url
+        // carries, which ImagePathResolver and three generators read. If escaped brackets are ever
+        // supported, this test should be replaced rather than deleted quietly.
+        var doc = new TextDocument(@"[a\]b](url)");
+
+        var spans = MarkdownSyntax.FindLinkSpans(doc, doc.GetLineByNumber(1));
+
+        Assert.Empty(spans);
+    }
 }

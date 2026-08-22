@@ -21,10 +21,31 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
     // redraw — so results are cached per element key and dropped whenever either input changes.
     private readonly Dictionary<string, ResolvedStyle> _resolved = new(StringComparer.Ordinal);
 
+    /// <summary>
+    /// Bumped every time <see cref="Resolve"/>'s answers change — i.e. whenever the cache below is
+    /// dropped. Lets a consumer that caches something *derived* from resolved styles know its own
+    /// cache is stale.
+    /// </summary>
+    /// <remarks>
+    /// <c>TableRowElementGenerator</c> is the one such consumer: its column widths are measured with
+    /// the resolved typefaces of the constructs inside each cell, so retuning (say) the code font in
+    /// Preferences changes every measured width without touching the document or the base font that
+    /// its other cache keys watch. Deliberately a value it *reads* rather than a call MainWindow
+    /// makes: a push would be one more thing to remember at every site that restyles, and forgetting
+    /// it would show up only as subtly misaligned columns.
+    /// </remarks>
+    public int StyleGeneration { get; private set; }
+
+    private void InvalidateResolved()
+    {
+        _resolved.Clear();
+        StyleGeneration++;
+    }
+
     public ModeStyles Styles
     {
         get => _styles;
-        set { _styles = value; _resolved.Clear(); }
+        set { _styles = value; InvalidateResolved(); }
     }
 
     // Set by MainWindow.ApplyTheme; a TextView.Redraw() afterwards re-runs ColorizeLine.
@@ -35,7 +56,7 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
         {
             if (_isDark == value) return;
             _isDark = value;
-            _resolved.Clear();
+            InvalidateResolved();
         }
     }
 
@@ -222,7 +243,10 @@ internal sealed class MarkdownLineColorizer : DocumentColorizingTransformer
 
     // Conventional typographic ratio for scripts; small enough to read as raised/lowered rather
     // than as ordinary text that happens to sit oddly.
-    private const double ScriptScale = 0.75;
+    // internal, not private: TableRowElementGenerator scales script runs inside rendered cells by
+    // the same factor. Referenced rather than duplicated, the constant-sharing convention
+    // BlockquoteMarkerElementGenerator.IndentPerLevel established.
+    internal const double ScriptScale = 0.75;
 
     // Styles a whole line as one unit from its element's resolved style. Every null member of the
     // resolved style is left untouched rather than overwritten with a default, so "inherit" in
