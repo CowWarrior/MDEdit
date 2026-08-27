@@ -185,7 +185,7 @@ Highlight, superscript, subscript, task lists, tables, and emoji shortcodes are 
     and it also carries weight, italic and text color. Text decoration and background are not
     offered for it: a decoration would apply to every line of the document, and the background of
     body text is the editor surface, which the theme already sets.
-  - Each of the other eighteen **elements** — headings 1 through 6, blockquote, horizontal rule,
+  - Each of the other nineteen **elements** — headings 1 through 6, blockquote, horizontal rule,
     code block, inline code, list marker, bold, italic, bold+italic, strikethrough, highlight,
     underline, hyperlink and HTML comment — can override Normal with its own font family, size,
     weight, italic, text decoration, and text and background colors for both the light and dark
@@ -306,19 +306,23 @@ edits, rather than the file as last written to disk.
 ## 11. Markdown Conformance
 
 The constructs MDEdit understands are those listed in the sections above. Several standard CommonMark
-and GFM constructs beyond them are not recognised, and a small number of ordinary text patterns are
-rendered incorrectly. Closing these gaps is *(planned)*, in the order below.
+and GFM constructs beyond them are not recognised. Closing these gaps is *(planned)*, in the order
+below.
 
-**Text that renders wrongly today comes first, ahead of syntax that is merely unsupported.** An
+**Text that renders wrongly is always closed ahead of syntax that is merely unsupported.** An
 unrecognised construct displays as its literal source, which is harmless and obvious; a misrendered
-one silently changes the meaning of what the user wrote, and looks like a defect in the editor.
+one silently changes the meaning of what the user wrote, and looks like a defect in the editor. Both
+cases of the former have now been closed, and are described here as the behaviour they are:
 
 - A backslash escapes the character after it, so `\*not emphasis\*` displays the asterisks literally
-  instead of rendering as italic. Escaping is currently absent everywhere.
-- An underscore inside a word does not open or close emphasis, so identifiers such as
-  `snake_case_name` display unchanged. This is CommonMark's flanking rule, which exists for this case.
+  rather than rendering as italic. This holds for every construct's markers, in both editor modes.
+  Inline code is the one exception, matching CommonMark: a backslash inside backticks is literal.
+- An underscore inside a word neither opens nor closes emphasis, so identifiers such as
+  `snake_case_name` display unchanged. This is CommonMark's flanking rule, which exists for this
+  case. Asterisks are deliberately unaffected — `foo*bar*` is emphasis in CommonMark and stays so.
 
-The following standard constructs are then recognised as they are elsewhere:
+The following standard constructs are **not yet recognised**, and are to be handled as they are
+elsewhere:
 
 - Setext headings — a line of text underlined with `===` or `---`.
 - Indented code blocks — four leading spaces — alongside the fenced form already supported.
