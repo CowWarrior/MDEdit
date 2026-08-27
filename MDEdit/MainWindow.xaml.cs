@@ -668,12 +668,39 @@ public partial class MainWindow : Window
         RebuildRecentFilesMenu();
     }
 
+    /// <summary>
+    /// Applies View → Convert Emoji on Save when it is enabled (Requirements.md §1).
+    /// </summary>
+    /// <remarks>
+    /// Called from both save paths immediately before the document text is read, and always over the
+    /// <b>whole document regardless of any selection</b> — an automatic save-time pass has no reason
+    /// to respect whatever happens to be highlighted, which is why it passes a zero-length range
+    /// (<see cref="MarkdownFormatter.ConvertEmojiToShortcodes"/>'s own signal for "everything").
+    /// <para>
+    /// It goes through the very same command the Format menu calls, so the manual and automatic
+    /// forms can never diverge on what converts — code spans and fenced blocks are skipped either
+    /// way. And because that command groups its edits into one <c>RunUpdate</c>, a user who didn't
+    /// want the result can undo it with a single Ctrl+Z; that leaves the document dirty again, which
+    /// is honest rather than a bug, since the file on disk really does differ from the buffer.
+    /// </para>
+    /// <para>
+    /// Not routed through <c>ApplyFormat</c>: there is no selection to place afterwards, and moving
+    /// focus is not a save's business.
+    /// </para>
+    /// </remarks>
+    private void ConvertEmojiOnSaveIfEnabled()
+    {
+        if (!_settings.ConvertEmojiOnSave) return;
+        MarkdownFormatter.ConvertEmojiToShortcodes(Editor.Document, new SelectionRange(0, 0));
+    }
+
     private bool ExecuteSave()
     {
         if (_files.CurrentPath is null) return ExecuteSaveAs();
 
         try
         {
+            ConvertEmojiOnSaveIfEnabled();
             _files.Save(Editor.Document.Text);
             _isDirty = false;
             UpdateTitle();
@@ -707,10 +734,12 @@ public partial class MainWindow : Window
             DefaultExt = isTxt ? ".txt" : ".md",
             FileName = _files.CurrentPath is null ? "Untitled.md" : Path.GetFileName(_files.CurrentPath)
         };
+        // After the dialog, so cancelling it leaves the document untouched.
         if (dlg.ShowDialog() != true) return false;
 
         try
         {
+            ConvertEmojiOnSaveIfEnabled();
             _files.SaveAs(dlg.FileName, Editor.Document.Text);
             _isDirty = false;
             UpdateHighlighting(dlg.FileName);
@@ -1061,6 +1090,8 @@ public partial class MainWindow : Window
         MenuWordWrap.IsChecked = _settings.WordWrap;
         Editor.ShowLineNumbers = _settings.ShowLineNumbers;
         MenuLineNumbers.IsChecked = _settings.ShowLineNumbers;
+        // Checkmark only — this setting has no effect until a save, so there is nothing to apply.
+        MenuConvertEmojiOnSave.IsChecked = _settings.ConvertEmojiOnSave;
         // settings.json is user-editable, so the persisted list is re-checked rather than trusted.
         _settings.RecentFiles = RecentFiles.Sanitize(_settings.RecentFiles);
         RebuildRecentFilesMenu();
@@ -1314,6 +1345,12 @@ public partial class MainWindow : Window
     // (MenuWordWrap_Click's shape); the save/apply/redraw tail is SetLivePreview's. Deliberately
     // not routed through UpdateLivePreviewState — this isn't a live-preview mode, it's a separate
     // opt-in that only has any effect while live preview is on.
+    private void MenuConvertEmojiOnSave_Click(object sender, RoutedEventArgs e)
+    {
+        _settings.ConvertEmojiOnSave = MenuConvertEmojiOnSave.IsChecked;
+        SettingsService.Save(_settings);
+    }
+
     private void MenuLoadRemoteImages_Click(object sender, RoutedEventArgs e)
     {
         _settings.LoadRemoteImages = MenuLoadRemoteImages.IsChecked;

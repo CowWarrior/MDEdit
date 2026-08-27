@@ -23,6 +23,14 @@ internal sealed class AppSettings
     // PreferencesWindow's Cancel and Reset, and it is purely presentational — a privacy setting
     // must not be revertible by a dialog that never showed it.
     public bool LoadRemoteImages { get; set; }
+    // Whether saving first replaces literal emoji characters with their catalogue shortcodes
+    // (Requirements.md §1, View > Convert Emoji on Save), exactly as the Format menu command does.
+    // Defaults to FALSE: this rewrites the document's own content, and a save that silently edits
+    // what the user wrote has to be asked for rather than assumed.
+    // Deliberately NOT in EditorPreferences, for the same reason as LoadRemoteImages and ZoomLevel:
+    // that object is replaced wholesale by PreferencesWindow's Cancel and Reset, and a behaviour
+    // setting must not be revertible by a dialog that never showed it.
+    public bool ConvertEmojiOnSave { get; set; }
     // Most-recently-used file paths, newest first — see the File > Recent Files menu.
     // Kept in shape by Editing/RecentFiles, which also sanitizes it on load.
     public List<string> RecentFiles { get; set; } = [];

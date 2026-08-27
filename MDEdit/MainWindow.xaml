@@ -137,6 +137,11 @@
                           IsCheckable="True"
                           ToolTip="Off by default: fetching an image from the web tells its host that this document was opened."
                           Click="MenuLoadRemoteImages_Click"/>
+                <MenuItem x:Name="MenuConvertEmojiOnSave"
+                          Header="Convert _Emoji on Save"
+                          IsCheckable="True"
+                          ToolTip="Off by default: saving would otherwise rewrite your document. When on, every save first replaces literal emoji with their :shortcode: form, exactly as Format → Convert Emoji to Shortcodes does."
+                          Click="MenuConvertEmojiOnSave_Click"/>
                 <Separator/>
                 <MenuItem Header="_Theme">
                     <MenuItem x:Name="MenuThemeLight"  Header="_Light"                    IsCheckable="True" Click="MenuThemeLight_Click"/>

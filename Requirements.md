@@ -13,6 +13,12 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
 - The user can open an existing Markdown file (`.md`, `.markdown`) or plain text file (`.txt`) from disk.
 - The user can save the current document to its existing location.
 - The user can save the current document to a new location and file type (Save As), choosing between Markdown and plain text formats.
+- The user can have saving first convert literal emoji characters to their catalogue shortcodes,
+  from a setting that persists between sessions. It applies to the whole document on every save,
+  whether Save or Save As, and does exactly what the manual command does — leaving characters with
+  no catalogue entry, and anything inside inline code or a fenced code block, untouched. **It is off
+  by default**, since it rewrites the document's own content, and one undo reverses the conversion
+  without undoing the save.
 - When there are unsaved changes and the user attempts to create a new document, open another file, or close the application, the user is prompted to save, discard, or cancel the operation.
 - The user can reopen a recently used document from an MRU (most recently used) list in the File menu.
   - The list holds the ten most recent documents, newest first, and persists between sessions.

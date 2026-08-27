@@ -18,6 +18,17 @@ public class AppSettingsTests
         Assert.False(new AppSettings().LoadRemoteImages);
     }
 
+    // Its own named test for the same reason LoadRemoteImages has one: this setting rewrites the
+    // user's document on every save. Defaulting it on — for a fresh install or for a settings.json
+    // written before the property existed — would silently edit files, which is a data-integrity
+    // regression rather than cosmetic default drift.
+    [Fact]
+    public void ConvertEmojiOnSave_DefaultsToOff()
+    {
+        Assert.False(new AppSettings().ConvertEmojiOnSave);
+        Assert.False(SettingsService.Deserialize("{}").ConvertEmojiOnSave);
+    }
+
     [Fact]
     public void Defaults_MatchDocumentedValues()
     {
@@ -30,6 +41,7 @@ public class AppSettingsTests
         Assert.NotNull(settings.RecentFiles);
         Assert.Empty(settings.RecentFiles);
         Assert.Equal("", settings.LastReleaseNotesVersionShown);
+        Assert.False(settings.ConvertEmojiOnSave);
         Assert.Equal(2, settings.LineBreakCharWeight);
         // 1.0 means "exactly what Preferences says" — zoom starts non-destructive.
         Assert.Equal(1.0, settings.ZoomLevel);
