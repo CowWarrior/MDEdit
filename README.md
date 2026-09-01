@@ -74,7 +74,7 @@ Specified and intended for a future release, with no date attached:
 - **C# on .NET 10** (`net10.0-windows`), **WPF** — Fluent theming, with Light/Dark/System modes
 - **[AvalonEdit](https://github.com/icsharpcode/AvalonEdit) 6.3.0.90** — the text editor control
   everything is built on
-- **xUnit** — 586 tests over the editing logic, deliberately factored out of the window to be
+- **xUnit** — unit tests over the editing logic, deliberately factored out of the window to be
   testable without one
 - **ClickOnce**, published to GitHub Pages from `docs/`
 
