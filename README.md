@@ -61,6 +61,9 @@ MDEdit emits literal `<u>` tags, relying on Markdown's pass-through of inline HT
   Restarting MDEdit restores it.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text
   engine MDEdit draws with, not a setting.
+- Once MDEdit opens your Markdown files, Explorer shows them with a generic blue icon and Windows
+  names the handling app "ClickOnce" rather than MDEdit. This is how Windows presents ClickOnce
+  file associations; double-clicking still opens the file in MDEdit.
 
 ## Planned
 

@@ -80,6 +80,7 @@ Things that do not work correctly today, listed so they do not come as a surpris
 
 - Switching the theme while the Find panel is open closes the panel, and it cannot be reopened. Restarting MDEdit restores it.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text engine MDEdit draws with, not a setting.
+- Markdown files opened with MDEdit show a generic blue icon in Explorer, and Windows labels the app "ClickOnce" rather than MDEdit. This comes from how Windows installs MDEdit, and does not affect opening files.
 
 ## Planned
 
