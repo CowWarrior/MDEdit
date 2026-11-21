@@ -37,6 +37,10 @@ internal sealed class AppSettings
     // The release ("Major.Minor.Build") ReleaseNotes.md was last auto-shown for — see
     // MainWindow.MaybeShowReleaseNotesOnFirstRun and Editing/ReleaseNotesGate. Empty means never shown.
     public string LastReleaseNotesVersionShown { get; set; } = "";
+    // Whether the one-time "make MDEdit your default app?" question has been asked (Requirements.md
+    // §1, Editing/DefaultAppsGate). Asked once, ever — Help > Set Default Apps reaches the same
+    // Settings page afterwards. Top-level like the others: nothing in PreferencesWindow shows it.
+    public bool DefaultAppsPromptShown { get; set; }
     // How many characters the status bar's character count charges per line break — 0, 1, or 2
     // (Requirements.md §9). Defaults to 2 so an upgrading user's displayed count doesn't change:
     // that was the only behavior before this setting existed (Editor.Document.TextLength counts

@@ -35,8 +35,9 @@ Installation is [ClickOnce](https://learn.microsoft.com/en-us/visualstudio/deplo
 no administrator rights needed, and MDEdit checks for updates each time it launches. Builds are
 Authenticode-signed.
 
-To make MDEdit the default handler for `.md` and `.markdown` files, use **Help → Register File
-Associations** after installing. This is deliberately manual rather than automatic.
+On first launch MDEdit asks once whether you'd like it to open `.md` and `.txt` files, and if so
+takes you to Windows' Default apps settings, where you make the choice yourself — MDEdit never
+changes a default behind your back. **Help → Set Default Apps** reaches the same page any time.
 
 ## Markdown support
 

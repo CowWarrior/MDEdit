@@ -46,6 +46,11 @@ public partial class MainWindow : Window
     // ── State ─────────────────────────────────────────────────────────────
     private readonly FileService _files = new();
     private readonly AppSettings _settings = SettingsService.Load();
+
+    // Whether DefaultAppsService found ClickOnce's update-proof ProgID and registered MDEdit as a
+    // candidate handler this launch — decides which Settings page Help > Set Default Apps opens
+    // and whether the first-run question is asked at all.
+    private bool _defaultAppsRegistered;
     private readonly MarkdownLineColorizer _colorizer = new();
     private readonly HeadingMarkerElementGenerator _headingMarkerGenerator = new();
     private readonly EmphasisMarkerElementGenerator _emphasisMarkerGenerator = new();
@@ -188,13 +193,19 @@ public partial class MainWindow : Window
         // Follow OS light/dark switches live while the theme setting is System.
         SystemEvents.UserPreferenceChanged += OnUserPreferenceChanged;
 
-        // args[0] is the exe path itself; a file path argument (from double-clicking an associated
-        // file, or "Open with") is args[1], per the "MDEdit.exe" "%1" command FileAssociationService registers.
-        var args = Environment.GetCommandLineArgs();
-        if (args.Length > 1)
-            OpenFile(args[1]);
+        // A file to open arrives either on the command line or, for a double-click under ClickOnce,
+        // as launcher activation data — see StartupFile for why both are needed.
+        var startupFile = StartupFile.Resolve(
+            Environment.GetCommandLineArgs(),
+            Environment.GetEnvironmentVariable(StartupFile.ActivationDataVariable));
+        if (startupFile is not null)
+            OpenFile(startupFile);
         else
             MaybeShowReleaseNotesOnFirstRun();
+
+        // Every launch, so a removed registration self-heals; cheap when nothing changed.
+        _defaultAppsRegistered = DefaultAppsService.EnsureRegistered();
+        ContentRendered += MaybeAskAboutDefaultApps;
     }
 
     // ── Syntax highlighting ───────────────────────────────────────────────
@@ -446,8 +457,8 @@ public partial class MainWindow : Window
     }
 
     // Requirements.md §1: a second editor window, deliberately a second *process* rather than
-    // another Window inside this one. That is the mechanism MDEdit already ships — double-clicking
-    // an associated file runs "MDEdit.exe" "%1" (see FileAssociationService) — so it is proven here,
+    // another Window inside this one. Launching a second MDEdit is already what happens whenever a
+    // file is opened from Explorer while one is running, so it is proven here,
     // and it makes each window independent for free: its own document, its own unsaved-changes
     // prompt, its own AppSettings, and closing one leaves the others alone.
     //
@@ -465,9 +476,8 @@ public partial class MainWindow : Window
     // MDEdits already behave today when a second one is launched from Explorer.
     private void NewWindow()
     {
-        // The same path source FileAssociationService registers. Under ClickOnce this resolves to
-        // the real exe inside the current version's folder, so launching it directly is what
-        // Explorer already does; it skips ClickOnce's update check, which is right for a second
+        // Under ClickOnce this resolves to the real exe inside the current version's folder.
+        // Launching it directly skips ClickOnce's update check, which is right for a second
         // window — this process made that check when it started.
         if (Environment.ProcessPath is not string exePath)
         {
@@ -571,6 +581,43 @@ public partial class MainWindow : Window
         EnsureReleaseNotesAreReadOnly(path);
         // Not a user-initiated Open: no error dialog on failure, and it doesn't join Recent Files.
         OpenFile(path, addToRecentFiles: false, showErrorOnFailure: false);
+    }
+
+    // The one-time "make MDEdit your default app?" question (Requirements.md §1). Deferred to
+    // ContentRendered so it appears over a visible window — after any release notes have opened —
+    // rather than before the window exists. Marked as asked before showing, like the release notes,
+    // so a crash mid-dialog can't turn it into a prompt on every launch. MDEdit never sets a
+    // default itself: Yes only opens Windows' own Settings page, where the user chooses.
+    private void MaybeAskAboutDefaultApps(object? sender, EventArgs e)
+    {
+        ContentRendered -= MaybeAskAboutDefaultApps;
+        if (!DefaultAppsGate.ShouldPrompt(_settings.DefaultAppsPromptShown, _defaultAppsRegistered)) return;
+
+        _settings.DefaultAppsPromptShown = true;
+        SettingsService.Save(_settings);
+
+        var answer = MessageBox.Show(this,
+            "Would you like MDEdit to open Markdown (.md) and text (.txt) files when you double-click them?\n\n" +
+            "Windows lets you choose this yourself. Choose Yes to open the Default apps page in Settings, " +
+            "where you can pick MDEdit for each file type.\n\n" +
+            "You can do this later from Help > Set Default Apps.",
+            "Default apps", MessageBoxButton.YesNo, MessageBoxImage.Question);
+        if (answer == MessageBoxResult.Yes) OpenDefaultAppsSettings();
+    }
+
+    private void MenuSetDefaultApps_Click(object sender, RoutedEventArgs e) => OpenDefaultAppsSettings();
+
+    private void OpenDefaultAppsSettings()
+    {
+        try
+        {
+            DefaultAppsService.OpenSettings(_defaultAppsRegistered);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Could not open Windows Settings:\n\n{ex.Message}",
+                "Set Default Apps", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void MenuOpenReleaseNotes_Click(object sender, RoutedEventArgs e)
@@ -1418,25 +1465,6 @@ public partial class MainWindow : Window
         }
 
         OpenFile(path);
-    }
-
-    private void MenuRegisterFileAssociations_Click(object sender, RoutedEventArgs e)
-    {
-        try
-        {
-            FileAssociationService.Register();
-            MessageBox.Show(
-                "MDEdit is now the default app for .md and .markdown files.\n\n" +
-                "For .txt, MDEdit is listed under \"Open with\" but the existing default app is left " +
-                "alone — to make MDEdit the default there too, right-click a .txt file, choose " +
-                "\"Open with\" > \"Choose another app\", select MDEdit, and check \"Always use this app\".",
-                "Register File Associations", MessageBoxButton.OK, MessageBoxImage.Information);
-        }
-        catch (Exception ex)
-        {
-            MessageBox.Show($"Could not register file associations:\n\n{ex.Message}",
-                "Register File Associations", MessageBoxButton.OK, MessageBoxImage.Error);
-        }
     }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

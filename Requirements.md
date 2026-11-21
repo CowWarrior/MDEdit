@@ -11,6 +11,14 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
   when it opens, so a change made in one window does not reach the others until they are reopened,
   and the last window to save a setting is the one whose choice persists.
 - The user can open an existing Markdown file (`.md`, `.markdown`) or plain text file (`.txt`) from disk.
+- Double-clicking a file MDEdit is associated with opens that file, and keeps doing so after the
+  application updates.
+- The user chooses whether MDEdit is their default app for `.md`, `.markdown` and `.txt`; the
+  application never sets a default itself.
+  - MDEdit is offered as a choice for all three in Windows' "Open with" list and Default apps settings.
+  - On first run it asks once whether the user would like to make it their default, and if so opens
+    the Windows Settings page where they choose. It does not ask again.
+  - Help → Set Default Apps opens the same page at any time.
 - The user can save the current document to its existing location.
 - The user can save the current document to a new location and file type (Save As), choosing between Markdown and plain text formats.
 - The user can have saving first convert literal emoji characters to their catalogue shortcodes,

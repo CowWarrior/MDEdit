@@ -15,7 +15,7 @@ public partial class AboutWindow : Window
     /// than this dialog opening the file itself. Two reasons it isn't done here: MainWindow owns
     /// <c>OpenFile</c> along with the unsaved-changes guard and error reporting, and shelling the
     /// file out to its default handler would launch a *second* MDEdit instance whenever MDEdit is
-    /// registered for <c>.md</c> — which it is, for anyone who has used Register File Associations.
+    /// registered for <c>.md</c> — which a ClickOnce install is, via the pubxml's file associations.
     /// </remarks>
     public string? RequestedDocumentPath { get; private set; }
 

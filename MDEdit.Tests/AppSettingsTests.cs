@@ -41,6 +41,7 @@ public class AppSettingsTests
         Assert.NotNull(settings.RecentFiles);
         Assert.Empty(settings.RecentFiles);
         Assert.Equal("", settings.LastReleaseNotesVersionShown);
+        Assert.False(settings.DefaultAppsPromptShown);
         Assert.False(settings.ConvertEmojiOnSave);
         Assert.Equal(2, settings.LineBreakCharWeight);
         // 1.0 means "exactly what Preferences says" — zoom starts non-destructive.

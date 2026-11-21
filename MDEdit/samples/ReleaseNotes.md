@@ -6,6 +6,15 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.1.3
+
+- Fixed double-clicking a Markdown file opening an empty window instead of the file.
+- MDEdit now asks once whether you'd like it to open Markdown and text files, then lets you choose in Windows' Default apps settings. Help → Set Default Apps replaces Register File Associations.
+- Added Format → Convert Emoji to Shortcodes, and a View option to do it automatically on every save.
+- Headings now go up to level 6, with Ctrl+1 to Ctrl+6, and the Format menu groups headings and lists into submenus.
+- Bold, italic, code, links and other formatting now display inside table cells in WYSIWYG mode, and tables no longer show an empty row under the header.
+- Colours you mix in the colour picker are kept while MDEdit is open, and improved default styles now reach elements you haven't customized.
+
 ### Version 1.1.2
 
 - Added New Window — open a second editor window from the File menu or with Ctrl+Shift+N, so you can work on two documents at once without going through Explorer.
