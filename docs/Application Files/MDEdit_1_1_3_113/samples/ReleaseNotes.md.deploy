@@ -6,6 +6,15 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.1.3
+
+- Fixed double-clicking a Markdown file opening an empty window instead of the file.
+- MDEdit now asks once whether you'd like it to open Markdown and text files, then lets you choose in Windows' Default apps settings. Help → Set Default Apps replaces Register File Associations.
+- Added Format → Convert Emoji to Shortcodes, and a View option to do it automatically on every save.
+- Headings now go up to level 6, with Ctrl+1 to Ctrl+6, and the Format menu groups headings and lists into submenus.
+- Bold, italic, code, links and other formatting now display inside table cells in WYSIWYG mode, and tables no longer show an empty row under the header.
+- Colours you mix in the colour picker are kept while MDEdit is open, and improved default styles now reach elements you haven't customized.
+
 ### Version 1.1.2
 
 - Added New Window — open a second editor window from the File menu or with Ctrl+Shift+N, so you can work on two documents at once without going through Explorer.
@@ -70,17 +79,13 @@ Not tracked.
 Things that do not work correctly today, listed so they do not come as a surprise:
 
 - Switching the theme while the Find panel is open closes the panel, and it cannot be reopened. Restarting MDEdit restores it.
-- A backslash does not escape formatting: `\*text\*` still renders as italic instead of showing the asterisks.
-- An underscore inside a word starts italics, so a name like `snake_case_name` renders partly italicised. Use `*` for emphasis to avoid this.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text engine MDEdit draws with, not a setting.
 
 ## Planned
 
 Specified and intended for a future release, with no date attached:
 
-- Convert emoji to shortcodes — a command to replace literal emoji characters with their `:shortcode:` equivalents, across your selection or the whole document.
 - Find and replace — replace matches one at a time or all at once, from the same panel you search in, with Ctrl+H. Replacing everything counts as a single undo, so one Ctrl+Z puts it all back.
-- Formatting inside table cells — bold, links and emoji inside a table will render in WYSIWYG mode instead of showing their raw markers.
 - Improved Markdown conformance — better handling of less common Markdown syntax and edge cases.
 
 ---
