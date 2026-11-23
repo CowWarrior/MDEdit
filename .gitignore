@@ -10,6 +10,9 @@ obj/
 # Rider
 .idea/
 
+# Scraped third-party reference pages — copyrighted, never committed
+HTTPScrape/
+
 # Claude Code local settings — everything except shared skills, which are
 # project documentation and belong in the repo.
 .claude/*
