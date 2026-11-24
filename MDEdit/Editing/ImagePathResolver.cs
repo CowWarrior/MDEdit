@@ -45,9 +45,10 @@ internal static class ImagePathResolver
     /// <summary>
     /// Shared normalization for both entry points: trim, unwrap CommonMark's bracketed
     /// destination form, and drop a trailing quoted title. Returns "" when nothing usable is
-    /// left, which both entry points decline on.
+    /// left, which both entry points decline on. Internal so the BBCode converter writes the same
+    /// target the editor resolves, rather than one still carrying a title or angle brackets.
     /// </summary>
-    private static string Normalize(string url)
+    internal static string Normalize(string url)
     {
         url = url.Trim();
 

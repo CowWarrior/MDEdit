@@ -1112,6 +1112,31 @@ public partial class MainWindow : Window
     private void MenuConvertEmoji_Click(object sender, RoutedEventArgs e)
         => ApplyFormat(MarkdownFormatter.ConvertEmojiToShortcodes(Editor.Document, CurrentSelection));
 
+    // Requirements.md §2. Whole lines only — a selection is widened to the lines it touches (and the
+    // converter widens further to whole tables and code blocks), so a copy never cuts through a
+    // construct. The document itself is never changed.
+    private void MenuCopyAsBBCode_Click(object sender, RoutedEventArgs e)
+    {
+        var doc = Editor.Document;
+        var (first, last) = Editor.SelectionLength > 0
+            ? MarkdownFormatter.SelectedLineNumbers(doc, CurrentSelection)
+            : (1, doc.LineCount);
+
+        var bbcode = BBCodeConverter.Convert(doc, first, last);
+        if (bbcode.Length == 0) return;
+
+        try
+        {
+            Clipboard.SetText(bbcode);
+        }
+        catch (System.Runtime.InteropServices.ExternalException)
+        {
+            // Another process holding the clipboard open is the usual cause, and a retry usually works.
+            MessageBox.Show(this, "The clipboard is in use by another application. Please try again.",
+                "Copy as BBCode", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
     private void BtnTable_Click(object sender, RoutedEventArgs e)      => InsertTable();
     private void BtnH1_Click(object sender, RoutedEventArgs e)       => InsertHeading(1);
     private void BtnH2_Click(object sender, RoutedEventArgs e)       => InsertHeading(2);

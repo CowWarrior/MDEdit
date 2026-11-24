@@ -48,6 +48,29 @@ MDEdit is a desktop application for creating and editing Markdown documents. It 
   replacing does not mean re-entering the search term. The user can replace the current match and
   move to the next, or replace every match at once; replacing all is a single undo step, so one
   Ctrl+Z restores the document rather than unwinding the replacements one at a time *(planned)*
+- The user can copy the document as **World Anvil BBCode** from Edit → Copy as BBCode, for pasting
+  into World Anvil's editor. It converts the lines the selection touches, or the whole document when
+  nothing is selected, widened so a table or fenced code block is never cut in half. It is export
+  only: the document is not changed, and MDEdit neither imports nor edits BBCode. Every construct
+  MDEdit renders converts to its World Anvil tag, with these deliberate choices:
+  - Headings of every level become `[h1]`–`[h6]`, though World Anvil documents only four.
+  - Highlight becomes `[mark]`, which World Anvil restricts to its Grandmaster tier.
+  - Task items become World Anvil's `[]` and `[c]` checkboxes inside a bulleted list.
+  - A numbered list becomes `[ol]`, which World Anvil numbers itself, so the source's numbers are not kept.
+  - A remote image becomes `[img:url]`. A local image becomes visible bold placeholder text,
+    `IMAGE: path (alt text)`, since it must be uploaded to World Anvil by hand, which supplies the
+    tag to paste over it.
+  - Inline code and code blocks both become `[code]`, which World Anvil shows on a line of its own.
+  - Emoji become icons, since World Anvil refuses to save an article containing emoji. Each emoji,
+    whether written as a `:shortcode:` or typed directly, becomes a Font Awesome icon
+    (`[section:fa-solid …] [/section]`, which World Anvil restricts to its Grandmaster tier), or one of
+    World Anvil's free checklist icons for ✅ ❌ ➕ ➖. An emoji with no matching icon is kept as its
+    `:shortcode:` text, inside code as well as everywhere else. An emoji MDEdit doesn't know at all is
+    removed, so the article can always be saved.
+  - HTML comments become World Anvil's hidden `/* … */` comments.
+  - Plain text containing `[` is wrapped in `[noparse]` so World Anvil does not read it as a tag.
+  - A hard line break becomes `[br]`. Table column alignment and reference-link URLs have no
+    World Anvil equivalent and are dropped.
 
 ## 3. Markdown Formatting
 
@@ -353,20 +376,6 @@ appear in the user-facing "Planned" lists in `README.md` and `MDEdit/samples/Rel
 carry only items marked *(planned)* in the numbered sections above. An entry leaves this section by
 being decided and promoted to a numbered requirement, not by someone starting work on it.
 
-### BBCode support
-
-Support for BBCode (`[b]`, `[url]`, `[quote]` and similar), the markup used by many forum and bulletin
-board platforms. **The scope is undecided, and the two candidate answers are materially different
-products:**
-
-- **Import and export only.** BBCode becomes a format MDEdit converts to and from, while the editor
-  itself stays Markdown-only. This sits comfortably with what MDEdit already is: Markdown remains the
-  single source of truth, and conversion happens at the file boundary rather than in the editor.
-- **BBCode as a first-class markup.** The editor would highlight, live-preview and format BBCode the
-  way it does Markdown today. This is the far larger change, and it would make MDEdit a general markup
-  editor rather than a Markdown editor — a change of product identity, not merely of feature set. It
-  would also touch nearly every part of the editing layer, all of which is Markdown-specific by
-  construction.
-
-Considered a candidate for a 2.x release rather than the current line, chiefly because the second
-option is a change of direction rather than an addition to the existing one.
+None at present. (BBCode support was the last entry: it was decided as export-only Copy as BBCode in
+World Anvil's dialect, now in §2. BBCode import, other dialects, and BBCode as a first-class editing
+markup were not taken up.)

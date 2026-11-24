@@ -79,6 +79,9 @@
                 <Separator/>
                 <MenuItem Header="Cu_t"          Command="Cut"        InputGestureText="Ctrl+X"/>
                 <MenuItem Header="_Copy"         Command="Copy"       InputGestureText="Ctrl+C"/>
+                <MenuItem Header="Copy as _BBCode"
+                          Click="MenuCopyAsBBCode_Click"
+                          ToolTip="Copies the selected lines, or the whole document, converted to World Anvil BBCode"/>
                 <MenuItem Header="_Paste"        Command="Paste"      InputGestureText="Ctrl+V"/>
                 <Separator/>
                 <MenuItem Header="Select _All"   Command="SelectAll"  InputGestureText="Ctrl+A"/>

@@ -215,7 +215,7 @@ internal static class MarkdownFormatter
     /// does not include that line — dragging from the start of line 1 to the start of line 3 selects
     /// two lines, which is both what the user sees highlighted and what other editors do.
     /// </summary>
-    private static (int First, int Last) SelectedLineNumbers(TextDocument doc, SelectionRange sel)
+    internal static (int First, int Last) SelectedLineNumbers(TextDocument doc, SelectionRange sel)
     {
         var first = doc.GetLineByOffset(sel.Start);
         if (sel.Length <= 0) return (first.LineNumber, first.LineNumber);

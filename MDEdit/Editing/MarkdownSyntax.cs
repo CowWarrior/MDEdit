@@ -85,6 +85,23 @@ internal enum InlineStyles
 /// </summary>
 internal readonly record struct InlineRun(string Text, InlineStyles Styles);
 
+/// <summary>
+/// Which construct <see cref="MarkdownSyntax.TryMatchInline"/> found. <see cref="Emphasis"/> covers
+/// every symmetric-marker run except code, its exact meaning carried in <see cref="InlineMatch.Style"/>.
+/// </summary>
+internal enum InlineConstruct { Code, Emphasis, Underline, Link, Image, ReferenceLink, Emoji }
+
+/// <summary>
+/// One inline construct starting at a given position of a string. <see cref="Length"/> covers the whole
+/// construct, markers included; [<see cref="ContentStart"/>, +<see cref="ContentLength"/>) is the part
+/// between the markers — the label for links and images, the name for emoji. <see cref="Url"/> is the raw
+/// parenthesized target for inline links and images; <see cref="Emoji"/> the character a shortcode
+/// stands for.
+/// </summary>
+internal readonly record struct InlineMatch(
+    InlineConstruct Kind, int Length, int ContentStart, int ContentLength,
+    InlineStyles Style, string? Url, string? Emoji);
+
 internal enum FenceKind { None, Backtick, Tilde }
 
 /// <summary>
@@ -305,7 +322,7 @@ internal static class MarkdownSyntax
     /// <see cref="InlineCodePattern"/> stays escape-blind.
     /// </para>
     /// </remarks>
-    private static int EscapeLength(string text, int pos)
+    internal static int EscapeLength(string text, int pos)
         => text[pos] == '\\'
         && pos + 1 < text.Length
         && EscapablePunctuation.Contains(text[pos + 1])
@@ -637,6 +654,66 @@ internal static class MarkdownSyntax
         return runs;
     }
 
+    /// <summary>
+    /// The inline construct starting exactly at <paramref name="pos"/>, if any — the single-position
+    /// form of the scanners above, for a consumer that walks text itself and needs constructs as a
+    /// tree rather than a flat span list (the BBCode converter, which recurses into each match's
+    /// content so a link inside bold keeps both).
+    /// </summary>
+    /// <remarks>
+    /// Same pattern tables and precedence as everything else in this file — emphasis (inline code
+    /// last among them) before links before underline before emoji — so the converter cannot
+    /// disagree with the editor about what a run is. The caller consumes backslash escapes first
+    /// (<see cref="EscapeLength"/>), as every scanner here does.
+    /// </remarks>
+    public static bool TryMatchInline(string text, int pos, out InlineMatch match)
+    {
+        foreach (var (pattern, markerLength, _, kind) in EmphasisPatterns)
+        {
+            var m = pattern.Match(text, pos);
+            if (!m.Success) continue;
+
+            var style = ClassifyEmphasis(text[pos], markerLength, kind);
+            match = new InlineMatch(
+                style == InlineStyles.Code ? InlineConstruct.Code : InlineConstruct.Emphasis,
+                m.Length, pos + markerLength, m.Length - 2 * markerLength, style, null, null);
+            return true;
+        }
+
+        foreach (var (pattern, isImage) in LinkPatterns)
+        {
+            var m = pattern.Match(text, pos);
+            if (!m.Success) continue;
+
+            var label = m.Groups[1];
+            string? url = m.Groups[2].Success ? m.Groups[2].Value : null;
+            var construct = isImage ? InlineConstruct.Image
+                          : url is null ? InlineConstruct.ReferenceLink
+                          : InlineConstruct.Link;
+            match = new InlineMatch(construct, m.Length, label.Index, label.Length, InlineStyles.None, url, null);
+            return true;
+        }
+
+        var underline = UnderlinePattern.Match(text, pos);
+        if (underline.Success)
+        {
+            match = new InlineMatch(InlineConstruct.Underline, underline.Length, pos + UnderlineOpenLength,
+                underline.Length - UnderlineOpenLength - UnderlineCloseLength, InlineStyles.Underline, null, null);
+            return true;
+        }
+
+        var emoji = EmojiPattern.Match(text, pos);
+        if (emoji.Success && EmojiCatalog.TryGet(emoji.Groups[1].Value, out var character))
+        {
+            match = new InlineMatch(InlineConstruct.Emoji, emoji.Length, pos + 1, emoji.Length - 2,
+                InlineStyles.None, null, character);
+            return true;
+        }
+
+        match = default;
+        return false;
+    }
+
     private static void Hide(bool[] hidden, int start, int end)
     {
         for (int i = start; i < end; i++) hidden[i] = true;
@@ -701,22 +778,32 @@ internal static class MarkdownSyntax
             var code = InlineCodePattern.Match(text, pos);
             if (code.Success) { pos += code.Length; continue; }
 
-            if (!EmojiCatalog.CouldStartEmoji(text[pos])) { pos++; continue; }
+            int length = EmojiCharacterLength(text, pos, out var shortcode);
+            if (length == 0) { pos++; continue; }
 
-            bool matched = false;
-            int longest = Math.Min(EmojiCatalog.MaxEmojiLength, text.Length - pos);
-            for (int length = longest; length >= 1; length--)
-            {
-                if (!EmojiCatalog.TryGetShortcode(text.Substring(pos, length), out var shortcode)) continue;
-
-                results.Add(new EmojiCharacterSpan(line.Offset + pos, line.Offset + pos + length, shortcode));
-                pos += length;
-                matched = true;
-                break;
-            }
-            if (!matched) pos++;
+            results.Add(new EmojiCharacterSpan(line.Offset + pos, line.Offset + pos + length, shortcode));
+            pos += length;
         }
         return results;
+    }
+
+    /// <summary>
+    /// The length of the catalogued emoji character starting at <paramref name="pos"/>, or 0 when
+    /// none does — the single-position form of <see cref="FindEmojiCharacterSpans"/>, longest match
+    /// first. Knows nothing of inline code; skipping that is the caller's business.
+    /// </summary>
+    public static int EmojiCharacterLength(string text, int pos, out string shortcode)
+    {
+        shortcode = "";
+        if (!EmojiCatalog.CouldStartEmoji(text[pos])) return 0;
+
+        int longest = Math.Min(EmojiCatalog.MaxEmojiLength, text.Length - pos);
+        for (int length = longest; length >= 1; length--)
+        {
+            if (EmojiCatalog.TryGetShortcode(text.Substring(pos, length), out shortcode)) return length;
+        }
+        shortcode = "";
+        return 0;
     }
 
     private static List<(EmphasisSpan Span, EmphasisKind Kind)> ScanLine(TextDocument doc, DocumentLine line)

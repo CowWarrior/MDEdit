@@ -1,0 +1,264 @@
+# Emoji shortcode → World Anvil icon, used only by Edit → Copy as BBCode (BBCodeConverter).
+#
+# World Anvil refuses to save an article containing emoji, so every emoji is exported as an icon
+# instead. One "shortcode<space>replacement" pair per line:
+#   - a Font Awesome or RPG-Awesome class ("fa-solid fa-fire", "ra ra-aura"), which the converter
+#     wraps as "[section:<class>] [/section]" — Grandmaster tier and above;
+#   - or a literal tag starting with '[', emitted as-is — World Anvil's free checklist icons.
+#
+# Keys are Emoji.txt shortcodes, and only the first-listed name of each emoji is ever looked up:
+# aliases (+1, -1) resolve through their emoji to it, so they need no line of their own. A shortcode
+# with no line here exports as ":shortcode:" text. Every Font Awesome name was checked by pasting it
+# into a World Anvil article (2026-11-24); ok_hand, fox, panda, penguin and snail had no working icon,
+# and ok, new and top no sensible one. Icons are single-colour, so the coloured hearts all share one.
+# Blank lines and lines starting with '#' are ignored.
+
+# ── Faces ─────────────────────────────────────────────────────────────
+smile fa-solid fa-face-smile-beam
+smiley fa-solid fa-face-grin-wide
+grin fa-solid fa-face-grin-beam
+laughing fa-solid fa-face-laugh-squint
+joy fa-solid fa-face-grin-tears
+rofl fa-solid fa-face-grin-squint-tears
+blush fa-solid fa-face-smile-relaxed
+slightly_smiling_face fa-solid fa-face-smile
+wink fa-solid fa-face-smile-wink
+heart_eyes fa-solid fa-face-grin-hearts
+kissing_heart fa-solid fa-face-kiss-wink-heart
+thinking fa-solid fa-face-thinking
+neutral_face fa-solid fa-face-meh
+expressionless fa-solid fa-face-expressionless
+no_mouth fa-solid fa-face-meh-blank
+smirk fa-solid fa-face-smirking
+unamused fa-solid fa-face-unamused
+roll_eyes fa-solid fa-face-rolling-eyes
+grimacing fa-solid fa-face-grimace
+relieved fa-solid fa-face-relieved
+pensive fa-solid fa-face-pensive
+sleepy fa-solid fa-face-sleepy
+sleeping fa-solid fa-face-sleeping
+mask fa-solid fa-face-mask
+sunglasses fa-solid fa-face-sunglasses
+confused fa-solid fa-face-confused
+worried fa-solid fa-face-worried
+open_mouth fa-solid fa-face-surprise
+astonished fa-solid fa-face-astonished
+flushed fa-solid fa-face-flushed
+scream fa-solid fa-face-scream
+angry fa-solid fa-face-angry
+rage fa-solid fa-face-pouting
+cry fa-solid fa-face-sad-tear
+sob fa-solid fa-face-sad-cry
+sweat_smile fa-solid fa-face-grin-beam-sweat
+innocent fa-solid fa-face-smile-halo
+nerd_face fa-solid fa-face-glasses
+partying_face fa-solid fa-face-party
+yawning_face fa-solid fa-face-tired
+exploding_head fa-solid fa-face-explode
+face_with_monocle fa-solid fa-face-monocle
+zipper_mouth_face fa-solid fa-face-zipper
+shushing_face fa-solid fa-face-shush
+raised_eyebrow fa-solid fa-face-raised-eyebrow
+
+# ── Hands and people ──────────────────────────────────────────────────
+thumbsup fa-solid fa-thumbs-up
+thumbsdown fa-solid fa-thumbs-down
+wave fa-solid fa-hand-wave
+clap fa-solid fa-hands-clapping
+pray fa-solid fa-hands-praying
+muscle fa-solid fa-hand-fist
+handshake fa-solid fa-handshake
+point_right fa-solid fa-hand-point-right
+point_left fa-solid fa-hand-point-left
+point_up fa-solid fa-hand-point-up
+point_down fa-solid fa-hand-point-down
+raised_hands fa-solid fa-hand
+crossed_fingers fa-solid fa-hand-fingers-crossed
+eyes fa-solid fa-eyes
+brain fa-solid fa-brain
+
+# ── Hearts and symbols ────────────────────────────────────────────────
+heart fa-solid fa-heart
+broken_heart fa-solid fa-heart-crack
+sparkling_heart fa-solid fa-heart
+blue_heart fa-solid fa-heart
+green_heart fa-solid fa-heart
+yellow_heart fa-solid fa-heart
+purple_heart fa-solid fa-heart
+black_heart fa-solid fa-heart
+white_check_mark [c]
+heavy_check_mark fa-solid fa-check
+x [x]
+warning fa-solid fa-triangle-exclamation
+no_entry fa-solid fa-circle-minus
+question fa-solid fa-question
+exclamation fa-solid fa-exclamation
+bangbang fa-solid fa-exclamation
+information_source fa-solid fa-circle-info
+recycle fa-solid fa-recycle
+100 fa-solid fa-hundred-points
+arrow_right fa-solid fa-arrow-right
+arrow_left fa-solid fa-arrow-left
+arrow_up fa-solid fa-arrow-up
+arrow_down fa-solid fa-arrow-down
+heavy_plus_sign [+]
+heavy_minus_sign [-]
+heavy_multiplication_x fa-solid fa-xmark
+heavy_division_sign fa-solid fa-divide
+
+# ── Objects and tools ─────────────────────────────────────────────────
+fire fa-solid fa-fire
+star fa-solid fa-star
+star2 fa-solid fa-star-shooting
+sparkles fa-solid fa-sparkles
+zap fa-solid fa-bolt
+boom fa-solid fa-explosion
+tada fa-solid fa-party-horn
+confetti_ball fa-solid fa-party-bell
+balloon fa-solid fa-balloon
+gift fa-solid fa-gift
+trophy fa-solid fa-trophy
+medal fa-solid fa-medal
+crown fa-solid fa-crown
+gem fa-solid fa-gem
+bulb fa-solid fa-lightbulb
+flashlight fa-solid fa-flashlight
+battery fa-solid fa-battery-full
+electric_plug fa-solid fa-plug
+computer fa-solid fa-laptop
+desktop_computer fa-solid fa-desktop
+keyboard fa-solid fa-keyboard
+printer fa-solid fa-print
+iphone fa-solid fa-mobile-screen
+telephone fa-solid fa-phone
+camera fa-solid fa-camera
+video_camera fa-solid fa-video
+tv fa-solid fa-tv
+radio fa-solid fa-radio
+headphones fa-solid fa-headphones
+hammer fa-solid fa-hammer
+wrench fa-solid fa-wrench
+gear fa-solid fa-gear
+nut_and_bolt fa-solid fa-screwdriver-wrench
+link fa-solid fa-link
+lock fa-solid fa-lock
+unlock fa-solid fa-lock-open
+key fa-solid fa-key
+mag fa-solid fa-magnifying-glass
+bell fa-solid fa-bell
+no_bell fa-solid fa-bell-slash
+hourglass fa-solid fa-hourglass-end
+hourglass_flowing_sand fa-solid fa-hourglass-half
+watch fa-solid fa-watch
+alarm_clock fa-solid fa-alarm-clock
+stopwatch fa-solid fa-stopwatch
+money_bag fa-solid fa-sack-dollar
+credit_card fa-solid fa-credit-card
+package fa-solid fa-box
+mailbox fa-solid fa-mailbox
+email fa-solid fa-envelope
+envelope fa-solid fa-envelope
+paperclip fa-solid fa-paperclip
+scissors fa-solid fa-scissors
+pushpin fa-solid fa-thumbtack
+clipboard fa-solid fa-clipboard
+
+# ── Documents ─────────────────────────────────────────────────────────
+book fa-solid fa-book-open
+books fa-solid fa-books
+notebook fa-solid fa-book
+memo fa-solid fa-file-pen
+pencil fa-solid fa-pencil
+pen fa-solid fa-pen
+page_facing_up fa-solid fa-file-lines
+file_folder fa-solid fa-folder
+open_file_folder fa-solid fa-folder-open
+calendar fa-solid fa-calendar-days
+bar_chart fa-solid fa-chart-simple
+chart_with_upwards_trend fa-solid fa-arrow-trend-up
+chart_with_downwards_trend fa-solid fa-arrow-trend-down
+
+# ── Nature and weather ────────────────────────────────────────────────
+sunny fa-solid fa-sun
+cloud fa-solid fa-cloud
+snowflake fa-solid fa-snowflake
+umbrella fa-solid fa-umbrella
+crescent_moon fa-solid fa-moon
+rainbow fa-solid fa-rainbow
+ocean fa-solid fa-water
+earth_americas fa-solid fa-earth-americas
+tree fa-solid fa-tree
+cactus fa-solid fa-cactus
+cherry_blossom fa-solid fa-flower
+rose fa-solid fa-flower-tulip
+sunflower fa-solid fa-flower-daffodil
+four_leaf_clover fa-solid fa-clover
+maple_leaf fa-solid fa-leaf-maple
+mushroom fa-solid fa-mushroom
+
+# ── Animals ───────────────────────────────────────────────────────────
+dog fa-solid fa-dog
+cat fa-solid fa-cat
+mouse fa-solid fa-mouse-field
+bear fa-solid fa-teddy-bear
+bird fa-solid fa-dove
+fish fa-solid fa-fish
+whale fa-solid fa-whale
+dolphin fa-solid fa-dolphin
+butterfly fa-solid fa-butterfly
+bug fa-solid fa-bug
+ant fa-solid fa-ant
+bee fa-solid fa-bee
+turtle fa-solid fa-turtle
+snake fa-solid fa-snake
+dragon fa-solid fa-dragon
+unicorn fa-solid fa-unicorn
+
+# ── Food and drink ────────────────────────────────────────────────────
+coffee fa-solid fa-mug-hot
+tea fa-solid fa-mug-tea
+beer fa-solid fa-beer-mug
+wine_glass fa-solid fa-wine-glass
+pizza fa-solid fa-pizza-slice
+hamburger fa-solid fa-burger
+cake fa-solid fa-cake-slice
+birthday fa-solid fa-cake-candles
+apple fa-solid fa-apple-whole
+banana fa-solid fa-banana
+bread fa-solid fa-bread-slice
+cheese fa-solid fa-cheese
+chocolate_bar fa-solid fa-candy-bar
+candy fa-solid fa-candy
+popcorn fa-solid fa-popcorn
+
+# ── Travel and places ─────────────────────────────────────────────────
+rocket fa-solid fa-rocket
+airplane fa-solid fa-plane
+car fa-solid fa-car
+bike fa-solid fa-bicycle
+train fa-solid fa-train
+ship fa-solid fa-ship
+house fa-solid fa-house
+office fa-solid fa-building
+construction fa-solid fa-road-barrier
+checkered_flag fa-solid fa-flag-checkered
+
+# ── Activities ────────────────────────────────────────────────────────
+art fa-solid fa-palette
+musical_note fa-solid fa-music
+guitar fa-solid fa-guitar
+game_die fa-solid fa-dice
+video_game fa-solid fa-gamepad
+soccer fa-solid fa-futbol
+basketball fa-solid fa-basketball
+football fa-solid fa-football
+baseball fa-solid fa-baseball
+tennis fa-solid fa-tennis-ball
+
+# ── Misc ──────────────────────────────────────────────────────────────
+robot fa-solid fa-robot
+alien fa-solid fa-alien
+ghost fa-solid fa-ghost
+skull fa-solid fa-skull
+bomb fa-solid fa-bomb
+poop fa-solid fa-poo
