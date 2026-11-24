@@ -6,6 +6,10 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.2.0
+
+- Added Edit → Copy as BBCode, which copies your selection or the whole document in World Anvil's BBCode, ready to paste into an article. Emoji become matching icons, since World Anvil does not accept emoji.
+
 ### Version 1.1.3
 
 - Fixed double-clicking a Markdown file opening an empty window instead of the file.
@@ -80,6 +84,7 @@ Things that do not work correctly today, listed so they do not come as a surpris
 
 - Switching the theme while the Find panel is open closes the panel, and it cannot be reopened. Restarting MDEdit restores it.
 - Emoji display in black and white rather than colour. This is a limitation of the Windows text engine MDEdit draws with, not a setting.
+- Markdown files opened with MDEdit show a generic blue icon in Explorer, and Windows labels the app "ClickOnce" rather than MDEdit. This comes from how Windows installs MDEdit, and does not affect opening files.
 
 ## Planned
 
