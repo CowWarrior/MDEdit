@@ -6,6 +6,10 @@ update, so you always know what's new.
 
 ## Recent changes
 
+### Version 1.2.0
+
+- Added Edit → Copy as BBCode, which copies your selection or the whole document in World Anvil's BBCode, ready to paste into an article. Emoji become matching icons, since World Anvil does not accept emoji.
+
 ### Version 1.1.3
 
 - Fixed double-clicking a Markdown file opening an empty window instead of the file.
